@@ -1,0 +1,130 @@
+{
+  "models": [
+    {
+      "id": "gpt-4o",
+      "name": "GPT-4o",
+      "provider": "openai",
+      "pricing": {
+        "prompt_per_million": 2.50,
+        "completion_per_million": 10.00
+      }
+    },
+    {
+      "id": "gpt-4o-mini",
+      "name": "GPT-4o mini",
+      "provider": "openai",
+      "pricing": {
+        "prompt_per_million": 0.15,
+        "completion_per_million": 0.60
+      }
+    },
+    {
+      "id": "o1-preview",
+      "name": "o1-preview",
+      "provider": "openai",
+      "pricing": {
+        "prompt_per_million": 15.00,
+        "completion_per_million": 60.00
+      }
+    },
+    {
+      "id": "o1-mini",
+      "name": "o1-mini",
+      "provider": "openai",
+      "pricing": {
+        "prompt_per_million": 3.00,
+        "completion_per_million": 12.00
+      }
+    },
+    {
+      "id": "o3-mini",
+      "name": "o3-mini",
+      "provider": "openai",
+      "pricing": {
+        "prompt_per_million": 1.10,
+        "completion_per_million": 4.40
+      }
+    },
+    {
+      "id": "gpt-4-turbo",
+      "name": "GPT-4 Turbo",
+      "provider": "openai",
+      "pricing": {
+        "prompt_per_million": 10.00,
+        "completion_per_million": 30.00
+      }
+    },
+    {
+      "id": "gpt-4",
+      "name": "GPT-4",
+      "provider": "openai",
+      "pricing": {
+        "prompt_per_million": 30.00,
+        "completion_per_million": 60.00
+      }
+    },
+    {
+      "id": "gpt-3.5-turbo",
+      "name": "GPT-3.5 Turbo",
+      "provider": "openai",
+      "pricing": {
+        "prompt_per_million": 0.50,
+        "completion_per_million": 1.50
+      }
+    },
+    {
+      "id": "claude-3-5-sonnet-20241022",
+      "name": "Claude 3.5 Sonnet",
+      "provider": "anthropic",
+      "pricing": {
+        "prompt_per_million": 3.00,
+        "completion_per_million": 15.00
+      }
+    },
+    {
+      "id": "claude-3-5-haiku-20241022",
+      "name": "Claude 3.5 Haiku",
+      "provider": "anthropic",
+      "pricing": {
+        "prompt_per_million": 0.80,
+        "completion_per_million": 4.00
+      }
+    },
+    {
+      "id": "claude-3-opus-20240229",
+      "name": "Claude 3 Opus",
+      "provider": "anthropic",
+      "pricing": {
+        "prompt_per_million": 15.00,
+        "completion_per_million": 75.00
+      }
+    },
+    {
+      "id": "claude-3-5-sonnet",
+      "name": "Claude 3.5 Sonnet (alias)",
+      "provider": "anthropic",
+      "pricing": {
+        "prompt_per_million": 3.00,
+        "completion_per_million": 15.00
+      }
+    },
+    {
+      "id": "claude-sonnet-4-5",
+      "name": "Claude Sonnet 4.5 (placeholder - zero cost)",
+      "provider": "anthropic",
+      "pricing": {
+        "prompt_per_million": 0.0,
+        "completion_per_million": 0.0
+      }
+    },
+    {
+      "id": "claude-opus-4",
+      "name": "Claude Opus 4 (placeholder - zero cost)",
+      "provider": "anthropic",
+      "pricing": {
+        "prompt_per_million": 0.0,
+        "completion_per_million": 0.0
+      }
+    }
+  ]
+}

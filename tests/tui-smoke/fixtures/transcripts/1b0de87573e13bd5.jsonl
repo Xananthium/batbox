@@ -1,0 +1,6 @@
+data: {"id":"chatcmpl-plan","object":"chat.completion.chunk","created":1700000001,"model":"mock-lm","choices":[{"index":0,"delta":{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_plan01","type":"function","function":{"name":"ExitPlanMode","arguments":"{\"plan\":\"## Test Plan\n1. Write tests\n2. Build\n3. Deploy\"}"}}]},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-plan","object":"chat.completion.chunk","created":1700000001,"model":"mock-lm","choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}]}
+
+data: [DONE]
+

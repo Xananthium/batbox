@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "batbox",
+  "version-string": "0.1.0",
+  "description": "Local-sandbox AI coding assistant",
+  "builtin-baseline": "e0b785fa42e9b3ee27f62e54f65e41358a1d2671",
+  "dependencies": [
+    "ftxui",
+    "cpr",
+    "nlohmann-json",
+    "simdjson",
+    "lexbor",
+    "fmt",
+    "spdlog",
+    "sqlite3",
+    "cli11",
+    "doctest",
+    "utfcpp",
+    {
+      "name": "ixwebsocket",
+      "features": [
+        "ssl"
+      ]
+    }
+  ]
+}

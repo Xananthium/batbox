@@ -1,0 +1,154 @@
+# =============================================================================
+# .github/workflows/cold-build-time.yml
+#
+# Cold build budget verification for batbox.
+#
+# PURPOSE
+# -------
+# Verifies that a completely cold build (empty vcpkg cache, fresh CMake build
+# directory) stays within the 20-minute nominal budget (with platform-specific
+# CI overhead factors applied — see tests/perf/measure_cold_build.sh).
+#
+# This workflow is NOT on the push/PR critical path.  Cold builds are
+# expensive (they pull and compile all vcpkg dependencies from scratch) and
+# need only run:
+#   1. On demand  — triggered manually via workflow_dispatch
+#   2. Monthly    — scheduled on the 1st of each month to detect drift as new
+#                   components land (see B.2–B.19 in CMakeLists.txt)
+#
+# CACHING STRATEGY
+# ----------------
+# Cold jobs:   NO cache restore before the build (cold = cold).
+# Post-run:    The vcpkg installed/ tree is SAVED after a successful cold run
+#              so that non-cold workflows (e.g. a separate push/PR workflow)
+#              can restore it.  The build/ directory is never cached.
+#
+# BUDGET THRESHOLDS
+# -----------------
+#   macOS arm64 (macos-14): 25 minutes (20-min nominal × 1.25 CI overhead)
+#   Linux x64 (ubuntu-latest): 30 minutes (20-min nominal × 1.50 CI overhead)
+#
+# These match the per-platform thresholds in tests/perf/measure_cold_build.sh.
+# =============================================================================
+
+name: Cold Build Time
+
+on:
+  # Manual trigger — run anytime you suspect a component added too much build time
+  workflow_dispatch:
+
+  # Monthly schedule — 1st of each month at 04:00 UTC (low-traffic window)
+  schedule:
+    - cron: '0 4 1 * *'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # macOS arm64 cold build
+  # ---------------------------------------------------------------------------
+  macos-arm64:
+    name: Cold Build — macOS arm64
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Full clone so CMakeLists.txt and cmake/ helpers are all present
+          fetch-depth: 0
+
+      - name: Install system prerequisites
+        run: |
+          # Ensure cmake, ninja, and autoconf are available.
+          # macos-14 runners ship cmake; install ninja + autoconf for vcpkg port builds.
+          brew install ninja autoconf automake libtool pkg-config
+
+      - name: Run cold build measurement
+        id: cold_build
+        run: |
+          bash tests/perf/measure_cold_build.sh --target=macos | tee cold_build_output.txt
+          # Extract and export the elapsed time for the summary step
+          BUILD_TIME_SEC=$(grep '^BUILD_TIME_SEC=' cold_build_output.txt | cut -d= -f2)
+          echo "build_time_sec=${BUILD_TIME_SEC}" >> "$GITHUB_OUTPUT"
+
+      - name: Save vcpkg installed tree (post-cold cache population)
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          # Cache the compiled vcpkg packages so non-cold workflows benefit
+          path: vcpkg/installed
+          key: vcpkg-macos-arm64-${{ hashFiles('vcpkg.json') }}-${{ github.sha }}
+
+      - name: Build time summary
+        if: always()
+        run: |
+          if [[ -f cold_build_output.txt ]]; then
+            echo "### Cold Build Result — macOS arm64" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            cat cold_build_output.txt >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Linux x64 cold build
+  # ---------------------------------------------------------------------------
+  linux-x64:
+    name: Cold Build — Linux x64
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install system prerequisites
+        run: |
+          # vcpkg port builds need these system libraries and build tools
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            ninja-build \
+            autoconf \
+            automake \
+            libtool \
+            pkg-config \
+            libssl-dev \
+            libgl1-mesa-dev \
+            libx11-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxcursor-dev \
+            libxi-dev \
+            libglu1-mesa-dev \
+            curl \
+            zip \
+            unzip \
+            tar \
+            git
+
+      - name: Run cold build measurement
+        id: cold_build
+        run: |
+          bash tests/perf/measure_cold_build.sh --target=linux | tee cold_build_output.txt
+          BUILD_TIME_SEC=$(grep '^BUILD_TIME_SEC=' cold_build_output.txt | cut -d= -f2)
+          echo "build_time_sec=${BUILD_TIME_SEC}" >> "$GITHUB_OUTPUT"
+
+      - name: Save vcpkg installed tree (post-cold cache population)
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          path: vcpkg/installed
+          key: vcpkg-linux-x64-${{ hashFiles('vcpkg.json') }}-${{ github.sha }}
+
+      - name: Build time summary
+        if: always()
+        run: |
+          if [[ -f cold_build_output.txt ]]; then
+            echo "### Cold Build Result — Linux x64" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            cat cold_build_output.txt >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi

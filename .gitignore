@@ -1,0 +1,73 @@
+# build trees — never commit
+build/
+build2/
+build_test/
+build_verify/
+build-*/
+out/
+cmake-build-*/
+
+# vcpkg vendored deps
+vcpkg/
+!vcpkg.json
+
+# caches
+.cache/
+.ccache/
+.ninja_*
+compile_commands.json
+
+# editors
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+
+# logs and session state
+*.log
+*.tmp
+batbox.log
+
+# sqlite transient
+*.db-shm
+*.db-wal
+
+# secrets — belt-and-braces, none of these should ever land here
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+credentials.json
+
+# accidental test artifacts from inference smoke tests
+mental_floss_clone.html
+mental_clone_*.html
+mental_clone_*.css
+mental_clone_*.js
+script.js
+styles.css
+/index.html
+/red/
+
+# python sidecar venv
+python-sidecar/.venv/
+**/__pycache__/
+*.pyc
+
+# tui-smoke runtime
+tests/tui-smoke/.runtime/
+tests/tui-smoke/.tmux-socket
+
+# coverage
+*.gcov
+*.gcda
+*.gcno
+coverage/
+
+# generated docs
+docs/_build/
+
+# os
+Thumbs.db

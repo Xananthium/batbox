@@ -1,0 +1,611 @@
+#!/usr/bin/env bash
+# =============================================================================
+# bin/harness — BatBox TUI smoke-test harness CLI
+#
+# Subcommands:
+#   up      [--name NAME] [--nuclear] [--api-base URL] [--cwd PATH]
+#   down    [--name NAME]
+#   send    [--name NAME] [--no-enter] "<text>"
+#   key     [--name NAME] <key-name>
+#   screen  [--name NAME]
+#   capture [--name NAME]        (alias for screen)
+#   wait_for [--name NAME] [--timeout N] "<pattern>"
+#   run     <case-file>
+#   smoke
+#   mock-llm start|stop
+#
+# All session names are automatically prefixed with "batbox-qa-" to avoid
+# collisions with the user's own tmux sessions.
+#
+# Exit codes:
+#   0  — success / pattern found
+#   1  — failure / pattern not found / timeout
+#   2  — usage error / missing argument
+#
+# Compatible with bash 3.2+ (macOS system bash).
+# Paths are resolved relative to this script's own location — no hardcoded
+# absolute paths.
+# =============================================================================
+
+set -euo pipefail
+
+# ---------------------------------------------------------------------------
+# Resolve harness root (the directory containing bin/, lib/, cases/, fixtures/)
+# This works even when the script is invoked via a symlink.
+# ---------------------------------------------------------------------------
+_HARNESS_BIN="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+HARNESS_ROOT="$(cd "${_HARNESS_BIN}/.." && pwd)"
+
+# ---------------------------------------------------------------------------
+# Source shared libraries
+# ---------------------------------------------------------------------------
+# shellcheck source=../lib/tmux_helpers.sh
+source "${HARNESS_ROOT}/lib/tmux_helpers.sh"
+# shellcheck source=../lib/assertions.sh
+source "${HARNESS_ROOT}/lib/assertions.sh"
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+_usage() {
+    cat >&2 << 'USAGE'
+Usage: harness <subcommand> [options]
+
+Subcommands:
+  up       [--name NAME] [--nuclear] [--api-base URL] [--cwd PATH]
+               Start a tmux session running BatBox (or bash for harness testing).
+               Idempotent: re-running on an existing session is a no-op.
+
+  down     [--name NAME]
+               Kill the named tmux session.
+
+  send     [--name NAME] [--no-enter] "<text>"
+               Type literal text into the session. Appends Enter by default.
+               Use --no-enter to suppress Enter.
+
+  key      [--name NAME] <key-name>
+               Send a tmux special key (Tab, BSpace, Escape, Up, C-c, ...).
+
+  screen   [--name NAME]
+               Dump current pane contents (ANSI stripped) to stdout.
+
+  capture  [--name NAME]
+               Alias for 'screen'.
+
+  wait_for [--name NAME] [--timeout N] "<pattern>"
+               Poll at 5 Hz until pattern (grep -E) appears or N seconds pass.
+               Exits 0 on match, 1 on timeout. Default timeout: 10s.
+
+  run      <case-file>
+               Execute a single case file (bash script). Exits with its status.
+
+  smoke
+               Run all cases/??_*.sh files in order. Stops on first failure.
+
+  mock-llm start [--port PORT] [--fixtures-dir DIR]
+               Start the mock LM Studio server in the background.
+               PID written to /tmp/batbox-qa-mock-llm.pid.
+
+  mock-llm stop
+               Stop the mock LM Studio server.
+
+  mock-reasoning start [--port PORT] [--chunks N] [--mode MODE]
+               Start the reasoning-only mock server (TUI-T14 / TUI-T19 fixture).
+               MODE is one of: reasoning-only (default), error-event,
+               fatal-error, inline-error.
+               PID written to /tmp/batbox-qa-mock-reasoning-only.pid.
+
+  mock-reasoning stop
+               Stop the reasoning-only mock server.
+USAGE
+    exit 2
+}
+
+_die() {
+    echo "ERROR: $*" >&2
+    exit 1
+}
+
+# ---------------------------------------------------------------------------
+# _parse_name_flag <default> "$@"
+# Extracts --name NAME from argument list.
+# Prints "<resolved_session_name> <remaining_args_count> [remaining args...]"
+# We can't return multiple values in bash 3.2 without globals, so we set:
+#   _PARSED_SESSION — session name
+#   _PARSED_ARGS    — remaining positional args as an indexed array
+# ---------------------------------------------------------------------------
+_parse_named_args() {
+    # Positional: --name foo --timeout 10 [positional...]
+    # Sets globals: _OPT_NAME, _OPT_TIMEOUT, _OPT_NO_ENTER, _OPT_NUCLEAR,
+    #               _OPT_API_BASE, _OPT_CWD, _OPT_PORT, _OPT_FIXTURES_DIR,
+    #               _OPT_MODE
+    # And _POSITIONALS array
+
+    _OPT_NAME=""
+    _OPT_TIMEOUT="10"
+    _OPT_NO_ENTER=""
+    _OPT_NUCLEAR=""
+    _OPT_API_BASE=""
+    _OPT_CWD=""
+    _OPT_PORT="${TUI_MOCK_PORT}"
+    _OPT_FIXTURES_DIR="${HARNESS_ROOT}/fixtures/transcripts"
+    _OPT_MODE=""
+    _POSITIONALS=()
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --name)
+                [ $# -ge 2 ] || _die "--name requires a value"
+                _OPT_NAME="$2"
+                shift 2
+                ;;
+            --name=*)
+                _OPT_NAME="${1#--name=}"
+                shift
+                ;;
+            --timeout)
+                [ $# -ge 2 ] || _die "--timeout requires a value"
+                _OPT_TIMEOUT="$2"
+                shift 2
+                ;;
+            --timeout=*)
+                _OPT_TIMEOUT="${1#--timeout=}"
+                shift
+                ;;
+            --no-enter)
+                _OPT_NO_ENTER="--no-enter"
+                shift
+                ;;
+            --nuclear)
+                _OPT_NUCLEAR="1"
+                shift
+                ;;
+            --api-base)
+                [ $# -ge 2 ] || _die "--api-base requires a value"
+                _OPT_API_BASE="$2"
+                shift 2
+                ;;
+            --api-base=*)
+                _OPT_API_BASE="${1#--api-base=}"
+                shift
+                ;;
+            --cwd)
+                [ $# -ge 2 ] || _die "--cwd requires a value"
+                _OPT_CWD="$2"
+                shift 2
+                ;;
+            --cwd=*)
+                _OPT_CWD="${1#--cwd=}"
+                shift
+                ;;
+            --port)
+                [ $# -ge 2 ] || _die "--port requires a value"
+                _OPT_PORT="$2"
+                shift 2
+                ;;
+            --port=*)
+                _OPT_PORT="${1#--port=}"
+                shift
+                ;;
+            --fixtures-dir)
+                [ $# -ge 2 ] || _die "--fixtures-dir requires a value"
+                _OPT_FIXTURES_DIR="$2"
+                shift 2
+                ;;
+            --fixtures-dir=*)
+                _OPT_FIXTURES_DIR="${1#--fixtures-dir=}"
+                shift
+                ;;
+            --mode)
+                [ $# -ge 2 ] || _die "--mode requires a value"
+                _OPT_MODE="$2"
+                shift 2
+                ;;
+            --mode=*)
+                _OPT_MODE="${1#--mode=}"
+                shift
+                ;;
+            --)
+                shift
+                while [ $# -gt 0 ]; do
+                    _POSITIONALS[${#_POSITIONALS[@]}]="$1"
+                    shift
+                done
+                break
+                ;;
+            -*)
+                _die "Unknown option: $1"
+                ;;
+            *)
+                _POSITIONALS[${#_POSITIONALS[@]}]="$1"
+                shift
+                ;;
+        esac
+    done
+}
+
+# ---------------------------------------------------------------------------
+# cmd_up
+# ---------------------------------------------------------------------------
+cmd_up() {
+    _parse_named_args "$@"
+
+    local session
+    session="$(tui_session_name "${_OPT_NAME}")"
+
+    # Determine the binary to run
+    local binary="${HARNESS_ROOT}/../../build/src/batbox"
+    # Normalise path
+    binary="$(cd "$(dirname "$binary")" 2>/dev/null && pwd)/$(basename "$binary")" 2>/dev/null || true
+
+    # Build environment pairs
+    local env_pairs=()
+    env_pairs[${#env_pairs[@]}]="BATBOX_NO_SPLASH=true"
+
+    if [ -n "${_OPT_API_BASE}" ]; then
+        env_pairs[${#env_pairs[@]}]="BATBOX_API_BASE_URL=${_OPT_API_BASE}"
+    elif [ -z "${BATBOX_API_BASE_URL:-}" ]; then
+        # Default to the mock LLM URL
+        env_pairs[${#env_pairs[@]}]="BATBOX_API_BASE_URL=${TUI_MOCK_BASE_URL}"
+    fi
+
+    if [ -n "${_OPT_NUCLEAR}" ]; then
+        env_pairs[${#env_pairs[@]}]="BATBOX_NUCLEAR=true"
+    fi
+
+    # Determine working directory
+    local work_dir="${_OPT_CWD:-${HARNESS_ROOT}}"
+    if [ ! -d "$work_dir" ]; then
+        _die "Working directory does not exist: $work_dir"
+    fi
+
+    # Choose command: use binary if it exists, fall back to bash (useful for
+    # harness self-tests that don't need the actual BatBox binary)
+    local run_cmd
+    if [ -x "$binary" ]; then
+        run_cmd="$binary"
+    else
+        echo "INFO: BatBox binary not found at '$binary' — starting bash shell instead." >&2
+        run_cmd="bash"
+    fi
+
+    # Build env flag list for tui_session_up
+    tui_session_up "$session" "$run_cmd" "${env_pairs[@]+"${env_pairs[@]}"}"
+    local rc=$?
+    if [ $rc -eq 0 ]; then
+        echo "OK: session '$session' up (cmd: $run_cmd)"
+    fi
+    return $rc
+}
+
+# ---------------------------------------------------------------------------
+# cmd_down
+# ---------------------------------------------------------------------------
+cmd_down() {
+    _parse_named_args "$@"
+    local session
+    session="$(tui_session_name "${_OPT_NAME}")"
+    tui_session_down "$session"
+    echo "OK: session '$session' down"
+}
+
+# ---------------------------------------------------------------------------
+# cmd_send
+# ---------------------------------------------------------------------------
+cmd_send() {
+    _parse_named_args "$@"
+    local session
+    session="$(tui_session_name "${_OPT_NAME}")"
+
+    if [ ${#_POSITIONALS[@]} -eq 0 ]; then
+        _die "send requires text argument"
+    fi
+    local text="${_POSITIONALS[0]}"
+
+    tui_send_text "$session" "$text" "${_OPT_NO_ENTER}"
+}
+
+# ---------------------------------------------------------------------------
+# cmd_key
+# ---------------------------------------------------------------------------
+cmd_key() {
+    _parse_named_args "$@"
+    local session
+    session="$(tui_session_name "${_OPT_NAME}")"
+
+    if [ ${#_POSITIONALS[@]} -eq 0 ]; then
+        _die "key requires a key-name argument (e.g. Enter, Tab, Escape, C-c)"
+    fi
+    local key="${_POSITIONALS[0]}"
+    tui_send_key "$session" "$key"
+}
+
+# ---------------------------------------------------------------------------
+# cmd_screen  (also aliased as capture)
+# ---------------------------------------------------------------------------
+cmd_screen() {
+    _parse_named_args "$@"
+    local session
+    session="$(tui_session_name "${_OPT_NAME}")"
+    tui_capture "$session"
+}
+
+# ---------------------------------------------------------------------------
+# cmd_wait_for
+# ---------------------------------------------------------------------------
+cmd_wait_for() {
+    _parse_named_args "$@"
+    local session
+    session="$(tui_session_name "${_OPT_NAME}")"
+
+    if [ ${#_POSITIONALS[@]} -eq 0 ]; then
+        _die "wait_for requires a pattern argument"
+    fi
+    local pattern="${_POSITIONALS[0]}"
+
+    tui_wait_for "$session" "$pattern" "${_OPT_TIMEOUT}"
+}
+
+# ---------------------------------------------------------------------------
+# cmd_run
+# ---------------------------------------------------------------------------
+cmd_run() {
+    if [ $# -eq 0 ]; then
+        _die "run requires a case-file argument"
+    fi
+    local case_file="$1"
+
+    if [ ! -f "$case_file" ]; then
+        # Try relative to HARNESS_ROOT
+        local candidate="${HARNESS_ROOT}/${case_file}"
+        if [ -f "$candidate" ]; then
+            case_file="$candidate"
+        else
+            _die "Case file not found: $1"
+        fi
+    fi
+
+    # Run the case file in its own subshell; inherit our PATH
+    bash "$case_file"
+}
+
+# ---------------------------------------------------------------------------
+# cmd_smoke
+# ---------------------------------------------------------------------------
+cmd_smoke() {
+    local cases_dir="${HARNESS_ROOT}/cases"
+    local failed=0
+    local count=0
+
+    # Use a loop that's bash 3.2 compatible (no globstar)
+    for case_file in "${cases_dir}"/[0-9][0-9]_*.sh; do
+        [ -f "$case_file" ] || continue
+        count=$(( count + 1 ))
+        echo "--- Running: $(basename "$case_file") ---"
+        if bash "$case_file"; then
+            echo "PASS: $(basename "$case_file")"
+        else
+            echo "FAIL: $(basename "$case_file")"
+            failed=$(( failed + 1 ))
+        fi
+    done
+
+    if [ "$count" -eq 0 ]; then
+        echo "No case files found in $cases_dir" >&2
+        return 1
+    fi
+
+    echo ""
+    echo "Results: $(( count - failed ))/$count passed"
+    return $failed
+}
+
+# ---------------------------------------------------------------------------
+# cmd_mock_llm
+# ---------------------------------------------------------------------------
+cmd_mock_llm() {
+    local action="${1:-}"
+    shift || true
+
+    case "$action" in
+        start)
+            _parse_named_args "$@"
+            local port="${_OPT_PORT}"
+            local fixtures_dir="${_OPT_FIXTURES_DIR}"
+
+            # Check if already running
+            if [ -f "${TUI_MOCK_PID_FILE}" ]; then
+                local old_pid
+                old_pid="$(cat "${TUI_MOCK_PID_FILE}")"
+                if kill -0 "$old_pid" 2>/dev/null; then
+                    echo "INFO: mock-llm already running (pid $old_pid)" >&2
+                    return 0
+                else
+                    rm -f "${TUI_MOCK_PID_FILE}"
+                fi
+            fi
+
+            local mock_script="${HARNESS_ROOT}/fixtures/mock_lmstudio.py"
+            if [ ! -f "$mock_script" ]; then
+                _die "mock_lmstudio.py not found at $mock_script"
+            fi
+
+            python3 "$mock_script" \
+                --port "$port" \
+                --fixtures-dir "$fixtures_dir" \
+                > /tmp/batbox-qa-mock-llm.log 2>&1 &
+
+            local mock_pid=$!
+
+            # Wait up to 3s for the server to be ready
+            local deadline=$(( $(date +%s) + 3 ))
+            while [ "$(date +%s)" -le "$deadline" ]; do
+                if [ -f "${TUI_MOCK_PID_FILE}" ]; then
+                    break
+                fi
+                sleep 0.1
+            done
+
+            if [ ! -f "${TUI_MOCK_PID_FILE}" ]; then
+                echo "WARNING: mock-llm did not write PID file within 3s (pid $mock_pid)" >&2
+                echo "$mock_pid" > "${TUI_MOCK_PID_FILE}"
+            fi
+
+            echo "OK: mock-llm started on port $port (pid $mock_pid)"
+            ;;
+
+        stop)
+            if [ ! -f "${TUI_MOCK_PID_FILE}" ]; then
+                echo "INFO: mock-llm not running (no PID file)" >&2
+                return 0
+            fi
+            local pid
+            pid="$(cat "${TUI_MOCK_PID_FILE}")"
+            if kill -0 "$pid" 2>/dev/null; then
+                kill "$pid"
+                # Wait up to 2s for clean exit
+                local deadline=$(( $(date +%s) + 2 ))
+                while [ "$(date +%s)" -le "$deadline" ]; do
+                    kill -0 "$pid" 2>/dev/null || break
+                    sleep 0.1
+                done
+                # Force kill if still running
+                kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null || true
+            fi
+            rm -f "${TUI_MOCK_PID_FILE}"
+            echo "OK: mock-llm stopped"
+            ;;
+
+        *)
+            _die "mock-llm requires 'start' or 'stop'"
+            ;;
+    esac
+}
+
+# ---------------------------------------------------------------------------
+# cmd_mock_reasoning — start/stop the reasoning-only mock (TUI-T14 / TUI-T19)
+# ---------------------------------------------------------------------------
+cmd_mock_reasoning() {
+    local action="${1:-}"
+    shift || true
+
+    local REASONING_PID_FILE="/tmp/batbox-qa-mock-reasoning-only.pid"
+
+    case "$action" in
+        start)
+            _parse_named_args "$@"
+            local port="${_OPT_PORT:-8828}"
+            local chunks="7"
+            local mode="${_OPT_MODE:-reasoning-only}"
+
+            # Extract --chunks from remaining positionals if present
+            # (legacy positional form; --mode is handled via _parse_named_args above)
+            local i=0
+            while [ $i -lt ${#_POSITIONALS[@]} ]; do
+                if [ "${_POSITIONALS[$i]:-}" = "--chunks" ]; then
+                    i=$(( i + 1 ))
+                    chunks="${_POSITIONALS[$i]:-7}"
+                fi
+                i=$(( i + 1 ))
+            done
+
+            # Check if already running
+            if [ -f "${REASONING_PID_FILE}" ]; then
+                local old_pid
+                old_pid="$(cat "${REASONING_PID_FILE}")"
+                if kill -0 "$old_pid" 2>/dev/null; then
+                    echo "INFO: mock-reasoning already running (pid $old_pid)" >&2
+                    return 0
+                else
+                    rm -f "${REASONING_PID_FILE}"
+                fi
+            fi
+
+            local mock_script="${HARNESS_ROOT}/fixtures/mock_reasoning_only.py"
+            if [ ! -f "$mock_script" ]; then
+                _die "mock_reasoning_only.py not found at $mock_script"
+            fi
+
+            python3 "$mock_script" \
+                --port "$port" \
+                --chunks "$chunks" \
+                --mode "$mode" \
+                > /tmp/batbox-qa-mock-reasoning-only.log 2>&1 &
+
+            local mock_pid=$!
+
+            # Wait up to 3s for PID file
+            local deadline=$(( $(date +%s) + 3 ))
+            while [ "$(date +%s)" -le "$deadline" ]; do
+                if [ -f "${REASONING_PID_FILE}" ]; then
+                    break
+                fi
+                sleep 0.1
+            done
+
+            if [ ! -f "${REASONING_PID_FILE}" ]; then
+                echo "WARNING: mock-reasoning did not write PID file within 3s (pid $mock_pid)" >&2
+                echo "$mock_pid" > "${REASONING_PID_FILE}"
+            fi
+
+            echo "OK: mock-reasoning started on port $port in mode '$mode' (pid $mock_pid)"
+            ;;
+
+        stop)
+            if [ ! -f "${REASONING_PID_FILE}" ]; then
+                echo "INFO: mock-reasoning not running (no PID file)" >&2
+                return 0
+            fi
+            local pid
+            pid="$(cat "${REASONING_PID_FILE}")"
+            if kill -0 "$pid" 2>/dev/null; then
+                kill "$pid"
+                local deadline=$(( $(date +%s) + 2 ))
+                while [ "$(date +%s)" -le "$deadline" ]; do
+                    kill -0 "$pid" 2>/dev/null || break
+                    sleep 0.1
+                done
+                kill -0 "$pid" 2>/dev/null && kill -9 "$pid" 2>/dev/null || true
+            fi
+            rm -f "${REASONING_PID_FILE}"
+            echo "OK: mock-reasoning stopped"
+            ;;
+
+        *)
+            _die "mock-reasoning requires 'start' or 'stop'"
+            ;;
+    esac
+}
+
+# ---------------------------------------------------------------------------
+# Main dispatch
+# ---------------------------------------------------------------------------
+main() {
+    if [ $# -eq 0 ]; then
+        _usage
+    fi
+
+    local subcmd="$1"
+    shift
+
+    case "$subcmd" in
+        up)         cmd_up "$@" ;;
+        down)       cmd_down "$@" ;;
+        send)       cmd_send "$@" ;;
+        key)        cmd_key "$@" ;;
+        screen)     cmd_screen "$@" ;;
+        capture)    cmd_screen "$@" ;;    # alias
+        wait_for)   cmd_wait_for "$@" ;;
+        run)        cmd_run "$@" ;;
+        smoke)      cmd_smoke "$@" ;;
+        mock-llm)   cmd_mock_llm "$@" ;;
+        mock-reasoning) cmd_mock_reasoning "$@" ;;
+        --help|-h|help) _usage ;;
+        *)
+            echo "ERROR: Unknown subcommand: $subcmd" >&2
+            _usage
+            ;;
+    esac
+}
+
+main "$@"

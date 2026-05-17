@@ -1,0 +1,12 @@
+{
+  "name": "example-plugin",
+  "version": "1.0.0",
+  "description": "Example plugin fixture for integration tests",
+  "mcpServers": {
+    "example-server": {
+      "command": "node",
+      "args": ["server.js"],
+      "env": {}
+    }
+  }
+}
