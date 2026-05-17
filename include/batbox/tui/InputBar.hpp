@@ -45,6 +45,14 @@
 //  • Splash placeholder: set_splash_showing(true) before first prompt.
 //    Cleared by set_splash_showing(false) after first submit.
 //
+// TUI-FIX-T4: Segment model
+// -------------------------
+//  Buffer is now std::vector<InputSegment> (TextSegment | PasteSegment).
+//  Cursor is SegCursor {seg_idx, byte_off}.
+//  Public API (buffer(), cursor(), set_buffer(), clear()) is preserved; these
+//  methods flatten/reconstruct the segment vector transparently so existing
+//  callers continue to work without changes.
+//
 // Thread safety
 // -------------
 //  All methods must be called from the FTXUI event loop thread (main thread).
@@ -60,6 +68,7 @@
 #include <batbox/repl/Keybindings.hpp>
 #include <batbox/repl/VimMode.hpp>
 #include <batbox/theme/Theme.hpp>
+#include <batbox/tui/InputSegment.hpp>
 #include <batbox/tui/ThemeApply.hpp>
 
 #include <atomic>
@@ -113,6 +122,11 @@ public:
     /// Called to obtain slash command names for the palette overlay.
     /// Returns sorted list of slash command names without the leading '/'.
     using SlashCommandProvider = std::function<std::vector<std::string>()>;
+
+    /// Called when the user presses Esc while a stream is in flight.
+    /// Invoked from the FTXUI event-loop thread.  The callback should call
+    /// request_stop() on the active CancelSource via a thread-safe mechanism.
+    using InterruptCallback = std::function<void()>;
 
     // ---- Construction -------------------------------------------------------
 
@@ -214,6 +228,19 @@ public:
     /// Must be called from the UI thread (FTXUI event-loop thread).
     void set_stream_active(bool active);
 
+    /// Register a callback invoked when the user presses Esc while a stream
+    /// is in flight (stream_active_ == true).
+    ///
+    /// Called on the FTXUI event-loop thread.  The canonical implementation
+    /// captures a shared_ptr<CancelSource> and calls request_stop() on it so
+    /// the SSE worker thread detects cancellation at its next poll point.
+    ///
+    /// When nullptr (default), Esc while streaming is a no-op for the interrupt
+    /// path (existing Cancel semantics still apply when stream is inactive).
+    ///
+    /// Must be called from the UI thread before the event loop starts.
+    void set_on_interrupt(InterruptCallback cb);
+
     /// Set the current thinking-effort level shown in the footer right chip.
     ///
     /// Defaults to "medium". Accepted values: "low", "medium", "high".
@@ -249,10 +276,12 @@ public:
 
     // ---- Buffer access (read-only, from UI thread) --------------------------
 
-    /// Return a copy of the current input buffer.
+    /// Return a copy of the current input buffer (flattened from all segments).
     [[nodiscard]] std::string buffer() const;
 
-    /// Return the current cursor position (byte offset into buffer).
+    /// Return the current cursor position as a flat byte offset into the
+    /// flattened buffer string.  This preserves backward compatibility with
+    /// callers that use cursor() as a byte index.
     [[nodiscard]] std::size_t cursor() const noexcept;
 
     // ---- Vim mode -----------------------------------------------------------
@@ -270,6 +299,21 @@ public:
 
     /// Set the buffer content and move cursor to end (for history navigation / paste).
     void set_buffer(std::string text);
+
+    // ---- TUI-FIX-T4: segment model public helpers ---------------------------
+
+    /// Insert a bracketed-paste body at the current cursor position.
+    ///
+    /// If body is shorter than kPasteChipMinChars AND contains no newlines,
+    /// it is inserted as plain text in the current Text segment (no chip).
+    /// Otherwise a PasteSegment chip is created with the next paste id.
+    ///
+    /// Called from OnEvent when the \e[200~...\e[201~] envelope is complete.
+    void insert_paste(std::string body);
+
+    /// Flatten all segments into a single string (paste bodies expanded).
+    /// This is what gets submitted to on_submit_.
+    [[nodiscard]] std::string flatten_for_submit() const;
 
 private:
     // ---- Render helpers -----------------------------------------------------
@@ -335,11 +379,35 @@ private:
 
     // ---- Internal helpers ---------------------------------------------------
 
-    /// Apply a VimAction returned by vim_mode_ to buf_ / cursor_.
+    /// Apply a VimAction returned by vim_mode_ to the buffer.
+    /// For vim operations, works on the flattened string then re-sets buffer.
     void apply_vim_action(const batbox::repl::VimAction& action);
 
-    /// Insert a single UTF-8 character sequence at cursor.
+    /// Insert a single UTF-8 character sequence at the current cursor position
+    /// in the current (or a new) Text segment.
     void insert_at_cursor(std::string_view text);
+
+    // ---- TUI-FIX-T4: segment model internals --------------------------------
+
+    /// Return the flat byte offset corresponding to the current SegCursor.
+    [[nodiscard]] std::size_t flat_cursor_offset() const noexcept;
+
+    /// Set the SegCursor from a flat byte offset into the flattened buffer.
+    void set_seg_cursor_from_flat(std::size_t flat_offset);
+
+    /// Ensure the segment at seg_cursor_.seg_idx is a TextSegment.
+    /// If the cursor is at a PasteSegment, split or insert as needed.
+    /// Returns a reference to the Text body at the cursor.
+    TextSegment& cursor_text_segment();
+
+    /// Remove empty TextSegments and merge adjacent TextSegments.
+    void normalize_segments();
+
+    /// Build the chip label for a PasteSegment.
+    [[nodiscard]] static std::string paste_chip_label(const PasteSegment& ps);
+
+    /// Returns true when the buffer (all segments combined) is logically empty.
+    [[nodiscard]] bool is_empty() const noexcept;
 
     // ---- State --------------------------------------------------------------
 
@@ -354,12 +422,26 @@ private:
     SubmitCallback        on_submit_;
     SlashCommandProvider  slash_provider_;
     AutocompleteProvider  ac_provider_;
+    InterruptCallback     on_interrupt_;  ///< Fired when Esc pressed while stream_active_.
 
-    // Input buffer
-    std::string  buf_;
-    std::size_t  cursor_{0};
+    // ---- TUI-FIX-T4: segment model buffer -----------------------------------
+    /// Buffer as a list of segments.  Always contains at least one TextSegment
+    /// (possibly with an empty body) so cursor operations have a valid target.
+    std::vector<InputSegment> segments_;
 
-    // Vim mode state machine
+    /// Cursor position within segments_.
+    SegCursor seg_cursor_{0, 0};
+
+    /// Per-session paste counter; incremented each time a Paste chip is created.
+    int paste_id_counter_{0};
+
+    /// True while accumulating a bracketed paste sequence (\e[200~...\e[201~).
+    bool in_paste_seq_{false};
+
+    /// Accumulated paste bytes (between \e[200~ and \e[201~).
+    std::string paste_accumulator_;
+
+    // ---- Vim mode state machine ---
     batbox::repl::VimMode vim_mode_;
 
     // Status line
@@ -376,18 +458,13 @@ private:
 
     // --- Splash placeholder (TUI-FLOW-T4) ---
     /// True while the SplashBanner is visible and no text has been typed.
-    /// When true and buf_ is empty, the prompt row shows a muted placeholder
-    /// instead of a blank cursor. Set to false by set_splash_showing(false)
-    /// after the first submit, or by any keypress that puts text in buf_.
     bool splash_showing_{false};
 
     // --- TUI-FLOW-T9: contextual placeholder rotation ---
     /// Rotating placeholder templates.  Index 0 is the T4 default fallback.
-    /// Populated by set_placeholder_templates(); empty = use kSplashPlaceholder.
     std::vector<std::string> placeholder_templates_;
 
     /// Frame counter incremented on each placeholder render call.
-    /// Divided by kPlaceholderFrameThrottle to advance template index slowly.
     mutable int placeholder_frame_counter_{0};
 
     // --- TUI-FLOW-T6: footer hint chips ---
@@ -395,37 +472,37 @@ private:
     bool stream_active_{false};
 
     /// Current thinking-effort level shown in the right footer chip.
-    /// Default "medium"; overridden by set_effort_level().
     std::string effort_level_{"medium"};
 
     /// Count of currently-failed MCP servers (0 = chip hidden, >0 = chip shown).
-    /// Populated by set_mcp_failed(); ready for TUI-FLOW-T11 to call.
-    /// Changed to std::atomic<int> by TUI-FLOW-T11 so McpStatusPoller can
-    /// call set_mcp_failed() from the poller thread without data races.
     std::atomic<int> mcp_failed_{0};
 
     // --- Slash palette overlay state ---
     bool                     palette_open_{false};
     std::string              palette_filter_str_;
-    std::vector<std::string> palette_all_;      ///< full list from slash_provider_
-    std::vector<std::string> palette_filtered_; ///< current filtered subset
+    std::vector<std::string> palette_all_;
+    std::vector<std::string> palette_filtered_;
     int                      palette_selected_{0};
 
     // --- Autocomplete state ---
     std::vector<std::string> ac_candidates_;
     int                      ac_index_{-1};
-    std::string              ac_prefix_;   ///< prefix at time Tab was first pressed
+    std::string              ac_prefix_;
 
     // --- TUI-FLOW-T3: perf HUD ---
-    /// True when BATBOX_PERF_HUD env var is set and non-empty at construction.
-    /// Checked once in the constructor — zero per-frame overhead when false.
     bool perf_hud_enabled_{false};
 
     // --- TUI-PERM-T1: permission gate for Shift+Tab mode cycle ---
-    /// Non-owning raw pointer set by set_permission_gate(); null = no cycle.
-    /// Null-safe: CycleMode handler checks before calling set_mode/current_mode.
     batbox::permissions::PermissionGate* perm_gate_{nullptr};
 };
+
+// =============================================================================
+// Constants
+// =============================================================================
+
+/// Minimum paste body length (in bytes) to create a PasteSegment chip.
+/// Pastes below this threshold with no newlines are inserted as plain text.
+inline constexpr int kPasteChipMinChars = 200;
 
 // =============================================================================
 // Factory

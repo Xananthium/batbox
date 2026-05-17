@@ -650,7 +650,15 @@ ftxui::Element ChatView::OnRender() {
         int paint_ms = static_cast<int>(
             std::chrono::duration_cast<std::chrono::milliseconds>(
                 render_start - pending_token_post_time_).count());
-        batbox::perf::g_perf.set_stream_to_paint_ms(paint_ms);
+        // TUI-FIX-T9: EMA over last 16 tokens (alpha = 1/16).
+        if (paint_ema_ms_ == 0) {
+            paint_ema_ms_ = paint_ms;
+        } else {
+            paint_ema_ms_ = paint_ema_ms_ + (paint_ms - paint_ema_ms_) / 16;
+        }
+        if (batbox::perf::g_perf_enabled.load(std::memory_order_relaxed)) {
+            batbox::perf::g_perf.set_stream_to_paint_ms(paint_ema_ms_);
+        }
         // Reset so we only record once per token batch.
         pending_token_post_time_ = std::chrono::steady_clock::time_point{};
     }
@@ -714,13 +722,21 @@ ftxui::Element ChatView::OnRender() {
     // The size() decorator captures the rendered box dimensions into our field.
     last_visible_height_ = std::max(last_visible_height_, 8);
 
-    // TUI-FLOW-T3: record per-frame render duration.
+    // TUI-FIX-T9: record per-frame render duration with EMA (alpha = 1/8).
     {
         auto render_end = std::chrono::steady_clock::now();
         int frame_ms = static_cast<int>(
             std::chrono::duration_cast<std::chrono::milliseconds>(
                 render_end - render_start).count());
-        batbox::perf::g_perf.set_frame_ms(frame_ms);
+        // EMA over last 8 frames.
+        if (frame_ema_ms_ == 0) {
+            frame_ema_ms_ = frame_ms;
+        } else {
+            frame_ema_ms_ = frame_ema_ms_ + (frame_ms - frame_ema_ms_) / 8;
+        }
+        if (batbox::perf::g_perf_enabled.load(std::memory_order_relaxed)) {
+            batbox::perf::g_perf.set_frame_ms(frame_ema_ms_);
+        }
     }
 
     return content

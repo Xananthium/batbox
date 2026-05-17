@@ -1,8 +1,9 @@
 // src/tui/InputBar.cpp
 // ---------------------------------------------------------------------------
-// batbox::tui::InputBar implementation.
+// batbox::tui::InputBar implementation — TUI-FIX-T4 segment-model refactor.
 //
 // See include/batbox/tui/InputBar.hpp for design notes and API contract.
+// See include/batbox/tui/InputSegment.hpp for the segment type definitions.
 // ---------------------------------------------------------------------------
 
 #include <batbox/tui/InputBar.hpp>
@@ -16,6 +17,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <cstddef>
+#include <numeric>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -50,13 +52,21 @@ constexpr std::string_view kInputEscape      = "\x1b";
 constexpr std::string_view kInputReturn      = "\x0a";
 constexpr std::string_view kInputCtrlM       = "\x0d";
 
+// TUI-FIX-T4: bracketed paste sequences
+constexpr std::string_view kBracketedPasteStart = "\x1b[200~";
+constexpr std::string_view kBracketedPasteEnd   = "\x1b[201~";
+
+// TUI-FIX-T4: additional Shift+Enter encodings (beyond kitty \x1b[13;2u
+// which is already handled by Keybindings via ReplAction::Newline).
+// "\x1b\r" — Alt+Enter / Shift+Enter in many terminals (xterm, Terminal.app)
+// "\x1b[27;2;13~" — libvte / some CSI-u implementations
+constexpr std::string_view kShiftEnterAlt   = "\x1b\r";
+constexpr std::string_view kShiftEnterCSIU  = "\x1b[27;2;13~";
+
 /// Default contextual placeholder shown when the splash banner is visible.
-/// Matches the acceptance criterion: 'Try "/help" or "plan a feature"'.
-/// Also serves as the index-0 fallback when placeholder_templates_ is empty.
 constexpr std::string_view kSplashPlaceholder = "Try '/help' or 'plan a feature'";
 
 /// Number of render frames between placeholder template advances (TUI-FLOW-T9).
-/// At ~60fps this is approximately 2 seconds per template.
 constexpr int kPlaceholderFrameThrottle = 120;
 
 /// Format a token count with comma separators.
@@ -80,8 +90,6 @@ std::string format_cost(double usd) {
 }
 
 /// Map a PermissionMode to the short display label shown in the footer chip.
-/// Default → "default"  Plan → "plan"  AcceptEdits → "accept edits"
-/// Nuclear  → "NUCLEAR" (all-caps to signal danger)
 std::string mode_chip_label(batbox::permissions::PermissionMode mode) {
     using M = batbox::permissions::PermissionMode;
     switch (mode) {
@@ -120,7 +128,7 @@ bool ci_contains(std::string_view haystack, std::string_view needle) {
     return it != haystack.end();
 }
 
-/// Returns true when the event is a ToolRunning payload event (has the prefix).
+/// Returns true when the event is a ToolRunning payload event.
 bool has_prefix_tool_running(const ftxui::Event& ev) {
     static constexpr const char* kPrefix = "batbox.tool-running";
     const std::string& s = ev.input();
@@ -128,7 +136,7 @@ bool has_prefix_tool_running(const ftxui::Event& ev) {
     return s.size() > plen && s.compare(0, plen, kPrefix) == 0 && s[plen] == ':';
 }
 
-/// Returns true when the event is a ToolDone payload event (has the prefix).
+/// Returns true when the event is a ToolDone payload event.
 bool has_prefix_tool_done(const ftxui::Event& ev) {
     static constexpr const char* kPrefix = "batbox.tool-done";
     const std::string& s = ev.input();
@@ -136,7 +144,7 @@ bool has_prefix_tool_done(const ftxui::Event& ev) {
     return s.size() > plen && s.compare(0, plen, kPrefix) == 0 && s[plen] == ':';
 }
 
-/// Returns true when the event is a ThinkingStarted payload event (has the prefix).
+/// Returns true when the event is a ThinkingStarted payload event.
 bool has_prefix_thinking_started(const ftxui::Event& ev) {
     static constexpr const char* kPrefix = "batbox.thinking-started";
     const std::string& s = ev.input();
@@ -144,12 +152,26 @@ bool has_prefix_thinking_started(const ftxui::Event& ev) {
     return s.size() > plen && s.compare(0, plen, kPrefix) == 0 && s[plen] == ':';
 }
 
-/// Returns true when the event is a ThinkingStopped payload event (has the prefix).
+/// Returns true when the event is a ThinkingStopped payload event.
 bool has_prefix_thinking_stopped(const ftxui::Event& ev) {
     static constexpr const char* kPrefix = "batbox.thinking-stopped";
     const std::string& s = ev.input();
     const std::size_t plen = std::strlen(kPrefix);
     return s.size() > plen && s.compare(0, plen, kPrefix) == 0 && s[plen] == ':';
+}
+
+/// Count UTF-8 characters in a string (approximate: counts leading bytes only).
+int count_utf8_chars(const std::string& s) {
+    int count = 0;
+    for (unsigned char c : s) {
+        if ((c & 0xC0) != 0x80) ++count;
+    }
+    return count;
+}
+
+/// Count newlines in a string.
+int count_newlines(const std::string& s) {
+    return static_cast<int>(std::count(s.begin(), s.end(), '\n'));
 }
 
 } // anonymous namespace
@@ -171,14 +193,18 @@ InputBar::InputBar(batbox::theme::ThemeRef       theme,
     , slash_provider_(std::move(slash_provider))
     , ac_provider_(std::move(ac_provider))
 {
+    // Initialise with a single empty TextSegment so the buffer is never empty
+    // of segments (cursor operations always have a valid target).
+    segments_.emplace_back(TextSegment{""});
+    seg_cursor_ = SegCursor{0, 0};
+
     // Respect BATBOX_VIM_MODE env var at construction
     const char* vim_env = std::getenv("BATBOX_VIM_MODE");
     if (vim_env && std::string_view(vim_env) == "true") {
         vim_mode_.set_enabled(true);
     }
 
-    // TUI-FLOW-T3: check BATBOX_PERF_HUD once at construction — zero overhead
-    // when the env var is unset (no per-frame getenv calls).
+    // TUI-FLOW-T3: check BATBOX_PERF_HUD once at construction
     {
         const char* hud_env = std::getenv("BATBOX_PERF_HUD");
         perf_hud_enabled_ = (hud_env != nullptr && hud_env[0] != '\0'
@@ -226,7 +252,7 @@ void InputBar::set_splash_showing(bool showing) {
 
 void InputBar::set_placeholder_templates(std::vector<std::string> templates) {
     placeholder_templates_ = std::move(templates);
-    placeholder_frame_counter_ = 0;   // reset rotation on new template list
+    placeholder_frame_counter_ = 0;
 }
 
 // =============================================================================
@@ -235,6 +261,10 @@ void InputBar::set_placeholder_templates(std::vector<std::string> templates) {
 
 void InputBar::set_stream_active(bool active) {
     stream_active_ = active;
+}
+
+void InputBar::set_on_interrupt(InterruptCallback cb) {
+    on_interrupt_ = std::move(cb);
 }
 
 void InputBar::set_effort_level(std::string level) {
@@ -251,23 +281,21 @@ void InputBar::set_mcp_failed(int n) {
 
 void InputBar::set_permission_gate(batbox::permissions::PermissionGate* gate) {
     perm_gate_ = gate;
-    // Initialise the mode label from the gate's current mode so the footer chip
-    // shows the correct state even before the user presses Shift+Tab.
     if (perm_gate_) {
         status_.mode_label = mode_chip_label(perm_gate_->current_mode());
     }
 }
 
 // =============================================================================
-// Public API — buffer
+// Public API — buffer (backward-compatible flat API)
 // =============================================================================
 
 std::string InputBar::buffer() const {
-    return buf_;
+    return flatten_for_submit();
 }
 
 std::size_t InputBar::cursor() const noexcept {
-    return cursor_;
+    return flat_cursor_offset();
 }
 
 // =============================================================================
@@ -287,8 +315,12 @@ void InputBar::toggle_vim() {
 // =============================================================================
 
 void InputBar::clear() {
-    buf_.clear();
-    cursor_ = 0;
+    segments_.clear();
+    segments_.emplace_back(TextSegment{""});
+    seg_cursor_ = SegCursor{0, 0};
+    paste_id_counter_ = 0;  // reset paste counter on clear
+    in_paste_seq_ = false;
+    paste_accumulator_.clear();
     history_.reset_cursor();
     palette_close();
     autocomplete_reset();
@@ -296,9 +328,240 @@ void InputBar::clear() {
 }
 
 void InputBar::set_buffer(std::string text) {
-    buf_    = std::move(text);
-    cursor_ = buf_.size();
+    segments_.clear();
+    segments_.emplace_back(TextSegment{text});
+    seg_cursor_ = SegCursor{0, text.size()};
+    in_paste_seq_ = false;
+    paste_accumulator_.clear();
     autocomplete_reset();
+}
+
+// =============================================================================
+// TUI-FIX-T4: segment model — flatten and cursor helpers
+// =============================================================================
+
+std::string InputBar::flatten_for_submit() const {
+    std::string result;
+    for (const auto& seg : segments_) {
+        if (const auto* ts = std::get_if<TextSegment>(&seg)) {
+            result += ts->body;
+        } else if (const auto* ps = std::get_if<PasteSegment>(&seg)) {
+            result += ps->body;
+        }
+    }
+    return result;
+}
+
+std::size_t InputBar::flat_cursor_offset() const noexcept {
+    std::size_t offset = 0;
+    for (std::size_t i = 0; i < seg_cursor_.seg_idx && i < segments_.size(); ++i) {
+        if (const auto* ts = std::get_if<TextSegment>(&segments_[i])) {
+            offset += ts->body.size();
+        } else if (const auto* ps = std::get_if<PasteSegment>(&segments_[i])) {
+            offset += ps->body.size();
+        }
+    }
+    // Add byte offset within the current segment (only applies to TextSegments)
+    if (seg_cursor_.seg_idx < segments_.size()) {
+        if (std::get_if<TextSegment>(&segments_[seg_cursor_.seg_idx])) {
+            offset += seg_cursor_.byte_off;
+        }
+        // For PasteSegments, byte_off is always 0; the cursor sits before them.
+    }
+    return offset;
+}
+
+void InputBar::set_seg_cursor_from_flat(std::size_t flat_offset) {
+    std::size_t remaining = flat_offset;
+    for (std::size_t i = 0; i < segments_.size(); ++i) {
+        std::size_t seg_len = 0;
+        if (const auto* ts = std::get_if<TextSegment>(&segments_[i])) {
+            seg_len = ts->body.size();
+            if (remaining <= seg_len) {
+                seg_cursor_ = SegCursor{i, remaining};
+                return;
+            }
+        } else if (const auto* ps = std::get_if<PasteSegment>(&segments_[i])) {
+            seg_len = ps->body.size();
+            if (remaining < seg_len) {
+                // Cursor cannot enter paste; place it before this segment.
+                seg_cursor_ = SegCursor{i, 0};
+                return;
+            }
+            // If remaining == seg_len, the cursor is right after the paste segment.
+            // If remaining > seg_len, we fall through to next segment.
+        }
+        remaining -= seg_len;
+    }
+    // Cursor at end of buffer: point at (segments_.size() - 1, last_text_size)
+    // or create an end position.
+    if (!segments_.empty()) {
+        std::size_t last = segments_.size() - 1;
+        if (const auto* ts = std::get_if<TextSegment>(&segments_[last])) {
+            seg_cursor_ = SegCursor{last, std::min(remaining, ts->body.size())};
+        } else {
+            // Last segment is paste — cursor sits at end (after paste)
+            // We represent this as seg_idx = segments_.size() (past end).
+            seg_cursor_ = SegCursor{segments_.size(), 0};
+        }
+    } else {
+        seg_cursor_ = SegCursor{0, 0};
+    }
+}
+
+bool InputBar::is_empty() const noexcept {
+    for (const auto& seg : segments_) {
+        if (const auto* ts = std::get_if<TextSegment>(&seg)) {
+            if (!ts->body.empty()) return false;
+        } else {
+            // Any paste segment makes it non-empty
+            return false;
+        }
+    }
+    return true;
+}
+
+void InputBar::normalize_segments() {
+    // Step 1: Remove empty TextSegments (except keep one if all empty)
+    // Step 2: Merge adjacent TextSegments
+
+    // Build a new segment list
+    std::vector<InputSegment> result;
+    for (auto& seg : segments_) {
+        if (const auto* ts = std::get_if<TextSegment>(&seg)) {
+            if (ts->body.empty()) continue;
+            // Try to merge with last segment if it's also Text
+            if (!result.empty() && std::get_if<TextSegment>(&result.back())) {
+                std::get<TextSegment>(result.back()).body += ts->body;
+            } else {
+                result.push_back(seg);
+            }
+        } else {
+            result.push_back(seg);
+        }
+    }
+
+    // Always keep at least one (empty) TextSegment
+    if (result.empty()) {
+        result.emplace_back(TextSegment{""});
+    } else if (!std::get_if<TextSegment>(&result.back())) {
+        // Ensure we end with a TextSegment so the cursor can sit at end
+        result.emplace_back(TextSegment{""});
+    }
+
+    // Update segments_ and recompute cursor from flat offset
+    std::size_t flat = flat_cursor_offset();
+    segments_ = std::move(result);
+    set_seg_cursor_from_flat(flat);
+}
+
+// static
+std::string InputBar::paste_chip_label(const PasteSegment& ps) {
+    if (ps.line_count > 0) {
+        return "[Pasted text #" + std::to_string(ps.id)
+             + " +" + std::to_string(ps.line_count) + " lines]";
+    } else {
+        return "[Pasted text #" + std::to_string(ps.id)
+             + " (" + std::to_string(ps.char_count) + " chars)]";
+    }
+}
+
+// =============================================================================
+// TUI-FIX-T4: insert_paste
+// =============================================================================
+
+void InputBar::insert_paste(std::string body) {
+    const int newlines  = count_newlines(body);
+    const int char_cnt  = count_utf8_chars(body);
+
+    // Sub-threshold: insert as plain text (no chip)
+    if (newlines == 0 && char_cnt < kPasteChipMinChars) {
+        insert_at_cursor(body);
+        return;
+    }
+
+    // Build a PasteSegment chip
+    ++paste_id_counter_;
+    PasteSegment ps;
+    ps.id          = paste_id_counter_;
+    ps.body        = std::move(body);
+    ps.line_count  = newlines;
+    ps.char_count  = char_cnt;
+
+    // Insert at current cursor:
+    // Split the current TextSegment at the cursor position, insert paste in middle.
+    std::size_t si = seg_cursor_.seg_idx;
+    std::size_t bo = seg_cursor_.byte_off;
+
+    if (si < segments_.size() && std::get_if<TextSegment>(&segments_[si])) {
+        auto& ts = std::get<TextSegment>(segments_[si]);
+        std::string before = ts.body.substr(0, bo);
+        std::string after  = ts.body.substr(bo);
+
+        // Replace current text segment with: before_text + paste + after_text
+        std::vector<InputSegment> replacement;
+        if (!before.empty()) replacement.emplace_back(TextSegment{before});
+        replacement.emplace_back(std::move(ps));
+        replacement.emplace_back(TextSegment{after});
+
+        segments_.erase(segments_.begin() + static_cast<std::ptrdiff_t>(si));
+        segments_.insert(segments_.begin() + static_cast<std::ptrdiff_t>(si),
+                         std::make_move_iterator(replacement.begin()),
+                         std::make_move_iterator(replacement.end()));
+
+        // Cursor sits right after the paste segment (before the after_text)
+        std::size_t paste_idx = si + (before.empty() ? 0 : 1);
+        seg_cursor_ = SegCursor{paste_idx + 1, 0};
+    } else {
+        // Cursor is not on a text segment (e.g. at end past all segments)
+        // Insert paste segment at current index and add trailing text
+        if (si >= segments_.size()) {
+            segments_.emplace_back(std::move(ps));
+            segments_.emplace_back(TextSegment{""});
+            seg_cursor_ = SegCursor{segments_.size() - 1, 0};
+        } else {
+            segments_.insert(segments_.begin() + static_cast<std::ptrdiff_t>(si),
+                             std::move(ps));
+            seg_cursor_ = SegCursor{si + 1, 0};
+        }
+    }
+
+    normalize_segments();
+}
+
+// =============================================================================
+// Internal: cursor_text_segment
+// =============================================================================
+
+TextSegment& InputBar::cursor_text_segment() {
+    // If cursor is within or at the end of a TextSegment, return it.
+    if (seg_cursor_.seg_idx < segments_.size()) {
+        if (auto* ts = std::get_if<TextSegment>(&segments_[seg_cursor_.seg_idx])) {
+            return *ts;
+        }
+        // Cursor is AT a PasteSegment (byte_off == 0).
+        // Insert a new TextSegment before the paste segment.
+        segments_.insert(
+            segments_.begin() + static_cast<std::ptrdiff_t>(seg_cursor_.seg_idx),
+            TextSegment{""});
+        // seg_cursor_.seg_idx still points to the new TextSegment.
+        return std::get<TextSegment>(segments_[seg_cursor_.seg_idx]);
+    }
+    // Cursor is past the end of segments_.
+    segments_.emplace_back(TextSegment{""});
+    seg_cursor_.seg_idx = segments_.size() - 1;
+    seg_cursor_.byte_off = 0;
+    return std::get<TextSegment>(segments_.back());
+}
+
+// =============================================================================
+// Internal: insert_at_cursor
+// =============================================================================
+
+void InputBar::insert_at_cursor(std::string_view text) {
+    auto& ts = cursor_text_segment();
+    ts.body.insert(seg_cursor_.byte_off, text);
+    seg_cursor_.byte_off += text.size();
 }
 
 // =============================================================================
@@ -308,7 +571,6 @@ void InputBar::set_buffer(std::string text) {
 ftxui::Element InputBar::OnRender() {
     Elements rows;
 
-    // Palette overlay renders above the prompt when open
     if (palette_open_) {
         rows.push_back(render_palette_overlay());
     }
@@ -326,13 +588,8 @@ ftxui::Element InputBar::render_prompt_row() const {
     auto muted_color  = color_for(theme_, ThemeRole::Muted);
 
     // TUI-FLOW-T4 + TUI-FLOW-T9: show contextual placeholder when splash is
-    // visible and the input buffer is empty.  The placeholder is chosen from the
-    // rotating template list (set via set_placeholder_templates).  It vanishes
-    // the moment the user types anything (buf_ becomes non-empty).
-    if (splash_showing_ && buf_.empty()) {
-        // TUI-FLOW-T9: select template by throttled frame counter.
-        // Advance the counter every call (once per render frame).
-        // Divide by kPlaceholderFrameThrottle to slow rotation to ~2s per step.
+    // visible and the input buffer is logically empty.
+    if (splash_showing_ && is_empty()) {
         std::string placeholder_text;
         if (placeholder_templates_.empty()) {
             placeholder_text = std::string(kSplashPlaceholder);
@@ -344,46 +601,123 @@ ftxui::Element InputBar::render_prompt_row() const {
         ++placeholder_frame_counter_;
 
         return hbox({
-            text("> ")           | ftxui::color(prefix_color) | bold,
+            text("> ")             | ftxui::color(prefix_color) | bold,
             text(placeholder_text) | ftxui::color(muted_color),
         });
     }
 
-    // Normal rendering: split buffer at cursor for visual cursor highlight.
-    std::string before_cursor = buf_.substr(0, cursor_);
-    std::string at_cursor;
-    std::string after_cursor;
+    // Normal rendering: build prompt as a sequence of text spans and paste chips.
+    // The cursor is positioned within the text.
+    const std::size_t flat_cur = flat_cursor_offset();
+    const std::string flat_buf = flatten_for_submit();
 
-    if (cursor_ < buf_.size()) {
-        unsigned char c = static_cast<unsigned char>(buf_[cursor_]);
-        std::size_t char_len = 1;
-        if (c >= 0xF0)      char_len = 4;
-        else if (c >= 0xE0) char_len = 3;
-        else if (c >= 0xC0) char_len = 2;
-        char_len = std::min(char_len, buf_.size() - cursor_);
-        at_cursor    = buf_.substr(cursor_, char_len);
-        after_cursor = buf_.substr(cursor_ + char_len);
-    } else {
-        at_cursor = " ";
+    // Split the flattened buffer into before/at/after cursor for cursor highlight.
+    // However, we want to preserve paste chip rendering for PasteSegments.
+    // Strategy: render segment by segment, tracking flat offset to place cursor.
+
+    Elements prompt_parts;
+    std::size_t flat_pos = 0;
+
+    for (std::size_t si = 0; si < segments_.size(); ++si) {
+        if (const auto* ts = std::get_if<TextSegment>(&segments_[si])) {
+            const std::string& body = ts->body;
+
+            if (flat_cur >= flat_pos && flat_cur <= flat_pos + body.size()) {
+                // Cursor is within this text segment
+                std::size_t local_cur = flat_cur - flat_pos;
+                std::string before = body.substr(0, local_cur);
+                std::string at_cur;
+                std::string after;
+
+                if (local_cur < body.size()) {
+                    unsigned char c = static_cast<unsigned char>(body[local_cur]);
+                    std::size_t char_len = 1;
+                    if (c >= 0xF0)      char_len = 4;
+                    else if (c >= 0xE0) char_len = 3;
+                    else if (c >= 0xC0) char_len = 2;
+                    char_len = std::min(char_len, body.size() - local_cur);
+                    at_cur = body.substr(local_cur, char_len);
+                    after  = body.substr(local_cur + char_len);
+                } else {
+                    at_cur = " ";
+                }
+
+                if (!before.empty()) {
+                    prompt_parts.push_back(text(before) | ftxui::color(fg_color));
+                }
+                prompt_parts.push_back(
+                    text(at_cur)
+                    | ftxui::color(color_for(theme_, ThemeRole::Bg))
+                    | bgcolor(fg_color));
+                if (!after.empty()) {
+                    prompt_parts.push_back(text(after) | ftxui::color(fg_color));
+                }
+            } else {
+                // Cursor not in this segment — render plain text
+                if (!body.empty()) {
+                    prompt_parts.push_back(text(body) | ftxui::color(fg_color));
+                }
+            }
+            flat_pos += body.size();
+
+        } else if (const auto* ps = std::get_if<PasteSegment>(&segments_[si])) {
+            // Render as chip (inverse/muted style)
+            std::string chip = paste_chip_label(*ps);
+
+            // Check if cursor is exactly before this paste segment
+            bool cursor_before = (flat_cur == flat_pos);
+
+            if (cursor_before) {
+                // Render a block cursor before the chip
+                prompt_parts.push_back(
+                    text(" ")
+                    | ftxui::color(color_for(theme_, ThemeRole::Bg))
+                    | bgcolor(fg_color));
+            }
+
+            prompt_parts.push_back(
+                text(chip)
+                | ftxui::color(color_for(theme_, ThemeRole::Bg))
+                | bgcolor(muted_color));
+
+            flat_pos += ps->body.size();
+        }
     }
 
-    Element text_element = hbox({
-        text(before_cursor) | ftxui::color(fg_color),
-        text(at_cursor)     | ftxui::color(color_for(theme_, ThemeRole::Bg))
-                            | bgcolor(fg_color),
-        text(after_cursor)  | ftxui::color(fg_color),
-    });
+    // If cursor is at the very end (after all segments)
+    if (flat_cur == flat_pos) {
+        // Check that we haven't already added a cursor character
+        // (this happens when the last segment is Text and cursor == its end)
+        // The loop above handles this case by putting at_cur = " ".
+        // If the last segment is a Paste, we need a trailing cursor.
+        bool needs_end_cursor = true;
+        if (!segments_.empty()) {
+            if (std::get_if<TextSegment>(&segments_.back())) {
+                // Already handled in the loop above (at_cur = " " at segment end)
+                needs_end_cursor = false;
+            }
+        }
+        if (needs_end_cursor || segments_.empty()) {
+            prompt_parts.push_back(
+                text(" ")
+                | ftxui::color(color_for(theme_, ThemeRole::Bg))
+                | bgcolor(fg_color));
+        }
+    }
 
     std::string vim_indicator;
     if (vim_mode_.is_enabled()) {
         vim_indicator = "  " + vim_mode_.mode_indicator();
     }
 
-    return hbox({
-        text("> ")  | ftxui::color(prefix_color) | bold,
-        text_element,
-        text(vim_indicator) | ftxui::color(muted_color),
-    });
+    Elements row_parts;
+    row_parts.push_back(text("> ") | ftxui::color(prefix_color) | bold);
+    for (auto& e : prompt_parts) {
+        row_parts.push_back(std::move(e));
+    }
+    row_parts.push_back(text(vim_indicator) | ftxui::color(muted_color));
+
+    return hbox(std::move(row_parts));
 }
 
 ftxui::Element InputBar::render_status_row() const {
@@ -405,29 +739,22 @@ ftxui::Element InputBar::render_status_row() const {
     parts.push_back(text(" · ")  | ftxui::color(muted_color));
     parts.push_back(text(mode)   | ftxui::color(muted_color));
 
-    // Append running tool indicator when a tool is in progress.
-    // Priority: tool-running wins over thinking (both could theoretically be
-    // active simultaneously; show the more specific indicator).
     if (running_tool_.has_value() && !running_tool_->empty()) {
         parts.push_back(text(" · ") | ftxui::color(muted_color));
         parts.push_back(text("running: ") | ftxui::color(magenta_color));
         parts.push_back(text(*running_tool_) | ftxui::color(magenta_color) | bold);
     } else if (thinking_) {
-        // TUI-T15: reasoning phase active — show muted "thinking..." indicator
-        // so the user knows inference is alive during Magistral's long reasoning.
         parts.push_back(text(" · ") | ftxui::color(muted_color));
         parts.push_back(text("thinking...") | ftxui::color(muted_color));
     }
 
-    // TUI-FLOW-T3: perf HUD chip — zero overhead when env var is unset.
-    // Appended as a right-side chip: "⚡ first=Xms · paint=Yms · frame=Zms"
     if (perf_hud_enabled_) {
         auto snap = batbox::perf::g_perf.snapshot();
-        std::string hud = " â¡ first="
+        std::string hud = " ⚡ first="
                         + std::to_string(snap.first_token_ms)
-                        + "ms Â· paint="
+                        + "ms · paint="
                         + std::to_string(snap.stream_to_paint_ms)
-                        + "ms Â· frame="
+                        + "ms · frame="
                         + std::to_string(snap.frame_ms)
                         + "ms";
         parts.push_back(text(hud) | ftxui::color(magenta_color));
@@ -494,23 +821,17 @@ ftxui::Element InputBar::render_palette_overlay() const {
 // =============================================================================
 
 std::pair<std::string, std::string> InputBar::compute_footer_chips() const {
-    // Splash-showing mode: helper discovery chips replace the regular chips.
     if (splash_showing_) {
         return {"? for shortcuts", "@ for agents"};
     }
-
-    // Left chip: "esc to interrupt" only while a stream is in flight.
     std::string left = stream_active_ ? "esc to interrupt" : "";
-
-    // Right chip: MCP failure takes priority over effort level.
     std::string right;
     const int mcp_n = mcp_failed_.load(std::memory_order_relaxed);
     if (mcp_n > 0) {
-        right = std::to_string(mcp_n) + " MCP server failed Â· /mcp";
+        right = std::to_string(mcp_n) + " MCP server failed · /mcp";
     } else {
         right = "thinking effort: " + effort_level_;
     }
-
     return {left, right};
 }
 
@@ -523,27 +844,16 @@ ftxui::Element InputBar::render_footer_chips_row() const {
 
     Elements parts;
 
-    // --- Left chip (stream interrupt or splash hints) ---
     if (!left.empty()) {
         parts.push_back(text("  ") | ftxui::color(muted_color));
         parts.push_back(text(left) | ftxui::color(muted_color));
     }
 
-    // --- Mode chip (TUI-PERM-T1) ---
-    // The mode chip is rendered to the right of the left chip (or at the
-    // left margin when there is no left chip).  It uses color hinting so the
-    // user can glance at the color to know which mode is active:
-    //   Default     → Muted (neutral; normal operation)
-    //   Plan        → AccentMagenta (caution; write tools blocked)
-    //   AcceptEdits → AccentCyan (info; edit tools auto-approved)
-    //   Nuclear     → Error + bold (danger; ALL tools auto-approved)
     {
         const std::string& mode_str = status_.mode_label.empty()
                                       ? "default"
                                       : status_.mode_label;
 
-        // Determine mode from label for color selection (avoids storing the
-        // PermissionMode enum separately; label is already the canonical text).
         ftxui::Color mode_color = muted_color;
         bool         mode_bold  = false;
         if (mode_str == "plan") {
@@ -554,11 +864,9 @@ ftxui::Element InputBar::render_footer_chips_row() const {
             mode_color = error_color;
             mode_bold  = true;
         }
-        // Default stays muted — no special color.
 
-        // Separator before mode chip.
         if (!left.empty()) {
-            parts.push_back(text(" Â· ") | ftxui::color(muted_color));
+            parts.push_back(text(" · ") | ftxui::color(muted_color));
         } else {
             parts.push_back(text("  ") | ftxui::color(muted_color));
         }
@@ -570,9 +878,8 @@ ftxui::Element InputBar::render_footer_chips_row() const {
         parts.push_back(mode_elem);
     }
 
-    // --- Right chip (effort / MCP failures) ---
     if (!right.empty()) {
-        parts.push_back(text(" Â· ") | ftxui::color(muted_color));
+        parts.push_back(text(" · ") | ftxui::color(muted_color));
         parts.push_back(text(right) | ftxui::color(muted_color));
     }
 
@@ -587,7 +894,7 @@ bool InputBar::OnEvent(ftxui::Event event) {
     BATBOX_LOG_TRACE("InputBar::OnEvent: input_size={} input=[{}]",
                      event.input().size(), event.input());
 
-    // --- Tool running / done events: update the status row indicator ---
+    // --- Tool running / done events ---
     if (has_prefix_tool_running(event)) {
         auto p = batbox::tui::extract_tool_running(event);
         if (p.has_value()) {
@@ -615,10 +922,42 @@ bool InputBar::OnEvent(ftxui::Event event) {
         return true;
     }
 
+    const auto& inp = event.input();
+
+    // --- TUI-FIX-T4: Bracketed paste accumulation ---
+    // Check for paste-end FIRST (before start) to correctly handle any ordering.
+    if (in_paste_seq_) {
+        if (inp == kBracketedPasteEnd) {
+            // End of bracketed paste — commit
+            in_paste_seq_ = false;
+            std::string body = std::move(paste_accumulator_);
+            paste_accumulator_.clear();
+            insert_paste(std::move(body));
+            autocomplete_reset();
+            return true;
+        }
+        // Accumulate bytes (the paste content arrives as one or more events)
+        paste_accumulator_ += inp;
+        return true;
+    }
+    if (inp == kBracketedPasteStart) {
+        in_paste_seq_ = true;
+        paste_accumulator_.clear();
+        return true;
+    }
+
+    // --- TUI-FIX-T4: Additional Shift+Enter aliases (non-kitty terminals) ---
+    // \e\r (common in xterm, Terminal.app when enhanced keyboard protocol is off)
+    // \e[27;2;13~ (libvte CSI-u variant)
+    // The kitty \x1b[13;2u is already handled by Keybindings as ReplAction::Newline.
+    if (inp == kShiftEnterAlt || inp == kShiftEnterCSIU) {
+        insert_at_cursor("\n");
+        autocomplete_reset();
+        return true;
+    }
+
     // --- Palette overlay intercepts most keys when open ---
     if (palette_open_) {
-        const auto& inp = event.input();
-
         if (inp == kInputEscape) {
             palette_close();
             return true;
@@ -663,13 +1002,15 @@ bool InputBar::OnEvent(ftxui::Event event) {
 
     // --- Vim mode ---
     if (vim_mode_.is_enabled()) {
-        const auto& inp = event.input();
         if (!inp.empty() && event != ftxui::Event::Custom) {
-            auto vim_action = vim_mode_.handle_key(inp, buf_, cursor_);
+            // For vim mode, work on the flattened buffer then re-set
+            std::string flat_buf = flatten_for_submit();
+            std::size_t flat_cur = flat_cursor_offset();
+            auto vim_action = vim_mode_.handle_key(inp, flat_buf, flat_cur);
             using K = batbox::repl::VimActionKind;
             if (vim_action.kind == K::SendLine) {
                 if (on_submit_) {
-                    auto submitted = buf_;
+                    auto submitted = flatten_for_submit();
                     history_.push(submitted);
                     clear();
                     on_submit_(std::move(submitted));
@@ -684,8 +1025,6 @@ bool InputBar::OnEvent(ftxui::Event event) {
     }
 
     // --- Arrow keys for history (when vim mode off or in passthrough) ---
-    const auto& inp = event.input();
-
     if (inp == kInputArrowUp) {
         if (auto prev = history_.previous()) {
             set_buffer(*prev);
@@ -702,21 +1041,83 @@ bool InputBar::OnEvent(ftxui::Event event) {
         return true;
     }
 
-    // --- Cursor movement ---
+    // --- TUI-FIX-T4: Cursor movement skipping paste segments as atoms ---
     if (inp == kInputArrowLeft) {
-        if (cursor_ > 0) --cursor_;
+        if (seg_cursor_.seg_idx == 0 && seg_cursor_.byte_off == 0) {
+            return true; // at start, clamp
+        }
+        if (seg_cursor_.byte_off > 0) {
+            // Move back one byte (UTF-8 aware: skip continuation bytes)
+            --seg_cursor_.byte_off;
+            const auto& ts = std::get<TextSegment>(segments_[seg_cursor_.seg_idx]);
+            while (seg_cursor_.byte_off > 0 &&
+                   (static_cast<unsigned char>(ts.body[seg_cursor_.byte_off]) & 0xC0) == 0x80) {
+                --seg_cursor_.byte_off;
+            }
+        } else {
+            // Move to previous segment
+            if (seg_cursor_.seg_idx > 0) {
+                --seg_cursor_.seg_idx;
+                if (const auto* ts = std::get_if<TextSegment>(&segments_[seg_cursor_.seg_idx])) {
+                    seg_cursor_.byte_off = ts->body.size();
+                } else {
+                    // Previous is a paste segment — skip to before it
+                    seg_cursor_.byte_off = 0;
+                }
+            }
+        }
         return true;
     }
     if (inp == kInputArrowRight) {
-        if (cursor_ < buf_.size()) ++cursor_;
+        if (seg_cursor_.seg_idx >= segments_.size()) return true; // past end
+
+        if (const auto* ts = std::get_if<TextSegment>(&segments_[seg_cursor_.seg_idx])) {
+            if (seg_cursor_.byte_off < ts->body.size()) {
+                // Advance one UTF-8 character
+                unsigned char c = static_cast<unsigned char>(ts->body[seg_cursor_.byte_off]);
+                std::size_t char_len = 1;
+                if (c >= 0xF0)      char_len = 4;
+                else if (c >= 0xE0) char_len = 3;
+                else if (c >= 0xC0) char_len = 2;
+                seg_cursor_.byte_off += std::min(char_len, ts->body.size() - seg_cursor_.byte_off);
+            } else {
+                // At end of this text segment; move to next
+                if (seg_cursor_.seg_idx + 1 < segments_.size()) {
+                    ++seg_cursor_.seg_idx;
+                    seg_cursor_.byte_off = 0;
+                    // If next is a paste segment, skip over it to the segment after
+                    if (std::get_if<PasteSegment>(&segments_[seg_cursor_.seg_idx])) {
+                        if (seg_cursor_.seg_idx + 1 < segments_.size()) {
+                            ++seg_cursor_.seg_idx;
+                            seg_cursor_.byte_off = 0;
+                        }
+                    }
+                }
+            }
+        } else {
+            // Current is paste segment — skip over it
+            if (seg_cursor_.seg_idx + 1 < segments_.size()) {
+                ++seg_cursor_.seg_idx;
+                seg_cursor_.byte_off = 0;
+            }
+        }
         return true;
     }
     if (inp == kInputHome) {
-        cursor_ = 0;
+        seg_cursor_ = SegCursor{0, 0};
         return true;
     }
     if (inp == kInputEnd) {
-        cursor_ = buf_.size();
+        // Move to end of last text segment
+        if (!segments_.empty()) {
+            std::size_t last = segments_.size() - 1;
+            if (const auto* ts = std::get_if<TextSegment>(&segments_[last])) {
+                seg_cursor_ = SegCursor{last, ts->body.size()};
+            } else {
+                // Last is paste, cursor sits after it (logically at segments_.size())
+                seg_cursor_ = SegCursor{last + 1, 0};
+            }
+        }
         return true;
     }
 
@@ -730,10 +1131,10 @@ bool InputBar::OnEvent(ftxui::Event event) {
         return handle_delete();
     }
 
-    // --- Plain Enter / Ctrl+M: submit (when not vim mode) ---
+    // --- Plain Enter / Ctrl+M: submit ---
     if (inp == kInputReturn || inp == kInputCtrlM) {
-        if (!buf_.empty()) {
-            auto submitted = buf_;
+        if (!is_empty()) {
+            auto submitted = flatten_for_submit();
             history_.push(submitted);
             clear();
             if (on_submit_) on_submit_(std::move(submitted));
@@ -749,9 +1150,11 @@ bool InputBar::OnEvent(ftxui::Event event) {
     }
 
     // --- '/' as first character: open palette ---
-    if (inp == "/" && buf_.empty() && cursor_ == 0) {
-        buf_    = "/";
-        cursor_ = 1;
+    if (inp == "/" && is_empty() && seg_cursor_.seg_idx == 0 && seg_cursor_.byte_off == 0) {
+        // Set buffer to "/" and open palette
+        segments_.clear();
+        segments_.emplace_back(TextSegment{"/"});
+        seg_cursor_ = SegCursor{0, 1};
         palette_open();
         return true;
     }
@@ -775,40 +1178,98 @@ bool InputBar::handle_printable(const ftxui::Event& ev) {
 }
 
 bool InputBar::handle_backspace() {
-    if (cursor_ == 0 || buf_.empty()) return false;
+    if (seg_cursor_.seg_idx == 0 && seg_cursor_.byte_off == 0) return false;
 
-    std::size_t byte_pos = cursor_;
-    --byte_pos;
-    while (byte_pos > 0 &&
-           (static_cast<unsigned char>(buf_[byte_pos]) & 0xC0) == 0x80) {
+    if (seg_cursor_.byte_off > 0) {
+        // Delete one UTF-8 character before cursor within current Text segment
+        auto& ts = std::get<TextSegment>(segments_[seg_cursor_.seg_idx]);
+        std::size_t byte_pos = seg_cursor_.byte_off;
         --byte_pos;
+        while (byte_pos > 0 &&
+               (static_cast<unsigned char>(ts.body[byte_pos]) & 0xC0) == 0x80) {
+            --byte_pos;
+        }
+        ts.body.erase(byte_pos, seg_cursor_.byte_off - byte_pos);
+        seg_cursor_.byte_off = byte_pos;
+        autocomplete_reset();
+        normalize_segments();
+        return true;
     }
-    buf_.erase(byte_pos, cursor_ - byte_pos);
-    cursor_ = byte_pos;
-    autocomplete_reset();
-    return true;
+
+    // byte_off == 0 — look at the previous segment
+    if (seg_cursor_.seg_idx > 0) {
+        std::size_t prev_idx = seg_cursor_.seg_idx - 1;
+        if (std::get_if<PasteSegment>(&segments_[prev_idx])) {
+            // TUI-FIX-T4 AC4: single backspace deletes entire paste segment
+            segments_.erase(segments_.begin() + static_cast<std::ptrdiff_t>(prev_idx));
+            seg_cursor_.seg_idx = prev_idx;
+            seg_cursor_.byte_off = 0;
+            autocomplete_reset();
+            normalize_segments();
+            return true;
+        }
+        if (auto* ts = std::get_if<TextSegment>(&segments_[prev_idx])) {
+            if (!ts->body.empty()) {
+                std::size_t byte_pos = ts->body.size();
+                --byte_pos;
+                while (byte_pos > 0 &&
+                       (static_cast<unsigned char>(ts->body[byte_pos]) & 0xC0) == 0x80) {
+                    --byte_pos;
+                }
+                ts->body.erase(byte_pos, ts->body.size() - byte_pos);
+                seg_cursor_.seg_idx = prev_idx;
+                seg_cursor_.byte_off = byte_pos;
+                autocomplete_reset();
+                normalize_segments();
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 bool InputBar::handle_delete() {
-    if (cursor_ >= buf_.size()) return false;
+    if (seg_cursor_.seg_idx >= segments_.size()) return false;
 
-    std::size_t char_len = 1;
-    unsigned char c = static_cast<unsigned char>(buf_[cursor_]);
-    if (c >= 0xF0)      char_len = 4;
-    else if (c >= 0xE0) char_len = 3;
-    else if (c >= 0xC0) char_len = 2;
-    char_len = std::min(char_len, buf_.size() - cursor_);
-    buf_.erase(cursor_, char_len);
-    autocomplete_reset();
-    return true;
+    if (const auto* ts = std::get_if<TextSegment>(&segments_[seg_cursor_.seg_idx])) {
+        if (seg_cursor_.byte_off < ts->body.size()) {
+            auto& ts_mut = std::get<TextSegment>(segments_[seg_cursor_.seg_idx]);
+            std::size_t char_len = 1;
+            unsigned char c = static_cast<unsigned char>(ts_mut.body[seg_cursor_.byte_off]);
+            if (c >= 0xF0)      char_len = 4;
+            else if (c >= 0xE0) char_len = 3;
+            else if (c >= 0xC0) char_len = 2;
+            char_len = std::min(char_len, ts_mut.body.size() - seg_cursor_.byte_off);
+            ts_mut.body.erase(seg_cursor_.byte_off, char_len);
+            autocomplete_reset();
+            normalize_segments();
+            return true;
+        }
+        // At end of text segment — delete from next segment
+        if (seg_cursor_.seg_idx + 1 < segments_.size()) {
+            if (std::get_if<PasteSegment>(&segments_[seg_cursor_.seg_idx + 1])) {
+                // Delete the paste segment after this text segment
+                segments_.erase(segments_.begin() +
+                    static_cast<std::ptrdiff_t>(seg_cursor_.seg_idx + 1));
+                autocomplete_reset();
+                normalize_segments();
+                return true;
+            }
+        }
+    } else if (std::get_if<PasteSegment>(&segments_[seg_cursor_.seg_idx])) {
+        // Cursor is before a paste segment (should not normally happen in
+        // well-maintained segment state, but handle gracefully)
+        return false;
+    }
+    return false;
 }
 
 bool InputBar::handle_action(batbox::repl::ReplAction action) {
     using RA = batbox::repl::ReplAction;
     switch (action) {
         case RA::Send: {
-            if (buf_.empty()) return false;
-            auto submitted = buf_;
+            if (is_empty()) return false;
+            auto submitted = flatten_for_submit();
             history_.push(submitted);
             clear();
             if (on_submit_) on_submit_(std::move(submitted));
@@ -816,14 +1277,19 @@ bool InputBar::handle_action(batbox::repl::ReplAction action) {
         }
         case RA::Newline: {
             insert_at_cursor("\n");
+            autocomplete_reset();
             return true;
         }
         case RA::Cancel: {
+            if (stream_active_ && on_interrupt_) {
+                on_interrupt_();
+                return true;
+            }
             if (palette_open_) {
                 palette_close();
                 return true;
             }
-            if (!buf_.empty()) {
+            if (!is_empty()) {
                 clear();
                 return true;
             }
@@ -853,15 +1319,10 @@ bool InputBar::handle_action(batbox::repl::ReplAction action) {
             return true;
         }
         case RA::CycleMode: {
-            // TUI-PERM-T1: cycle the active permission mode through
-            // Default → Plan → AcceptEdits → Nuclear → Default.
-            // No-op when no gate is wired (e.g. unit tests without a gate).
             if (perm_gate_) {
                 const auto next = batbox::permissions::cycle_next(
                     perm_gate_->current_mode());
                 perm_gate_->set_mode(next);
-                // Keep status_.mode_label in sync so the status row reflects
-                // the new mode immediately (same frame as the key press).
                 status_.mode_label = mode_chip_label(next);
             }
             return true;
@@ -901,7 +1362,6 @@ void InputBar::palette_close() {
 void InputBar::palette_filter() {
     palette_filtered_.clear();
     palette_selected_ = 0;
-
     const auto& q = palette_filter_str_;
     for (const auto& item : palette_all_) {
         if (q.empty() || ci_contains(item, q)) {
@@ -920,8 +1380,10 @@ void InputBar::palette_commit() {
                              static_cast<int>(palette_filtered_.size()) - 1)));
     std::string chosen = "/" + palette_filtered_[idx];
     palette_close();
-    buf_    = std::move(chosen);
-    cursor_ = buf_.size();
+    // Replace entire buffer with the chosen slash command
+    segments_.clear();
+    segments_.emplace_back(TextSegment{chosen});
+    seg_cursor_ = SegCursor{0, chosen.size()};
 }
 
 // =============================================================================
@@ -932,15 +1394,17 @@ void InputBar::autocomplete_next() {
     if (!ac_provider_) return;
 
     if (ac_candidates_.empty()) {
-        ac_prefix_      = buf_;
-        ac_candidates_  = ac_provider_(ac_prefix_);
-        ac_index_       = -1;
+        ac_prefix_     = flatten_for_submit();
+        ac_candidates_ = ac_provider_(ac_prefix_);
+        ac_index_      = -1;
         if (ac_candidates_.empty()) return;
     }
 
     ac_index_ = (ac_index_ + 1) % static_cast<int>(ac_candidates_.size());
-    buf_    = ac_candidates_[static_cast<std::size_t>(ac_index_)];
-    cursor_ = buf_.size();
+    const std::string& candidate = ac_candidates_[static_cast<std::size_t>(ac_index_)];
+    segments_.clear();
+    segments_.emplace_back(TextSegment{candidate});
+    seg_cursor_ = SegCursor{0, candidate.size()};
 }
 
 void InputBar::autocomplete_reset() {
@@ -955,37 +1419,47 @@ void InputBar::autocomplete_reset() {
 
 void InputBar::apply_vim_action(const batbox::repl::VimAction& action) {
     using K = batbox::repl::VimActionKind;
+
+    // For vim operations, we work on the flattened buffer and then re-set segments.
+    // This is acceptable because vim mode is an advanced feature and the flattened
+    // representation is what the user is editing visually.
+
+    std::string flat_buf = flatten_for_submit();
+    std::size_t flat_cur = flat_cursor_offset();
+
     switch (action.kind) {
         case K::InsertChar:
             if (action.ch != '\0') {
-                buf_.insert(cursor_, 1, action.ch);
-                ++cursor_;
+                flat_buf.insert(flat_cur, 1, action.ch);
+                set_buffer(flat_buf);
+                set_seg_cursor_from_flat(flat_cur + 1);
             }
             break;
         case K::DeleteRange:
-            if (action.start <= action.end && action.end <= buf_.size()) {
-                buf_.erase(action.start, action.end - action.start);
-                cursor_ = action.start;
+            if (action.start <= action.end && action.end <= flat_buf.size()) {
+                flat_buf.erase(action.start, action.end - action.start);
+                set_buffer(flat_buf);
+                set_seg_cursor_from_flat(action.start);
             }
             break;
         case K::ReplaceRange:
-            if (action.start <= action.end && action.end <= buf_.size()) {
-                buf_.replace(action.start, action.end - action.start, action.text);
-                cursor_ = action.start + action.text.size();
+            if (action.start <= action.end && action.end <= flat_buf.size()) {
+                flat_buf.replace(action.start, action.end - action.start, action.text);
+                set_buffer(flat_buf);
+                set_seg_cursor_from_flat(action.start + action.text.size());
             }
             break;
         case K::MoveCursor:
-            cursor_ = std::min(action.cursor_pos, buf_.size());
+            set_seg_cursor_from_flat(std::min(action.cursor_pos, flat_buf.size()));
             break;
         case K::SetBuffer:
-            buf_    = action.text;
-            cursor_ = std::min(action.cursor_pos, buf_.size());
+            set_buffer(action.text);
+            set_seg_cursor_from_flat(std::min(action.cursor_pos, action.text.size()));
             break;
         case K::ChangeMode:
             break;
         case K::ClearLine:
-            buf_.clear();
-            cursor_ = 0;
+            clear();
             break;
         case K::SendLine:
             // Handled in OnEvent before apply_vim_action
@@ -995,15 +1469,6 @@ void InputBar::apply_vim_action(const batbox::repl::VimAction& action) {
         default:
             break;
     }
-}
-
-// =============================================================================
-// Internal helpers
-// =============================================================================
-
-void InputBar::insert_at_cursor(std::string_view text) {
-    buf_.insert(cursor_, text);
-    cursor_ += text.size();
 }
 
 // =============================================================================

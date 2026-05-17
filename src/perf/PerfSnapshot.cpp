@@ -9,6 +9,9 @@
 
 #include <batbox/perf/PerfSnapshot.hpp>
 
+#include <cstdlib>    // std::getenv
+#include <string_view>
+
 namespace batbox::perf {
 
 // =============================================================================
@@ -16,6 +19,15 @@ namespace batbox::perf {
 // =============================================================================
 
 PerfStore g_perf;
+
+// Enable flag — initialised once at static-init time from BATBOX_PERF_HUD.
+// Using a lambda to perform env-var inspection before threads start.
+std::atomic<bool> g_perf_enabled{[]() -> bool {
+    const char* env = std::getenv("BATBOX_PERF_HUD");
+    if (!env || env[0] == '\0') return false;
+    std::string_view sv(env);
+    return (sv != "0" && sv != "false");
+}()};
 
 // =============================================================================
 // PerfStore — setters

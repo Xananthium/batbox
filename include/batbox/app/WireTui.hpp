@@ -152,6 +152,7 @@ void wire_tui(
     batbox::tui::PlanApprovalCard*              plan_approval_card  = nullptr,
     batbox::tui::QuestionCard*                  question_card       = nullptr,
     batbox::mcp::McpServerRegistry*             mcp_registry        = nullptr,
-    batbox::permissions::PermissionGate*        permission_gate     = nullptr);
+    batbox::permissions::PermissionGate*        permission_gate     = nullptr,
+    batbox::tui::InputBar::InterruptCallback    on_interrupt_cb     = nullptr);
 
 } // namespace batbox::app

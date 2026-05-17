@@ -57,9 +57,31 @@ bool PermissionGate::is_accept_edits_tool(std::string_view tool_name) noexcept {
 }
 
 bool PermissionGate::is_read_only_tool(std::string_view tool_name) noexcept {
-    // Tools where is_read_only() == true — used for BATBOX_AUTO_APPROVE_READS.
-    static constexpr std::array<std::string_view, 5> kReadOnlyTools = {
-        "Read", "Glob", "Grep", "CtxInspect", "ToolSearch"
+    // Full read-only set used for:
+    //   (a) Plan mode pass-through — these tools are allowed even in Plan mode.
+    //   (b) BATBOX_AUTO_APPROVE_READS env-var shortcut.
+    //
+    // Set locked by TUI-FIX-T2:
+    //   Legacy set: Read, Glob, Grep, CtxInspect, ToolSearch
+    //   Added:      WebFetch, WebSearch, LSP,
+    //               TaskList, TaskOutput, TaskGet,
+    //               ListMcpResourcesTool, ReadMcpResourceTool
+    static constexpr std::array<std::string_view, 13> kReadOnlyTools = {
+        // --- original set ---
+        "Read",
+        "Glob",
+        "Grep",
+        "CtxInspect",
+        "ToolSearch",
+        // --- TUI-FIX-T2 additions ---
+        "WebFetch",
+        "WebSearch",
+        "LSP",
+        "TaskList",
+        "TaskOutput",
+        "TaskGet",
+        "ListMcpResourcesTool",
+        "ReadMcpResourceTool",
     };
     for (auto t : kReadOnlyTools) {
         if (tool_name == t) return true;
@@ -100,29 +122,37 @@ Decision PermissionGate::ask(std::string_view                      tool_name,
     }
 
     // -----------------------------------------------------------------------
-    // Step 1: Nuclear mode → Allow unconditionally.
+    // Step 1: Nuclear mode — Allow unconditionally.
+    //
+    // Nuclear is the "yolo" mode: every tool is auto-approved, no prompts,
+    // no rule checks, no callbacks.  The PermissionCard must never appear.
     // -----------------------------------------------------------------------
     if (mode_snapshot == PermissionMode::Nuclear) {
         return Decision::allow();
     }
 
     // -----------------------------------------------------------------------
-    // Step 2: Plan mode + non-read-only tool → Deny.
+    // Step 2: Plan mode + non-read-only tool — Deny with informative reason.
     //
-    // Read-only tools (Read, Glob, Grep, ToolSearch, CtxInspect, …) are
-    // permitted even in Plan mode; everything else is blocked.
-    // We use is_read_only_tool() for the built-in set.  For tools not in the
-    // known read-only set we conservatively treat them as non-read-only.
+    // Plan mode is read-only by design: the model is planning, not executing.
+    // Read-only tools (Read, Glob, Grep, WebFetch, WebSearch, LSP, TaskList,
+    // TaskOutput, TaskGet, ListMcpResourcesTool, ReadMcpResourceTool,
+    // CtxInspect, ToolSearch) are permitted; write tools are blocked.
+    //
+    // We use is_read_only_tool() for the built-in set.  Tools not in the
+    // known read-only set are conservatively treated as non-read-only and
+    // blocked.
     // -----------------------------------------------------------------------
     if (mode_snapshot == PermissionMode::Plan) {
         if (!is_read_only_tool(tool_name)) {
-            return Decision::deny();
+            return Decision::deny_with_rule(
+                "plan-mode-readonly");
         }
         // Read-only tools pass through in Plan mode — continue to rule checks.
     }
 
     // -----------------------------------------------------------------------
-    // Step 3: AcceptEdits mode + Edit/Write/MultiEdit → Allow.
+    // Step 3: AcceptEdits mode + Edit/Write/MultiEdit — Allow.
     // -----------------------------------------------------------------------
     if (mode_snapshot == PermissionMode::AcceptEdits) {
         if (is_accept_edits_tool(tool_name)) {

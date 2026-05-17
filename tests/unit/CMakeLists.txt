@@ -551,6 +551,19 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_splash.cpp)
     endif()
 endif()
 
+# TUI-FIX-T8 — SplashBanner account fallback: resolve_account_label + set_email
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_splash_account_fallback.cpp)
+    if(TARGET batbox_tui)
+        batbox_add_unit_test(test_splash_account_fallback
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_splash_account_fallback.cpp
+            batbox_tui batbox_theme batbox_core)
+    else()
+        batbox_add_unit_test(test_splash_account_fallback
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_splash_account_fallback.cpp
+            batbox_theme batbox_core)
+    endif()
+endif()
+
 # CPP 2.5 — Keybindings: defaults + override loader + event_to_action dispatch
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_keybindings.cpp)
     if(TARGET batbox_repl)
@@ -825,4 +838,17 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_mcp_status_poller.cpp)
             PRIVATE doctest::doctest batbox_core)
     endif()
     doctest_discover_tests(test_mcp_status_poller)
+endif()
+
+# TUI-FIX-T4 — InputBar segment-model: paste chip, bracketed paste, Shift+Enter newline
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_input_bar_segments.cpp)
+    if(TARGET batbox_tui)
+        batbox_add_unit_test(test_input_bar_segments
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_input_bar_segments.cpp
+            batbox_tui batbox_repl batbox_theme batbox_perf batbox_core)
+    else()
+        batbox_add_unit_test(test_input_bar_segments
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_input_bar_segments.cpp
+            batbox_repl batbox_theme batbox_perf batbox_core)
+    endif()
 endif()

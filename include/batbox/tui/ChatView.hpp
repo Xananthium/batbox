@@ -446,6 +446,15 @@ private:
     /// Default-constructed time_point has time_since_epoch() == 0 (sentinel).
     std::chrono::steady_clock::time_point pending_token_post_time_{};
 
+    // TUI-FIX-T9: EMA state for frame_ms and stream_to_paint_ms.
+    // frame_ema_ms_: exponential moving average of per-frame render duration.
+    //   alpha = 1/8 → new_ema = old_ema + (sample - old_ema) / 8
+    // paint_ema_ms_: exponential moving average of stream-to-paint latency.
+    //   alpha = 1/16 → new_ema = old_ema + (sample - old_ema) / 16
+    // Both are stored as integer milliseconds (truncated after EMA update).
+    int frame_ema_ms_{0};
+    int paint_ema_ms_{0};
+
     // -------------------------------------------------------------------------
     // TUI-ASKQ-T4 — QuestionCard modal integration
     // -------------------------------------------------------------------------

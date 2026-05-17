@@ -37,12 +37,31 @@
 
 #include <CLI/CLI.hpp>
 
+#include <clocale>
 #include <cstdlib>
 #include <exception>
 #include <iostream>
 #include <string>
 
 int main(int argc, char** argv) {
+    // Locale init — MUST be first, before any FTXUI / terminal construction.
+    // Without this, the C locale is "C" and FTXUI writes raw UTF-8 bytes that
+    // the terminal's wcwidth tables interpret as Latin-1, producing mojibake:
+    // "Â·" instead of "·", "â¡" instead of "⚡", etc.
+    {
+        const char* loc = std::setlocale(LC_ALL, "");
+        if (loc == nullptr) {
+            // setlocale failed (e.g. requested locale not installed).
+            // Fall back to "C" — UTF-8 glyphs will be degraded but we won't
+            // crash.  Emit a warning so operators can install the locale.
+            std::clog << "batbox: warning: setlocale(LC_ALL, \"\") returned NULL"
+                         " — UTF-8 rendering may be degraded\n";
+            std::setlocale(LC_ALL, "C");
+        } else {
+            std::clog << "batbox: locale: " << loc << "\n";
+        }
+    }
+
     batbox::AppArgs args;
 
     // -----------------------------------------------------------------------

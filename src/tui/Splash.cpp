@@ -13,6 +13,7 @@
 
 #include "batbox/tui/Splash.hpp"
 #include "batbox/tui/Changelog.hpp"
+#include "batbox/util/AccountLabel.hpp"
 #include "batbox/tui/ThemeApply.hpp"
 #include "splash_taglines.hpp"
 
@@ -255,7 +256,10 @@ void SplashBanner::set_model(std::string model) {
 }
 
 void SplashBanner::set_email(std::string email) {
-    email_ = std::move(email);
+    // Resolve the label immediately so render_full() never shows blank.
+    // If email is empty, resolve_account_label builds "$USER@<hostname>".
+    email_ = batbox::util::resolve_account_label(
+        email.empty() ? std::optional<std::string>{} : std::optional<std::string>{std::move(email)});
 }
 
 void SplashBanner::set_cwd(std::string cwd) {
@@ -316,7 +320,11 @@ ftxui::Element SplashBanner::render_full() const {
     // Left column: welcome + model + email + cwd
     // -----------------------------------------------------------------------
     std::string model_str = model_.empty() ? "(no model)"   : model_;
-    std::string email_str = email_.empty() ? "(no account)" : email_;
+    // email_ was already resolved in set_email(); but if set_email() was never
+    // called, resolve now so the banner always shows something useful.
+    std::string email_str = email_.empty()
+        ? batbox::util::resolve_account_label(std::nullopt)
+        : email_;
     std::string cwd_str   = cwd_.empty()   ? "~"            : cwd_;
 
     // Truncate cwd to fit the column

@@ -73,6 +73,8 @@ target_sources(batbox_tui
         MarkdownRender.cpp  # CPP 1.3 — incremental markdown -> FTXUI Element
         Events.cpp
         PermissionBanner.cpp  # CPP 1.16 — permission mode top banner + Nuclear confirmation
+        AccountLabel.cpp     # TUI-FIX-T8 — resolve_account_label: $USER@hostname fallback
+        ${PROJECT_SOURCE_DIR}/src/util/EditorLaunch.cpp  # TUI-FIX-T7 — resolve_editor + edit_string_in_editor
 )
 
 # ---------------------------------------------------------------------------

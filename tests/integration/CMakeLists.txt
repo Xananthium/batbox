@@ -971,6 +971,73 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_conversation_basic.cpp)
 endif()
 
 # ---------------------------------------------------------------------------
+# TUI-FIX-T5 — Conversation tool-call loop + follow-up turn test
+#
+# Verifies that run_turn() drives the full tool-call loop (User →
+# Assistant{tool_calls} → Tool → Assistant{stop}) and that a subsequent
+# user message is handled correctly (no dropped-turn bug).
+# Root cause of the live bug: App.cpp tui_on_submit had no turn-in-flight
+# guard, allowing concurrent user_message()/run_turn() on the non-thread-safe
+# Conversation.  Fix: tui_turn_in_flight atomic bool (TUI-FIX-T5).
+# ---------------------------------------------------------------------------
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_conversation_tool_loop.cpp)
+
+    add_executable(test_conversation_tool_loop
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_conversation_tool_loop.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/Conversation.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/ToolCallOrchestrator.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/Message.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/ToolRegistry.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/ContextWindow.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/Compactor.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp
+        ${PROJECT_SOURCE_DIR}/src/session/SessionStore.cpp
+        ${PROJECT_SOURCE_DIR}/src/session/SessionFile.cpp
+        ${PROJECT_SOURCE_DIR}/src/session/SessionIndex.cpp
+        ${PROJECT_SOURCE_DIR}/src/session/SessionRecovery.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/SystemPrompt.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ToolCallAccumulator.cpp
+        ${PROJECT_SOURCE_DIR}/src/perf/PerfSnapshot.cpp
+    )
+
+    set_target_properties(test_conversation_tool_loop PROPERTIES
+        CXX_STANDARD          20
+        CXX_STANDARD_REQUIRED ON
+        CXX_EXTENSIONS        OFF
+    )
+
+    target_include_directories(test_conversation_tool_loop
+        PRIVATE
+            ${PROJECT_SOURCE_DIR}/include
+    )
+
+    target_compile_definitions(test_conversation_tool_loop
+        PRIVATE
+            BATBOX_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures"
+    )
+
+    target_link_libraries(test_conversation_tool_loop
+        PRIVATE
+            doctest::doctest
+            batbox_config
+            batbox_core
+            batbox_permissions
+            batbox_perf
+            cpr::cpr
+            simdjson::simdjson
+            spdlog::spdlog
+            fmt::fmt
+            ZLIB::ZLIB
+    )
+
+    include(doctest)
+    doctest_discover_tests(test_conversation_tool_loop)
+
+endif()
+
+# ---------------------------------------------------------------------------
 # CPP 5.13 — WebSearchTool integration test
 #
 # Exercises WebSearchTool via an in-process mock HTTP server so no real Python

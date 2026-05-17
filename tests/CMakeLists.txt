@@ -64,6 +64,10 @@ endmacro()
 batbox_add_unit_test(test_cancel_token
     unit/test_cancel_token.cpp  batbox_core)
 
+# TUI-FIX-T3 — Esc stream cancel path (CancelToken latency + propagation)
+batbox_add_unit_test(test_conversation_cancel
+    unit/test_conversation_cancel.cpp  batbox_core)
+
 # CPP 0.x — CancelToken (legacy name kept for compatibility)
 batbox_add_unit_test(test_cancel
     unit/test_cancel.cpp        batbox_core)
@@ -115,6 +119,16 @@ target_link_libraries(test_message_model PRIVATE simdjson::simdjson)
 batbox_add_unit_test(test_mcp_framing
     unit/test_mcp_framing.cpp   batbox_mcp)
 target_link_libraries(test_mcp_framing PRIVATE batbox_core batbox_config batbox_inference simdjson::simdjson)
+
+# TUI-FIX-T7 — resolve_editor() + binary_accessible() (EditorLaunch util)
+# Compiles EditorLaunch.cpp directly so we don't pull in all of batbox_tui.
+# Links ftxui::component because EditorLaunch.cpp includes screen_interactive.hpp
+# for the edit_string_in_editor() WithRestoredIO path.
+batbox_add_unit_test(test_editor_launch
+    unit/test_editor_launch.cpp  batbox_core)
+target_sources(test_editor_launch PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/util/EditorLaunch.cpp)
+target_link_libraries(test_editor_launch PRIVATE ftxui::component)
 
 # ---------------------------------------------------------------------------
 # Commented-out future tests — uncomment as each CPP N.x task lands:
@@ -587,6 +601,27 @@ target_link_libraries(test_splash PRIVATE
     ftxui::screen
     simdjson::simdjson)
 
+# TUI-FIX-T8 — SplashBanner account fallback: resolve_account_label + set_email
+# Compile Splash.cpp, AccountLabel.cpp, Changelog.cpp, ThemeApply.cpp, Theme.cpp
+# directly so the test does not require batbox_tui to be fully linked.
+batbox_add_unit_test(test_splash_account_fallback
+    unit/test_splash_account_fallback.cpp  batbox_core)
+target_sources(test_splash_account_fallback PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/tui/Splash.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/AccountLabel.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/Changelog.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/ThemeApply.cpp
+    ${PROJECT_SOURCE_DIR}/src/theme/Theme.cpp
+    ${PROJECT_SOURCE_DIR}/src/theme/themes.cpp)
+target_include_directories(test_splash_account_fallback PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/tui)
+target_link_libraries(test_splash_account_fallback PRIVATE
+    batbox_config
+    ftxui::component
+    ftxui::dom
+    ftxui::screen
+    simdjson::simdjson)
+
 # CPP 1.12 — ModalPicker: generic list-pick modal
 # Compile ModalPicker.cpp and its theme dependencies directly.
 # Link ftxui::component, ftxui::dom, ftxui::screen for FTXUI types.
@@ -924,6 +959,36 @@ target_link_libraries(test_input_bar PRIVATE
     ftxui::component  ftxui::dom  ftxui::screen
     simdjson::simdjson
     spdlog::spdlog)
+# ---------------------------------------------------------------------------
+# TUI-FIX-T4 — InputBar segment-model: paste chip, bracketed paste, Shift+Enter
+# Uses the same source file list as test_input_bar (InputBar.cpp + deps).
+# ---------------------------------------------------------------------------
+batbox_add_unit_test(test_input_bar_segments
+    unit/test_input_bar_segments.cpp  batbox_core)
+target_sources(test_input_bar_segments PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/tui/InputBar.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/Events.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/ThemeApply.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/MarkdownRender.cpp
+    ${PROJECT_SOURCE_DIR}/src/theme/Theme.cpp
+    ${PROJECT_SOURCE_DIR}/src/theme/themes.cpp
+    ${PROJECT_SOURCE_DIR}/src/repl/History.cpp
+    ${PROJECT_SOURCE_DIR}/src/repl/Keybindings.cpp
+    ${PROJECT_SOURCE_DIR}/src/repl/VimMode.cpp
+    ${PROJECT_SOURCE_DIR}/src/repl/Autocomplete.cpp
+    ${PROJECT_SOURCE_DIR}/src/commands/SlashCommandRegistry.cpp
+    ${PROJECT_SOURCE_DIR}/src/plugins/PluginRegistry.cpp
+    ${PROJECT_SOURCE_DIR}/src/plugins/MarketplaceJson.cpp
+    ${PROJECT_SOURCE_DIR}/src/plugins/FrontmatterParser.cpp
+    ${PROJECT_SOURCE_DIR}/src/perf/PerfSnapshot.cpp)
+target_link_libraries(test_input_bar_segments PRIVATE
+    batbox_config
+    batbox_perf
+    batbox_permissions
+    ftxui::component  ftxui::dom  ftxui::screen
+    simdjson::simdjson
+    spdlog::spdlog)
+
 
 # ---------------------------------------------------------------------------
 # CPP 0.x — Json helpers: Json.hpp type alias + parse_json / to_json_string

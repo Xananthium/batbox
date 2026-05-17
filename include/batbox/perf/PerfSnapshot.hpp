@@ -102,4 +102,13 @@ private:
 /// ChatView.cpp (writer), and InputBar.cpp (reader).
 extern PerfStore g_perf;
 
+// =============================================================================
+// Global enable flag — set once at startup from BATBOX_PERF_HUD env var.
+// =============================================================================
+
+/// When false (default), ChatView skips all g_perf writes so the perf path
+/// is zero-cost when the HUD is not shown.  Set to true by InputBar
+/// constructor when BATBOX_PERF_HUD is non-empty and not "0"/"false".
+extern std::atomic<bool> g_perf_enabled;
+
 } // namespace batbox::perf

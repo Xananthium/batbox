@@ -8,7 +8,7 @@
 //
 // Decision flow (ned-cpp.md §2.C12):
 //   1. Nuclear mode → Allow (bypass everything)
-//   2. Plan mode + non-read-only tool → Deny("plan mode: read-only")
+//   2. Plan mode + non-read-only tool → Deny("Plan mode is read-only — exit plan mode to make changes")
 //   3. AcceptEdits mode + Edit or Write tool → Allow
 //   4. Deny rules match → Deny
 //   5. Allow rules match → Allow
@@ -50,6 +50,8 @@ namespace batbox::permissions {
 /// The outcome of a PermissionGate::ask() call.
 ///
 /// `kind`         — Allow or Deny.
+/// `reason`       — human-readable explanation for a Deny decision (e.g. from
+///                  Plan mode or a deny rule).  Empty string when not set.
 /// `persist_rule` — when present, the caller MUST add this rule to the store
 ///                  (the user chose "always allow" or "always deny").
 /// `edit_text`    — when present, the user edited the args and the tool should
@@ -59,6 +61,12 @@ struct Decision {
     enum class Kind { Allow, Deny };
 
     Kind kind = Kind::Deny;
+
+    /// Human-readable reason for a Deny decision.  Set by Plan-mode and
+    /// deny-with-reason paths so callers (e.g. BashTool, the TUI) can surface
+    /// a useful message rather than a bare "denied".  Empty for Allow decisions
+    /// and for plain deny() calls that carry no context.
+    std::string reason;
 
     /// When the user selected "always allow" or "always deny", the gate
     /// populates this field and the caller must persist it via PermissionStore.
@@ -81,6 +89,15 @@ struct Decision {
     [[nodiscard]] static Decision deny() {
         Decision d;
         d.kind = Kind::Deny;
+        return d;
+    }
+
+    /// Construct a Deny decision with a human-readable reason string.
+    /// Used by Plan mode and other policy-driven denials.
+    [[nodiscard]] static Decision deny_with_reason(std::string_view msg) {
+        Decision d;
+        d.kind   = Kind::Deny;
+        d.reason = std::string(msg);
         return d;
     }
 
@@ -157,7 +174,7 @@ public:
     ///
     /// Decision flow:
     ///   1. Nuclear mode → Allow (short-circuit, no rules checked)
-    ///   2. Plan mode + non-read-only tool → Deny("plan mode: read-only")
+    ///   2. Plan mode + non-read-only tool → Deny (with informative reason)
     ///   3. AcceptEdits mode + Edit/Write tool → Allow
     ///   4. Check deny rules → Deny on first match
     ///   5. Check allow rules → Allow on first match
@@ -200,8 +217,15 @@ private:
     [[nodiscard]] static bool is_accept_edits_tool(std::string_view tool_name) noexcept;
 
     /// Returns true when `tool_name` corresponds to a read-only tool.
-    /// Used for BATBOX_AUTO_APPROVE_READS handling.
-    /// The set is: {"Read", "Glob", "Grep", "CtxInspect", "ToolSearch"}.
+    ///
+    /// Used both for Plan-mode pass-through (read-only tools are allowed even
+    /// in Plan mode) and for BATBOX_AUTO_APPROVE_READS handling.
+    ///
+    /// Read-only set (TUI-FIX-T2):
+    ///   "Read", "Glob", "Grep", "CtxInspect", "ToolSearch",
+    ///   "WebFetch", "WebSearch", "LSP",
+    ///   "TaskList", "TaskOutput", "TaskGet",
+    ///   "ListMcpResourcesTool", "ReadMcpResourceTool"
     [[nodiscard]] static bool is_read_only_tool(std::string_view tool_name) noexcept;
 
     // -------------------------------------------------------------------------

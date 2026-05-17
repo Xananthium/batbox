@@ -6,7 +6,8 @@
 // prompt and waits for the user to press one of three action keys:
 //   a / A / Enter — Approve (confirm the plan; ExitPlanMode transitions to Approved)
 //   r / R / Esc   — Reject  (send plan back for revision)
-//   e / E         — Edit    (returns plan text so the model receives feedback)
+//   e / E         — Edit    (open plan text in $EDITOR / nano / pico / vi;
+//                            returns edited text so the model receives feedback)
 //
 // Threading model:
 //   • await_user_decision() — called from a worker thread; populates state,
@@ -14,12 +15,19 @@
 //   • OnRender()            — called on the UI (main) thread by the FTXUI loop.
 //   • OnEvent()             — called on the UI thread; calls resolve() on keypress.
 //
+// Editor integration (TUI-FIX-T7):
+//   The e/E handler calls batbox::util::edit_string_in_editor(plan_text_, screen_)
+//   which suspends FTXUI via WithRestoredIO(), runs the resolved editor
+//   (resolve_editor()), reads back the edited file, then resolves with
+//   PlanApprovalResult::edited(edited_text).
+//
 // Blueprint contract: batbox::tui::PlanApprovalCard (task TUI-PLAN-T2)
 // ---------------------------------------------------------------------------
 
 #include <batbox/tui/PlanApprovalCard.hpp>
 #include <batbox/tui/Events.hpp>
 #include <batbox/tui/ThemeApply.hpp>
+#include <batbox/util/EditorLaunch.hpp>
 
 #include <ftxui/component/event.hpp>
 #include <ftxui/dom/elements.hpp>
@@ -187,7 +195,7 @@ ftxui::Element PlanApprovalCard::OnRender() {
     Element hint_line_2 = hbox({
         text("  "),
         text("[E]") | bold | ftxui::color(cyan_c),
-        text(" Edit / send feedback"),
+        text(" Edit in $EDITOR"),
     }) | ftxui::bgcolor(bg_c);
 
     Element hint_line_3 = hbox({
@@ -246,7 +254,11 @@ bool PlanApprovalCard::OnEvent(ftxui::Event event) {
         return true;
     }
 
-    // e / E — Edit: return the plan text as feedback for the model
+    // e / E — Edit: open plan text in the resolved editor ($EDITOR / nano / vi),
+    //         then return the edited text as feedback for the model.
+    //
+    // TUI-FIX-T7: edit_string_in_editor() suspends FTXUI via WithRestoredIO()
+    // (if screen_ is set), runs the editor, reads back the edited content.
     if (event == ftxui::Event::Character('e') ||
         event == ftxui::Event::Character('E')) {
         std::string plan_snap;
@@ -254,7 +266,8 @@ bool PlanApprovalCard::OnEvent(ftxui::Event event) {
             std::lock_guard<std::mutex> lock(mtx_);
             plan_snap = plan_text_;
         }
-        resolve(PlanApprovalResult::edited(std::move(plan_snap)));
+        const std::string edited = batbox::util::edit_string_in_editor(plan_snap, screen_);
+        resolve(PlanApprovalResult::edited(edited));
         return true;
     }
 

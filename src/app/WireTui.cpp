@@ -78,6 +78,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <functional>
@@ -326,7 +327,8 @@ void wire_tui(
     batbox::tui::PlanApprovalCard*              plan_approval_card,
     batbox::tui::QuestionCard*                  question_card,
     batbox::mcp::McpServerRegistry*             mcp_registry,
-    batbox::permissions::PermissionGate*        permission_gate)
+    batbox::permissions::PermissionGate*        permission_gate,
+    batbox::tui::InputBar::InterruptCallback    on_interrupt_cb)
 {
     BATBOX_LOG_DEBUG("wire_tui: constructing TUI components");
 
@@ -385,10 +387,12 @@ void wire_tui(
             // Populate banner fields
             (*splash_banner_ptr)->set_model(model_name);
 
+            // Always call set_email so SplashBanner::set_email() can run
+            // resolve_account_label() and produce a $USER@hostname fallback
+            // when BATBOX_USER_EMAIL is unset or empty.
             const char* email_env = std::getenv("BATBOX_USER_EMAIL");
-            if (email_env && email_env[0] != '\0') {
-                (*splash_banner_ptr)->set_email(std::string(email_env));
-            }
+            (*splash_banner_ptr)->set_email(
+                (email_env && email_env[0] != '\0') ? std::string(email_env) : std::string{});
 
             std::error_code ec;
             auto cwd_path = std::filesystem::current_path(ec);
@@ -486,6 +490,12 @@ void wire_tui(
         BATBOX_LOG_DEBUG("wire_tui: PermissionGate wired to InputBar for Shift+Tab cycle");
     }
 
+    // TUI-FIX-T3: wire interrupt callback so Esc while streaming fires cancel.
+    if (input_bar_raw && on_interrupt_cb) {
+        input_bar_raw->set_on_interrupt(std::move(on_interrupt_cb));
+        BATBOX_LOG_DEBUG("wire_tui: interrupt callback wired to InputBar (TUI-FIX-T3)");
+    }
+
     // -------------------------------------------------------------------------
     // 7. PermissionBanner — wired to update InputBar status line on mode change.
     // -------------------------------------------------------------------------
@@ -552,6 +562,8 @@ void wire_tui(
     ftxui::Component effective_root = main_root;
     if (permission_card != nullptr) {
         auto* perm_card_ptr = permission_card;
+        // TUI-FIX-T7: inject screen so e key can run editor via WithRestoredIO.
+        permission_card->set_screen(&screen_mgr.screen_interactive());
 
         auto modal_renderer = ftxui::Renderer(main_root,
             [main_root, perm_card_ptr]() -> ftxui::Element {
@@ -585,6 +597,8 @@ void wire_tui(
     // -------------------------------------------------------------------------
     if (plan_approval_card != nullptr) {
         auto* plan_card_ptr = plan_approval_card;
+        // TUI-FIX-T7: inject screen so e/E key can run editor via WithRestoredIO.
+        plan_approval_card->set_screen(&screen_mgr.screen_interactive());
 
         auto plan_modal_renderer = ftxui::Renderer(effective_root,
             [effective_root, plan_card_ptr]() -> ftxui::Element {
@@ -717,6 +731,27 @@ void wire_tui(
             });
 
         BATBOX_LOG_DEBUG("wire_tui: McpStatusPoller started (TUI-FLOW-T11)");
+    }
+
+    // -------------------------------------------------------------------------
+    // 15b. TUI-FIX-T4: Enable bracketed paste mode.
+    //      Writes the VT sequence \e[?2004h to stdout so the terminal
+    //      wraps all paste events in \e[200~...\e[201~.  This must be done
+    //      AFTER the terminal is in raw mode (FTXUI's ScreenInteractive handles
+    //      raw mode setup) but before the event loop starts.
+    //      The corresponding disable (\e[?2004l) is written on exit via atexit.
+    //      Guard: only emit in a real terminal (isatty(1)).
+    // -------------------------------------------------------------------------
+    if (std::isatty(1)) {
+        // Enable bracketed paste mode
+        std::fputs("\x1b[?2004h", stdout);
+        std::fflush(stdout);
+        // Register disable on exit
+        std::atexit([]() {
+            std::fputs("\x1b[?2004l", stdout);
+            std::fflush(stdout);
+        });
+        BATBOX_LOG_DEBUG("wire_tui: bracketed paste mode enabled (TUI-FIX-T4)");
     }
 
     // -------------------------------------------------------------------------

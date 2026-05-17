@@ -20,9 +20,22 @@
 // Keys (OnEvent):
 //   a / A — Allow once / Always allow
 //   n / N — Deny once / Always deny
-//   e     — Edit args via ModalPicker (future: triggers arg editing; for now
-//            records Decision::EditArgs so the caller can re-prompt)
+//   e     — Edit args: opens $EDITOR / nano / pico / vi on the args JSON,
+//            reads back the edited JSON, returns Decision with edit_text set.
 //   Esc   — Cancel (treated as one-shot Deny)
+//
+// Editor integration (TUI-FIX-T7)
+// ---------------------------------
+// When the user presses e, OnEvent:
+//   1. Calls batbox::util::edit_string_in_editor(args_preview_, screen_) which:
+//      a. Writes args JSON to a temp file.
+//      b. Suspends FTXUI via screen_->WithRestoredIO() (if screen_ is set).
+//      c. Execs the resolved editor (resolve_editor()).
+//      d. Reads back the edited file.
+//   2. Sets Decision::edit_text to the edited content and resolves.
+//
+// Call set_screen(&screen_mgr.screen_interactive()) before the first
+// await_user_decision() to enable proper terminal handling.
 //
 // Threading
 // ---------
@@ -38,6 +51,7 @@
 // ------------------------------------
 //   bool show_card = false;
 //   auto card = std::make_shared<PermissionCard>(theme);
+//   card->set_screen(&screen_mgr.screen_interactive());
 //   auto root  = ftxui::Modal(base, card, &show_card);
 //
 //   // Worker thread:
@@ -58,6 +72,7 @@
 
 #include <ftxui/component/component_base.hpp>
 #include <ftxui/component/event.hpp>
+#include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/dom/elements.hpp>
 
 #include <condition_variable>
@@ -98,6 +113,20 @@ public:
     PermissionCard& operator=(PermissionCard&&)      = delete;
 
     // =========================================================================
+    // Screen injection (TUI-FIX-T7)
+    // =========================================================================
+
+    /// Inject the live ScreenInteractive pointer so that e can call
+    /// WithRestoredIO() before launching the external editor.
+    ///
+    /// Must be called before the first await_user_decision() on the UI thread.
+    /// Passing nullptr disables the WithRestoredIO suspension path (editor is
+    /// launched via std::system without terminal handoff — only for tests).
+    ///
+    /// @param screen  Pointer to the live ftxui::ScreenInteractive; may be null.
+    void set_screen(ftxui::ScreenInteractive* screen) noexcept { screen_ = screen; }
+
+    // =========================================================================
     // Blocking entry-point (called from a WORKER thread)
     // =========================================================================
 
@@ -131,7 +160,8 @@ public:
     /// Handle keyboard events.
     ///   a → Allow once       A → Always allow (with rule)
     ///   n → Deny once        N → Always deny (with rule)
-    ///   e → Edit args        Esc → Cancel (one-shot deny)
+    ///   e → Edit args in $EDITOR / nano / pico / vi
+    ///   Esc → Cancel (one-shot deny)
     ///
     /// Returns true when the event is consumed (always for the five action keys).
     ///
@@ -174,6 +204,11 @@ private:
     // =========================================================================
 
     const batbox::theme::Theme& theme_;  ///< Active colour palette (ref, not owned)
+
+    /// Live ScreenInteractive pointer — injected via set_screen() (TUI-FIX-T7).
+    /// Used by the e handler to suspend FTXUI while the external editor runs.
+    /// Null in headless/test contexts.
+    ftxui::ScreenInteractive* screen_{nullptr};
 
     // Display state — set by await_user_decision() before waiting, read by
     // OnRender() on the UI thread.  Protected by mtx_.

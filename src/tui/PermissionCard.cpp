@@ -14,6 +14,12 @@
 //   • OnRender()            — called on the UI (main) thread by the FTXUI loop.
 //   • OnEvent()             — called on the UI thread; calls resolve() on keypress.
 //
+// Editor integration (TUI-FIX-T7):
+//   The e handler calls batbox::util::edit_string_in_editor(args_preview_, screen_)
+//   which suspends FTXUI via WithRestoredIO(), runs the resolved editor
+//   (resolve_editor()), reads back the edited file, sets Decision::edit_text,
+//   then resolves so the caller can re-prompt with the modified args.
+//
 // Blueprint contract: batbox::tui::PermissionCard (blueprints table, task CPP 1.10)
 // ---------------------------------------------------------------------------
 
@@ -22,6 +28,7 @@
 #include <batbox/tui/ThemeApply.hpp>
 #include <batbox/permissions/PermissionGate.hpp>
 #include <batbox/core/Json.hpp>
+#include <batbox/util/EditorLaunch.hpp>
 
 #include <ftxui/component/event.hpp>
 #include <ftxui/dom/elements.hpp>
@@ -310,15 +317,21 @@ bool PermissionCard::OnEvent(ftxui::Event event) {
         return true;
     }
 
-    // e — Edit args: signal EditArgs by returning allow() with an edit_text marker.
-    // The caller checks Decision::edit_text to detect this case.
+    // e — Edit args: open args_preview_ in $EDITOR / nano / pico / vi.
+    //
+    // TUI-FIX-T7: edit_string_in_editor() suspends FTXUI via WithRestoredIO()
+    // (if screen_ is set), runs the editor, reads back the edited content.
+    // The edited JSON string is stored in Decision::edit_text so the caller
+    // can re-prompt the tool with the modified arguments.
     if (event == ftxui::Event::Character('e')) {
-        batbox::permissions::Decision edit_decision = batbox::permissions::Decision::deny();
-        // Signal edit-args intent: populate edit_text with current args preview.
+        std::string args_snap;
         {
             std::lock_guard<std::mutex> lock(mtx_);
-            edit_decision.edit_text = args_preview_;
+            args_snap = args_preview_;
         }
+        const std::string edited = batbox::util::edit_string_in_editor(args_snap, screen_);
+        batbox::permissions::Decision edit_decision = batbox::permissions::Decision::deny();
+        edit_decision.edit_text = edited;
         resolve(std::move(edit_decision));
         return true;
     }

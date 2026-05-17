@@ -115,6 +115,7 @@
 #include <batbox/plugins/SkillLoader.hpp>
 #include <batbox/conversation/PlanMode.hpp>
 
+#include <atomic>
 #include <mutex>
 
 #include <cstdlib>    // std::getenv
@@ -1406,9 +1407,19 @@ int App::run(const AppArgs& args) {
     // the worker thread — even if App::run() returns before the thread
     // finishes (graceful: the turn will complete naturally).
     // ------------------------------------------------------------------
+    // TUI-FIX-T3: shared cancel source for the current TUI turn.
+    auto tui_cancel_mtx = std::make_shared<std::mutex>();
+    auto tui_cancel_src = std::make_shared<std::shared_ptr<batbox::CancelSource>>(nullptr);
+    // TUI-FIX-T5: turn-in-flight guard prevents concurrent user_message() /
+    // run_turn() on the non-thread-safe Conversation when the user submits
+    // while a tool-call loop is already in progress.
+    auto tui_turn_in_flight = std::make_shared<std::atomic<bool>>(false);
+
     auto tui_on_submit =
         [tui_conversation, tui_client, tui_gate,
-         &screen_mgr, &command_registry, &tui_conv_adapter](std::string text) mutable {
+         &screen_mgr, &command_registry, &tui_conv_adapter,
+         tui_cancel_mtx, tui_cancel_src,
+         tui_turn_in_flight](std::string text) mutable {
             if (text.empty()) return;
 
             // UI-D6: branch on leading '/' before posting user message event
@@ -1493,10 +1504,34 @@ int App::run(const AppArgs& args) {
             }
 
             // Non-slash text: dispatch to Conversation + LLM on a worker thread.
+            // TUI-FIX-T5: reject concurrent submits — Conversation is not thread-safe.
+            // If a tool-call loop (or any run_turn) is still in progress, discard this
+            // submit with a brief informational token so the user sees feedback.
+            bool expected_idle = false;
+            if (!tui_turn_in_flight->compare_exchange_strong(
+                    expected_idle, true,
+                    std::memory_order_acq_rel,
+                    std::memory_order_acquire)) {
+                // A turn is already in flight: show a one-line indicator.
+                screen_mgr.post_token(
+                    "\n*(busy — previous turn still running, message discarded)*");
+                screen_mgr.post_event(
+                    batbox::tui::make_stream_done_event(/*had_error=*/false));
+                BATBOX_LOG_WARN("TUI on_submit: turn already in flight — discarding submit");
+                return;
+            }
+            // TUI-FIX-T3: create the cancel source before spawning so the interrupt
+            // callback can call request_stop() immediately after detach().
+            auto [cs_turn, ct_turn] = batbox::CancelToken::make_root();
+            {
+                std::lock_guard<std::mutex> lk(*tui_cancel_mtx);
+                *tui_cancel_src = std::make_shared<batbox::CancelSource>(std::move(cs_turn));
+            }
             std::thread([tui_conversation, tui_client, tui_gate, &screen_mgr,
+                         tui_cancel_mtx, tui_cancel_src, tui_turn_in_flight,
+                         cancel_tok = std::move(ct_turn),
                          text = std::move(text)]() mutable {
                 tui_conversation->user_message(text);
-                auto [cancel_src, cancel_tok] = batbox::CancelToken::make_root();
                 bool had_error = false;
                 try {
                     auto result = tui_conversation->run_turn(std::move(cancel_tok));
@@ -1507,27 +1542,52 @@ int App::run(const AppArgs& args) {
                 } catch (...) {
                     had_error = true;
                 }
+                // TUI-FIX-T5: release the turn-in-flight guard before posting
+                // stream_done so the UI can immediately accept a new submit.
+                tui_turn_in_flight->store(false, std::memory_order_release);
+                // Clear cancel source so a stale Esc after stream_done is a no-op.
+                {
+                    std::lock_guard<std::mutex> lk(*tui_cancel_mtx);
+                    *tui_cancel_src = nullptr;
+                }
                 // Signal ChatView to commit the streamed content to history
                 // and clear the streaming tail.
                 screen_mgr.post_event(batbox::tui::make_stream_done_event(had_error));
             }).detach();
         };
 
+    // TUI-FIX-T3: build interrupt callback that fires request_stop() via the
+    // mutex-guarded shared cancel source.
+    batbox::tui::InputBar::InterruptCallback tui_interrupt_cb =
+        [tui_cancel_mtx, tui_cancel_src, &screen_mgr]() {
+            std::shared_ptr<batbox::CancelSource> src;
+            {
+                std::lock_guard<std::mutex> lk(*tui_cancel_mtx);
+                src = *tui_cancel_src;
+            }
+            if (src) {
+                src->request_stop();
+                BATBOX_LOG_INFO("TUI Esc: stream interrupted by user");
+                screen_mgr.post_token("\n*Interrupted.*");
+            }
+        };
+
     batbox::app::wire_tui(
         screen_mgr,
-        &supervisor,             // AgentSupervisor* — valid (constructed above at step 9)
+        &supervisor,             // AgentSupervisor* â valid (constructed above at step 9)
         agent_queue,
         tui_theme,
         history,
         keybindings,
-        config.api.default_model,   // model_name → InputBar status bar
-        std::move(tui_on_submit),   // on_submit → Conversation dispatch / slash dispatch
-        &command_registry,          // slash_registry — UI-D5 fix (TUI-T3)
-        perm_card.get(),            // permission_card — UI-D2 fix (TUI-T4)
-        plan_approval_card.get(),   // plan_approval_card — TUI-PLAN-T2
-        question_card.get(),        // question_card — TUI-ASKQ-T4
-        &mcp_registry,              // mcp_registry — TUI-FLOW-T11 McpStatusPoller
-        tui_gate.get());            // permission_gate — TUI-PERM-T1 Shift+Tab cycle
+        config.api.default_model,   // model_name â InputBar status bar
+        std::move(tui_on_submit),   // on_submit â Conversation dispatch / slash dispatch
+        &command_registry,          // slash_registry â UI-D5 fix (TUI-T3)
+        perm_card.get(),            // permission_card â UI-D2 fix (TUI-T4)
+        plan_approval_card.get(),   // plan_approval_card â TUI-PLAN-T2
+        question_card.get(),        // question_card â TUI-ASKQ-T4
+        &mcp_registry,              // mcp_registry â TUI-FLOW-T11 McpStatusPoller
+        tui_gate.get(),             // permission_gate â TUI-PERM-T1 Shift+Tab cycle
+        std::move(tui_interrupt_cb));  // on_interrupt_cb â TUI-FIX-T3 Esc cancels stream
 
     BATBOX_LOG_INFO("TUI wired — entering event loop");
 
