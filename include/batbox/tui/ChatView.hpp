@@ -437,6 +437,18 @@ private:
     /// Signals the timer thread to stop (set before join()).
     std::atomic<bool> spinner_stop_flag_{false};
 
+    // ---- G3: Spinner string cache ----
+    // Formatted strings are rebuilt only when the underlying counters change.
+    // spinner_elapsed_s_ and spinner_token_count_ tick at most once per second;
+    // caching eliminates ~4 heap allocs/frame * 60fps = 240 allocs/sec during streaming.
+    mutable std::string cached_spinner_suffix_;          ///< "(Ns · arrow N tokens)"
+    mutable std::string cached_spinner_frozen_summary_;  ///< "  (Ns · N tokens)"
+    mutable int cached_spinner_elapsed_s_    = -1;
+    mutable int cached_spinner_token_count_  = -1;
+    mutable bool cached_spinner_tool_in_flight_ = false;
+    mutable int cached_frozen_elapsed_s_     = -1;
+    mutable int cached_frozen_token_count_   = -1;
+
     // -------------------------------------------------------------------------
     // TUI-FLOW-T3 — stream-to-paint latency
     // -------------------------------------------------------------------------

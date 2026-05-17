@@ -991,6 +991,37 @@ target_link_libraries(test_input_bar_segments PRIVATE
 
 
 # ---------------------------------------------------------------------------
+# TUI-FIX-T10 — InputBar input-queue (Codex hybrid): all 10 edge cases + G1/G10
+# Same source deps as test_input_bar_segments.
+# ---------------------------------------------------------------------------
+batbox_add_unit_test(test_input_queue
+    unit/test_input_queue.cpp  batbox_core)
+target_sources(test_input_queue PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/tui/InputBar.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/Events.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/ThemeApply.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/MarkdownRender.cpp
+    ${PROJECT_SOURCE_DIR}/src/theme/Theme.cpp
+    ${PROJECT_SOURCE_DIR}/src/theme/themes.cpp
+    ${PROJECT_SOURCE_DIR}/src/repl/History.cpp
+    ${PROJECT_SOURCE_DIR}/src/repl/Keybindings.cpp
+    ${PROJECT_SOURCE_DIR}/src/repl/VimMode.cpp
+    ${PROJECT_SOURCE_DIR}/src/repl/Autocomplete.cpp
+    ${PROJECT_SOURCE_DIR}/src/commands/SlashCommandRegistry.cpp
+    ${PROJECT_SOURCE_DIR}/src/plugins/PluginRegistry.cpp
+    ${PROJECT_SOURCE_DIR}/src/plugins/MarketplaceJson.cpp
+    ${PROJECT_SOURCE_DIR}/src/plugins/FrontmatterParser.cpp
+    ${PROJECT_SOURCE_DIR}/src/perf/PerfSnapshot.cpp)
+target_link_libraries(test_input_queue PRIVATE
+    batbox_config
+    batbox_perf
+    batbox_permissions
+    ftxui::component  ftxui::dom  ftxui::screen
+    simdjson::simdjson
+    spdlog::spdlog)
+
+
+# ---------------------------------------------------------------------------
 # CPP 0.x — Json helpers: Json.hpp type alias + parse_json / to_json_string
 # Compile Json.cpp directly; link simdjson explicitly.
 # ---------------------------------------------------------------------------

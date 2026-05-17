@@ -604,6 +604,22 @@ Result<UsageDelta> Client::stream_chat(
         session.SetWriteCallback(cpr::WriteCallback{write_cb});
         session.SetProgressCallback(cpr::ProgressCallback{progress_cb});
 
+        // B2: Idle-stream timeout via CURLOPT_LOW_SPEED_LIMIT + CURLOPT_LOW_SPEED_TIME.
+        //
+        // cfg_.api.stream_idle_timeout_sec is resolved ONCE at Config::load() time
+        // from BATBOX_STREAM_IDLE_TIMEOUT_SEC (default 60).  Setting limit=1 byte/sec
+        // with time=N means: abort the transfer if fewer than 1 byte/sec is received
+        // for N consecutive seconds.  This catches a stalled upstream mid-stream
+        // (not just connection establishment failures which SetTimeout handles).
+        //
+        // When stream_idle_timeout_sec == 0, the feature is disabled (no LowSpeed set).
+        if (cfg_.api.stream_idle_timeout_sec > 0) {
+            session.SetLowSpeed(cpr::LowSpeed{
+                /*limit=*/1,
+                /*time=*/std::chrono::seconds(cfg_.api.stream_idle_timeout_sec)
+            });
+        }
+
         cpr::Response http = session.Post();
 
         // --- Check for cancellation ---

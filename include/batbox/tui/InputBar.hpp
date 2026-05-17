@@ -30,6 +30,17 @@
 //   │ ◉ claude-sonnet-4 · 0tk · $0.000 · ins     │
 //   └────────────────────────────────────────────┘
 //
+//   When the input queue has entries (TUI-FIX-T10), queued rows render above
+//   the active input row in muted style:
+//
+//   ┌────────────────────────────────────────────┐
+//   │   [1] what is your favourite colour?       │  ← queue row (muted)
+//   │   [2] and your second choice?              │  ← queue row (muted)
+//   │ > █                                        │  ← active input row
+//   │ ◉ claude-sonnet-4 · 0tk · $0.000 · default │
+//   │ [2 queued · Tab: add · Enter: steer · ↑: edit]  │
+//   └────────────────────────────────────────────┘
+//
 // Design
 // ------
 //  • Inherits from ftxui::ComponentBase; constructed via
@@ -47,11 +58,19 @@
 //
 // TUI-FIX-T4: Segment model
 // -------------------------
-//  Buffer is now std::vector<InputSegment> (TextSegment | PasteSegment).
+//  Buffer is now std::vector<InputSegment> (tagged-union, kind 0=Text/1=Paste).
 //  Cursor is SegCursor {seg_idx, byte_off}.
 //  Public API (buffer(), cursor(), set_buffer(), clear()) is preserved; these
 //  methods flatten/reconstruct the segment vector transparently so existing
 //  callers continue to work without changes.
+//
+// TUI-FIX-T10: Input queue (Codex hybrid)
+// ----------------------------------------
+//  InputQueue (SoA) holds up to ~5 queued entries as a flat segment array.
+//  Tab mid-turn appends current input to queue; Enter mid-turn interrupts
+//  and submits combined message.  cursor_idx_ (-1 = input row, 0..N-1 =
+//  queue row) controls which row receives edits.
+//  Rendering happens inside OnRender (NOT a new FTXUI Component).
 //
 // Thread safety
 // -------------
@@ -78,6 +97,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <cstddef>
 
 #include <ftxui/component/component_base.hpp>
 #include <ftxui/component/event.hpp>
@@ -102,6 +122,65 @@ struct StatusLine {
     uint32_t    token_count{0}; ///< Cumulative input + output tokens this session
     double      cost_usd{0.0};  ///< Cumulative cost in USD
     std::string mode_label;   ///< e.g. "default", "plan", "nuclear"
+};
+
+// =============================================================================
+// InputQueue — SoA flat segment store for queued follow-up messages.
+//
+// TUI-FIX-T10: Struct-of-arrays layout.  Entry i occupies:
+//   all_segments[entry_starts[i] .. entry_starts[i] + entry_lens[i])
+//
+// Bounded to kMaxQueueDepth entries (~5).  Append is O(1) amortised.
+// Deletion (clear all) zeroes starts/lens and clears all_segments.
+// =============================================================================
+struct InputQueue {
+    static constexpr std::size_t kMaxQueueDepth = 5;
+
+    std::vector<std::size_t>  entry_starts;   ///< index into all_segments[]
+    std::vector<std::size_t>  entry_lens;     ///< segment count per entry
+    std::vector<InputSegment> all_segments;   ///< flat; all entries concatenated
+
+    /// Number of queued entries.
+    [[nodiscard]] std::size_t depth() const noexcept { return entry_starts.size(); }
+
+    /// True when the queue holds no entries.
+    [[nodiscard]] bool empty() const noexcept { return entry_starts.empty(); }
+
+    /// Append segments from [begin, end) as a new queue entry.
+    void append(const std::vector<InputSegment>& segs) {
+        entry_starts.push_back(all_segments.size());
+        entry_lens.push_back(segs.size());
+        for (const auto& s : segs) all_segments.push_back(s);
+    }
+
+    /// Flatten entry at index i into a single string (paste bodies expanded).
+    [[nodiscard]] std::string flatten_entry(std::size_t i) const {
+        if (i >= entry_starts.size()) return {};
+        std::string result;
+        std::size_t start = entry_starts[i];
+        std::size_t len   = entry_lens[i];
+        for (std::size_t j = start; j < start + len && j < all_segments.size(); ++j) {
+            result += all_segments[j].body;
+        }
+        return result;
+    }
+
+    /// Flatten all entries joined by '\n'.
+    [[nodiscard]] std::string flatten_all() const {
+        std::string result;
+        for (std::size_t i = 0; i < entry_starts.size(); ++i) {
+            if (i > 0) result += '\n';
+            result += flatten_entry(i);
+        }
+        return result;
+    }
+
+    /// Clear all queued entries.
+    void clear() {
+        entry_starts.clear();
+        entry_lens.clear();
+        all_segments.clear();
+    }
 };
 
 // =============================================================================
@@ -154,7 +233,7 @@ public:
 
     // ---- FTXUI interface ----------------------------------------------------
 
-    /// Render the input bar (prompt row + status row + optional palette overlay).
+    /// Render the input bar (queue rows + prompt row + status row + optional palette overlay).
     ftxui::Element OnRender() override;
 
     /// Handle keyboard and custom events.
@@ -315,11 +394,24 @@ public:
     /// This is what gets submitted to on_submit_.
     [[nodiscard]] std::string flatten_for_submit() const;
 
+    // ---- TUI-FIX-T10: input queue public accessors --------------------------
+
+    /// Read-only access to the input queue (for testing).
+    [[nodiscard]] const InputQueue& input_queue() const noexcept { return queue_; }
+
+    /// Clear the input queue (e.g. after a successful combined submit).
+    void clear_queue();
+
 private:
     // ---- Render helpers -----------------------------------------------------
 
     /// Render the single prompt row:  ">" prefix + text + cursor (or placeholder).
     ftxui::Element render_prompt_row() const;
+
+    /// Render one queue row (muted condensed line above the active input row).
+    /// @param entry_idx  Index into queue_.entry_starts (0 = oldest).
+    /// @param selected   True when cursor_idx_ == entry_idx (highlight row).
+    ftxui::Element render_queue_row(std::size_t entry_idx, bool selected) const;
 
     /// Render the status line row.
     ftxui::Element render_status_row() const;
@@ -336,6 +428,7 @@ private:
     ///
     /// Priority rules:
     ///   splash_showing_ → {"? for shortcuts", "@ for agents"}
+    ///   queue depth > 0 → right includes "[N queued · Tab: add · Enter: steer · ↑: edit]"
     ///   stream_active_  → left = "esc to interrupt"
     ///   mcp_failed_ > 0 → right = "N MCP server failed · /mcp"
     ///   otherwise       → right = "thinking effort: <level>"
@@ -395,19 +488,29 @@ private:
     /// Set the SegCursor from a flat byte offset into the flattened buffer.
     void set_seg_cursor_from_flat(std::size_t flat_offset);
 
-    /// Ensure the segment at seg_cursor_.seg_idx is a TextSegment.
-    /// If the cursor is at a PasteSegment, split or insert as needed.
+    /// Ensure the segment at seg_cursor_.seg_idx is a Text segment.
+    /// If the cursor is at a Paste segment, split or insert as needed.
     /// Returns a reference to the Text body at the cursor.
-    TextSegment& cursor_text_segment();
+    InputSegment& cursor_text_segment();
 
-    /// Remove empty TextSegments and merge adjacent TextSegments.
+    /// Remove empty Text segments and merge adjacent Text segments.
     void normalize_segments();
 
-    /// Build the chip label for a PasteSegment.
-    [[nodiscard]] static std::string paste_chip_label(const PasteSegment& ps);
+    /// Build the chip label for a Paste segment.
+    [[nodiscard]] static std::string paste_chip_label(const InputSegment& ps);
 
     /// Returns true when the buffer (all segments combined) is logically empty.
     [[nodiscard]] bool is_empty() const noexcept;
+
+    // ---- TUI-FIX-T10: queue helpers -----------------------------------------
+
+    /// Append the current input row to the queue (if non-empty) and clear input.
+    /// Returns true if an entry was actually appended.
+    bool queue_append_current();
+
+    /// Build the combined submit string: current + '\n' + joined queue, then
+    /// clear both.  Used by Enter-mid-turn and Enter-idle-with-queue paths.
+    std::string build_combined_submit();
 
     // ---- State --------------------------------------------------------------
 
@@ -425,7 +528,7 @@ private:
     InterruptCallback     on_interrupt_;  ///< Fired when Esc pressed while stream_active_.
 
     // ---- TUI-FIX-T4: segment model buffer -----------------------------------
-    /// Buffer as a list of segments.  Always contains at least one TextSegment
+    /// Buffer as a list of segments.  Always contains at least one Text segment
     /// (possibly with an empty body) so cursor operations have a valid target.
     std::vector<InputSegment> segments_;
 
@@ -441,11 +544,28 @@ private:
     /// Accumulated paste bytes (between \e[200~ and \e[201~).
     std::string paste_accumulator_;
 
+    // ---- TUI-FIX-T10: input queue -------------------------------------------
+    /// SoA queue of follow-up messages.  Populated by Tab mid-turn.
+    InputQueue queue_;
+
+    /// Queue/input selection cursor.
+    ///   -1           = input row (default)
+    ///   0 .. N-1     = queue row index (for edit via ↑/↓)
+    int cursor_idx_{-1};
+
     // ---- Vim mode state machine ---
     batbox::repl::VimMode vim_mode_;
 
     // Status line
     StatusLine status_;
+
+    // ---- A3: dirty-string cache for formatted status display ----
+    // Rebuilt only when status_strs_dirty_ == true (set by set_usage()).
+    // Combined with snprintf format_cost / format_tokens: 1 alloc per turn
+    // instead of per render frame.
+    mutable std::string cached_token_str_;
+    mutable std::string cached_cost_str_;
+    mutable bool status_strs_dirty_ = true;
 
     // Running tool indicator (set during tool dispatch, cleared after).
     // When non-empty, displayed as " · running: <name>" in the status row.

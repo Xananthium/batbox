@@ -366,14 +366,19 @@ int App::run_headless(const AppArgs& args, const batbox::config::Config& cfg_in,
     // 7. Construct Conversation with the wired ToolRegistry + gate.
     //    Both are passed in from App::run() — same objects TUI mode uses.
     // ------------------------------------------------------------------
+    // --no-tools: pass nullptr as registry so ChatRequest has no tool schemas.
+    // This is the P0 workaround for small-ctx models (e.g. Magistral 8k).
+    batbox::tools::ToolRegistry* headless_registry = args.no_tools ? nullptr : &tool_registry;
+    batbox::permissions::PermissionGate* headless_gate = args.no_tools ? nullptr : &gate;
+
     batbox::conversation::Conversation conversation{
         client,
         store,
         cfg,
         std::filesystem::current_path(), // working_dir
         on_delta,
-        &tool_registry,   // ToolRegistry — fully wired, same as interactive mode
-        &gate             // PermissionGate — non-interactive (nuclear/AcceptEdits)
+        headless_registry, // ToolRegistry (nullptr when --no-tools)
+        headless_gate      // PermissionGate (nullptr when --no-tools)
     };
 
     // ------------------------------------------------------------------
@@ -636,6 +641,9 @@ int App::run(const AppArgs& args) {
     // ------------------------------------------------------------------
     if (args.print_mode || args.subagent) {
         BATBOX_LOG_INFO("entering headless --print mode");
+        if (args.no_tools) {
+            BATBOX_LOG_INFO("--no-tools: tool registry omitted from ChatRequest");
+        }
         return run_headless(args, config, tool_registry_hl, gate_hl);
     }
 
@@ -1129,6 +1137,14 @@ int App::run(const AppArgs& args) {
 
     // on_delta_cb: forward each streaming token to the ScreenManager so the
     // ChatView's streaming tail is updated in real time.
+    // --no-tools: when set, pass nullptr as registry so the model does not
+    // receive any tool schemas in the ChatRequest (B1 fix for small-ctx models).
+    batbox::tools::ToolRegistry* tui_registry_ptr = args.no_tools ? nullptr : &tool_registry;
+    batbox::permissions::PermissionGate* tui_gate_ptr = args.no_tools ? nullptr : tui_gate.get();
+    if (args.no_tools) {
+        BATBOX_LOG_INFO("--no-tools: tool registry omitted from TUI ChatRequest");
+    }
+
     auto tui_conversation = std::make_shared<batbox::conversation::Conversation>(
         *tui_client,
         session_store,
@@ -1137,8 +1153,8 @@ int App::run(const AppArgs& args) {
         /*on_delta_cb=*/[&screen_mgr](std::string_view chunk) {
             screen_mgr.post_token(chunk);
         },
-        &tool_registry,
-        tui_gate.get());
+        tui_registry_ptr,
+        tui_gate_ptr);
 
     // Wire the message-appended callback so tool-call and tool-result messages
     // are forwarded to ChatView via a make_message_appended_event.
@@ -1190,6 +1206,16 @@ int App::run(const AppArgs& args) {
     tui_conversation->set_on_reasoning_stopped_cb(
         [&screen_mgr]() {
             screen_mgr.post_event(batbox::tui::make_thinking_stopped_event());
+        });
+
+    // Wire the usage-delta callback so InputBar status row shows live token / cost
+    // counters (TUI-FIX-T6 / A3).  The worker thread fires once per terminal
+    // UsageDelta; the event crosses to the UI thread where InputBar::OnEvent
+    // calls set_usage() — never crossing threads directly onto InputBar::status_.
+    tui_conversation->set_on_usage_delta_cb(
+        [&screen_mgr](uint32_t tokens, double cost_usd) {
+            screen_mgr.post_event(
+                batbox::tui::make_status_update_event_with_usage(tokens, cost_usd));
         });
 
     BATBOX_LOG_INFO("TUI conversation ready (model={})", config.api.default_model);

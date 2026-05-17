@@ -138,6 +138,16 @@ public:
     // Static helpers (public so tests can call them directly)
     // -------------------------------------------------------------------------
 
+    /// Estimate token count from serialized request body size using the bytes/4 heuristic.
+    ///
+    /// This is the G9-adopted primary path used by Conversation::run_turn() when
+    /// a serialized ChatRequest body is available.  The estimate has ±20% slack;
+    /// that is why the default compact threshold is 80% not 95%.
+    ///
+    /// @param serialized_bytes  Size in bytes of the JSON-serialized ChatRequest body.
+    /// @returns                 Estimated token count (serialized_bytes / 4).
+    [[nodiscard]] static size_t estimate_tokens_from_bytes(std::size_t serialized_bytes) noexcept;
+
     /// Look up the context-limit (in tokens) for a given model name.
     /// Matching is case-insensitive prefix/substring matching against known
     /// model name patterns.  Returns 128 000 for unknown models.

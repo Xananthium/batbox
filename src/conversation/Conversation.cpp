@@ -127,6 +127,16 @@ void Conversation::set_on_reasoning_stopped_cb(std::function<void()> cb)
 }
 
 // =============================================================================
+// set_on_usage_delta_cb()  (TUI-FIX-T6 / A3)
+// =============================================================================
+
+void Conversation::set_on_usage_delta_cb(
+    std::function<void(uint32_t /*tokens*/, double /*cost_usd*/)> cb)
+{
+    on_usage_delta_cb_ = std::move(cb);
+}
+
+// =============================================================================
 // user_message()
 // =============================================================================
 
@@ -172,12 +182,72 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         return batbox::Err(std::string("cancelled"));
     }
 
-    // ---- 1. Auto-compact check ----
+    // ---- 1. Auto-compact pre-flight check (bytes/4 estimator, G9) ----
+    //
+    // Token estimation uses the bytes/4 heuristic keyed off the serialized
+    // ChatRequest body size.  This is the same estimator used at run-time;
+    // using the actual serialized request means tool schemas, the system prompt,
+    // and message content are all included in the estimate.
+    //
+    // The context limit is resolved ONCE at Config::load() time and stored in
+    // cfg_.api.default_model_ctx_len.  If it is still at its initial value (4096)
+    // AND the model matches a known entry in ContextWindow, we use the table value.
+    // This covers the case where the user did not set any BATBOX_CTX_LEN_* env vars.
+    //
+    // Effective threshold = ceil(ctx_len * auto_compact_at_pct / 100).
+    // If post-compact estimate still exceeds threshold → Err (verbatim message).
     {
-        ContextWindow cw{cfg_};
-        cw.set_model(cfg_.api.default_model);
-        const size_t est = cw.estimate_tokens(messages_);
-        if (cw.needs_compact(est)) {
+        // Determine the resolved context length for this turn.
+        const std::size_t resolved_ctx_len = [&]() -> std::size_t {
+            // Use the env-resolved value if it is non-trivial (not the 4096 fallback
+            // that means "not set via env").  We distinguish by checking whether the
+            // env override was set — this is encoded in whether default_model_ctx_len
+            // differs from the ContextWindow built-in table.
+            // Simpler approach: always use cfg_.api.default_model_ctx_len if > 0,
+            // and trust that resolve_model_ctx_len() in Config.cpp already applied
+            // the correct priority (per-model env → default env → 4096).
+            // If it is exactly 4096, fall through to ContextWindow for the built-in table.
+            const std::size_t env_len = cfg_.api.default_model_ctx_len;
+            if (env_len > 4096) {
+                return env_len;  // env override was applied
+            }
+            // Try the built-in model table via ContextWindow.
+            const std::size_t table_len =
+                batbox::conversation::ContextWindow::context_limit_for_model(
+                    cfg_.api.default_model);
+            if (table_len > 0) {
+                return table_len;
+            }
+            // env_len is the 4096 fallback; use it.
+            return env_len;
+        }();
+
+        // Effective compact threshold (tokens).
+        const int pct = cfg_.compact.auto_compact_at_pct;
+        const std::size_t threshold =
+            (resolved_ctx_len * static_cast<std::size_t>(pct) + 99) / 100; // ceil div
+
+        // Build the ChatRequest now (also needed for step 2 below) and estimate
+        // via bytes/4.  This is the G9-adopted path: serialize the full request
+        // once and divide byte count by 4.  The ±20% slack is why the default
+        // threshold is 80% not 95%.
+        const bool is_planning = (plan_mode_ != nullptr) && plan_mode_->is_planning();
+        const std::string sys_prompt_preflight =
+            batbox::conversation::compose_system_prompt(is_planning, working_dir_);
+
+        batbox::inference::ChatRequest preflight_req =
+            build_chat_request(messages_, cfg_, registry_, sys_prompt_preflight);
+        // Serialize the request as JSON for the bytes/4 estimate.
+        // nlohmann to_json registered for ChatRequest; same pattern as Client.cpp.
+        const batbox::Json preflight_json = preflight_req;
+        const std::size_t est = preflight_json.dump().size() / 4;
+
+        auto logger_cw = batbox::log::get("conversation");
+        logger_cw->debug("ctx-budget: est={}tok threshold={}tok ctx_len={}tok pct={}%",
+                         est, threshold, resolved_ctx_len, pct);
+
+        if (est >= threshold) {
+            // Attempt compaction.
             Compactor compactor{cfg_.compact.keep_last_n_turns_verbatim};
             auto [child_src, child_tok] = ct.child();
             try {
@@ -190,7 +260,22 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
             } catch (const batbox::CancelledException&) {
                 return batbox::Err(std::string("cancelled"));
             }
-            // child_src goes out of scope here; its child token was already moved.
+
+            // Re-estimate after compaction to check if we are still over threshold.
+            batbox::inference::ChatRequest post_compact_req =
+                build_chat_request(messages_, cfg_, registry_, sys_prompt_preflight);
+            // Re-serialize after compaction.
+            const batbox::Json post_compact_json = post_compact_req;
+            const std::size_t post_est = post_compact_json.dump().size() / 4;
+
+            logger_cw->debug("ctx-budget post-compact: est={}tok threshold={}tok",
+                             post_est, threshold);
+
+            if (post_est >= threshold) {
+                return batbox::Err(std::string(
+                    "ctx-budget: prompt still exceeds compact threshold after compaction; "
+                    "consider /clear or a larger-ctx model"));
+            }
         }
     }
 
@@ -354,6 +439,18 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
 
         // Prefer usage from the streaming return value.
         usage = stream_res.value();
+
+        // A3 / TUI-FIX-T6: accumulate session usage and fire callback on the
+        // terminal UsageDelta (once per sub-turn / streaming call).
+        // The callback crosses to the UI thread via post_event — never calls
+        // InputBar::set_usage() directly (UI-thread only by contract).
+        if ((usage.total_tokens > 0 || usage.prompt_tokens > 0) && on_usage_delta_cb_) {
+            session_tokens_   += static_cast<uint32_t>(
+                (usage.total_tokens > 0) ? usage.total_tokens
+                                         : usage.prompt_tokens + usage.completion_tokens);
+            session_cost_usd_ += usage.cost_usd;
+            on_usage_delta_cb_(session_tokens_, session_cost_usd_);
+        }
 
         // TUI-FLOW-T3: log all three perf counters at INFO after each streaming
         // turn completes.  stream_to_paint_ms and frame_ms are updated by

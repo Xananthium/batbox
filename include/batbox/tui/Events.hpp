@@ -110,9 +110,16 @@ enum class SidecarState : uint8_t {
 };
 
 /// Payload for Events::StatusUpdate — sidecar lifecycle change.
+///
+/// Extended (TUI-FIX-T6 / A3): when tokens and cost_usd are present the
+/// payload carries a cumulative usage update for the status row.  Workers
+/// post usage-bearing events via make_status_update_event_with_usage();
+/// sidecar lifecycle changes use the existing make_status_update_event().
 struct StatusUpdatePayload {
-    SidecarState state;
-    std::string  detail;    ///< Optional human-readable detail (e.g. exit code)
+    SidecarState            state{SidecarState::Cold};
+    std::string             detail;    ///< Optional human-readable detail (e.g. exit code)
+    std::optional<uint32_t> tokens;    ///< Cumulative session token count (A3)
+    std::optional<double>   cost_usd;  ///< Cumulative session cost in USD (A3)
 };
 
 /// Payload for Events::AgentsDirty — which sub-agent changed.
@@ -286,6 +293,17 @@ struct SpinnerTickPayload {};
 /// Create a StatusUpdate event reflecting a sidecar @p state change.
 [[nodiscard]] ftxui::Event make_status_update_event(SidecarState state,
                                                      std::string  detail = "");
+
+/// Create a StatusUpdate event carrying cumulative usage counters (TUI-FIX-T6 / A3).
+///
+/// Call from the worker thread after each terminal-chunk UsageDelta.  The UI
+/// thread's InputBar::OnEvent extracts the payload and calls set_usage() —
+/// never call set_usage() directly from the worker thread.
+///
+/// @param tokens    Cumulative session token count (prompt + completion, all turns).
+/// @param cost_usd  Cumulative session cost in USD.
+[[nodiscard]] ftxui::Event make_status_update_event_with_usage(uint32_t tokens,
+                                                                double   cost_usd);
 
 /// Create a ModalShow event that will invoke @p callback when dismissed.
 [[nodiscard]] ftxui::Event make_modal_show_event(std::string title,

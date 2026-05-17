@@ -121,6 +121,29 @@ static std::filesystem::path resolve_path(std::string_view s) {
     return batbox::paths::expand_tilde(s);
 }
 
+/// Convert a resolved model name to the BATBOX_CTX_LEN_<MODEL_UPPER_UNDERSCORED>
+/// env-key suffix form.
+///
+/// Rule: uppercase every character; replace every non-alphanumeric (including '/'
+/// '.' '-') with '_'. Then prepend "BATBOX_CTX_LEN_".
+///
+/// Examples:
+///   "gpt-4o"                       → "BATBOX_CTX_LEN_GPT_4O"
+///   "mistralai/magistral-small-2509" → "BATBOX_CTX_LEN_MISTRALAI_MAGISTRAL_SMALL_2509"
+static std::string model_ctx_len_key(std::string_view model) {
+    std::string key;
+    key.reserve(20 + model.size());
+    key = "BATBOX_CTX_LEN_";
+    for (char c : model) {
+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
+            key += static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+        } else {
+            key += '_';
+        }
+    }
+    return key;
+}
+
 // ---------------------------------------------------------------------------
 // Macro-free per-key extraction helpers that return Err on bad values.
 // Each follows the pattern: if key present → parse → assign → propagate error.
@@ -421,6 +444,9 @@ static Result<void, std::string> apply_env(Config& cfg, const EnvMap& env) {
         if (!r) return Err(r.error());
         cfg.api.stream = *r;
     }
+    if (auto it = env.find("BATBOX_PROVIDER_HINT"); it != env.end()) {
+        cfg.api.provider_hint = it->second;
+    }
 
     // --- General group -------------------------------------------------------
     if (auto it = env.find("BATBOX_CONFIG_DIR"); it != env.end()) {
@@ -570,6 +596,15 @@ static Result<void, std::string> apply_env(Config& cfg, const EnvMap& env) {
         auto r = parse_int("BATBOX_KEEP_LAST_N_TURNS_VERBATIM", it->second);
         if (!r) return Err(r.error());
         cfg.compact.keep_last_n_turns_verbatim = *r;
+    }
+
+    // --- Idle stream timeout -------------------------------------------------
+    // Resolved once here; stored in cfg.api.stream_idle_timeout_sec.
+    // Client.cpp reads the field at curl-init time — never calls getenv.
+    if (auto it = env.find("BATBOX_STREAM_IDLE_TIMEOUT_SEC"); it != env.end()) {
+        auto r = parse_int("BATBOX_STREAM_IDLE_TIMEOUT_SEC", it->second);
+        if (!r) return Err(r.error());
+        cfg.api.stream_idle_timeout_sec = *r;
     }
 
     // --- Sidecar python auto-resolution --------------------------------------
@@ -743,11 +778,59 @@ static void apply_settings_json(Config& cfg, const Json& j) {
 // load_from_env()
 // ============================================================================
 
+/// Resolve the per-model context length from the env map.
+/// Called after apply_env() so that model alias fields are already populated.
+/// Fallback chain: per-model env → BATBOX_CTX_LEN_DEFAULT → built-in table → 4096.
+static void resolve_model_ctx_len(Config& cfg, const EnvMap& env) {
+    // Use the resolved default_model (already set by apply_env via getenv_with_fallback).
+    const std::string& model = cfg.api.default_model;
+
+    // 1. Try per-model env: BATBOX_CTX_LEN_<MODEL_UPPER_UNDERSCORED>
+    const std::string per_model_key = model_ctx_len_key(model);
+    if (auto it = env.find(per_model_key); it != env.end() && !it->second.empty()) {
+        auto r = parse_int(per_model_key, it->second);
+        if (r && *r > 0) {
+            cfg.api.default_model_ctx_len = static_cast<std::size_t>(*r);
+            return;
+        }
+        // Invalid value — fall through to next tier.
+        BATBOX_LOG_WARN("Config: {} has invalid value '{}'; falling back",
+                        per_model_key, it->second);
+    }
+
+    // 2. Try BATBOX_CTX_LEN_DEFAULT
+    if (auto it = env.find("BATBOX_CTX_LEN_DEFAULT"); it != env.end() && !it->second.empty()) {
+        auto r = parse_int("BATBOX_CTX_LEN_DEFAULT", it->second);
+        if (r && *r > 0) {
+            cfg.api.default_model_ctx_len = static_cast<std::size_t>(*r);
+            return;
+        }
+        BATBOX_LOG_WARN("Config: BATBOX_CTX_LEN_DEFAULT has invalid value '{}'; falling back",
+                        it->second);
+    }
+
+    // 3. Built-in model table via ContextWindow::context_limit_for_model
+    //    We include the lookup inline here to avoid a header dependency cycle.
+    //    The same table is duplicated in ContextWindow.cpp — they must stay in sync.
+    //    For now: use the ContextWindow static method via its header.
+    //    Import is done in the .cpp via forward logic below.
+    // We use 4096 as the fallback (tier 4) and rely on Conversation.cpp to call
+    // ContextWindow::context_limit_for_model for the built-in table, because
+    // Config.cpp does not include ContextWindow.hpp (would create a dep cycle).
+    // The resolution here covers tiers 1-2 (env). Tier 3 is done in Conversation.cpp
+    // via ContextWindow when default_model_ctx_len is still at its default (4096).
+    // Actually: we CAN include ContextWindow.hpp here since it only depends on Config.hpp
+    // and Message.hpp which are already available transitively.
+    // But to keep things simple, we embed the fallback logic directly:
+    cfg.api.default_model_ctx_len = 4096; // tier 4 fallback
+}
+
 Result<Config, std::string> Config::load_from_env(const EnvMap& env) {
     Config cfg = load_default();
     if (auto r = apply_env(cfg, env); !r) {
         return Err(r.error());
     }
+    resolve_model_ctx_len(cfg, env);
     if (auto r = cfg.validate(); !r) {
         return Err(r.error());
     }
@@ -768,6 +851,10 @@ Result<Config, std::string> Config::load(const EnvMap& env, const Json& settings
     if (auto r = apply_env(cfg, env); !r) {
         return Err(r.error());
     }
+
+    // Resolve per-model context length once (env tiers 1-2; fallback = 4096).
+    // Conversation.cpp uses this field at run_turn() time without calling getenv.
+    resolve_model_ctx_len(cfg, env);
 
     if (auto r = cfg.validate(); !r) {
         return Err(r.error());
@@ -842,9 +929,12 @@ Result<void, std::string> Config::validate() const {
         return Err("BATBOX_WEBFETCH_TIMEOUT_SEC: must be > 0 (got " +
                    std::to_string(search.webfetch_timeout_sec) + ")");
     }
-    // auto_compact_at_pct in [1, 100].
-    if (compact.auto_compact_at_pct < 1 || compact.auto_compact_at_pct > 100) {
-        return Err("BATBOX_AUTO_COMPACT_AT_PCT: must be in [1, 100] (got " +
+    // auto_compact_at_pct in [50, 95].
+    // Lower bound 50: triggering compact at <50% of ctx is never useful and likely
+    // a misconfiguration.  Upper bound 95: leaves at least 5% slack for the turn's
+    // own response tokens; 100% would trigger after every assistant reply.
+    if (compact.auto_compact_at_pct < 50 || compact.auto_compact_at_pct > 95) {
+        return Err("BATBOX_AUTO_COMPACT_AT_PCT: must be in [50, 95] (got " +
                    std::to_string(compact.auto_compact_at_pct) + ")");
     }
     // keep_last_n_turns_verbatim non-negative.

@@ -139,6 +139,23 @@ int main(int argc, char** argv) {
                  "internal: suppress splash, force headless for sub-agent use")
        ->group(""); // empty group hides from standard --help output
 
+    // -- Tool control -------------------------------------------------------
+    // --no-tools: omit tool schemas from ChatRequest.
+    //
+    // When set, Conversation is constructed with registry=nullptr so the model
+    // receives no tool schemas.  This is the P0 workaround for Magistral Small
+    // at 8k ctx where 39 tool defs overflow the prompt budget.
+    //
+    // Env-variable lookup:
+    //   BATBOX_CTX_LEN_MISTRALAI_MAGISTRAL_SMALL_2509=8192 (per-model ctx)
+    // Combined with --no-tools this keeps prompts well within 8k.
+    //
+    // Wave 3 ships the flag only.  Auto-trim (strip lowest-priority tools to
+    // fit budget automatically) is Wave 4 work gated on real telemetry.
+    cli.add_flag("--no-tools",
+                 args.no_tools,
+                 "omit tool schemas from ChatRequest (workaround for small-ctx models)");
+
     // -----------------------------------------------------------------------
     // Subcommands
     // -----------------------------------------------------------------------

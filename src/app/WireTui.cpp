@@ -79,6 +79,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdio>
+#include <unistd.h>
 #include <cstdlib>
 #include <filesystem>
 #include <functional>
@@ -742,7 +743,7 @@ void wire_tui(
     //      The corresponding disable (\e[?2004l) is written on exit via atexit.
     //      Guard: only emit in a real terminal (isatty(1)).
     // -------------------------------------------------------------------------
-    if (std::isatty(1)) {
+    if (::isatty(1)) {
         // Enable bracketed paste mode
         std::fputs("\x1b[?2004h", stdout);
         std::fflush(stdout);

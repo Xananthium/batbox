@@ -314,8 +314,25 @@ ContextWindow::ContextWindow(const batbox::config::Config& cfg)
 }
 
 // =============================================================================
-// ContextWindow::estimate_tokens
+// ContextWindow::estimate_tokens_from_bytes (G9 bytes/4 path)
 // =============================================================================
+// Primary estimator used when a serialized request body is available.
+// This is the path adopted by Conversation::run_turn() (G9 / A1).
+//
+// bytes / 4 is a ±20% slack estimate; that is why the compact threshold default
+// is 80% not 95%.  The overhead of tool schemas, system prompt, and JSON
+// encoding is automatically included because we measure the full wire body.
+
+// static free function
+size_t ContextWindow::estimate_tokens_from_bytes(std::size_t serialized_bytes) noexcept {
+    return serialized_bytes / 4;
+}
+
+// =============================================================================
+// ContextWindow::estimate_tokens (walking path — fallback)
+// =============================================================================
+// Kept as a fallback for callers that do not have a serialized request body.
+// Conversation::run_turn() uses estimate_tokens_from_bytes() instead (G9).
 
 size_t ContextWindow::estimate_tokens(const std::vector<Message>& messages) const {
     // Conversation-level prefix overhead (reply priming): 3 tokens.

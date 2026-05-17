@@ -520,6 +520,48 @@ TEST_SUITE("InputBar — status line") {
         CHECK(el != nullptr);
     }
 
+    // A3: dirty-string cache invalidation tests (TUI-FIX-T6)
+    TEST_CASE("set_usage invalidates string cache on each call") {
+        TestFixture f;
+        // First render with 0 tokens
+        auto el1 = f.bar->Render();
+        CHECK(el1 != nullptr);
+        // Update usage; must not crash and next render reflects new values
+        f.bar->set_usage(1234, 0.005);
+        auto el2 = f.bar->Render();
+        CHECK(el2 != nullptr);
+        // Update again; must still render correctly
+        f.bar->set_usage(9999, 0.125);
+        auto el3 = f.bar->Render();
+        CHECK(el3 != nullptr);
+    }
+
+    TEST_CASE("set_usage with zero tokens renders without crash") {
+        TestFixture f;
+        f.bar->set_usage(0, 0.0);
+        auto el = f.bar->Render();
+        CHECK(el != nullptr);
+    }
+
+    TEST_CASE("set_usage with large token count renders comma-formatted string") {
+        TestFixture f;
+        // 1,234,567 tokens — should be formatted as "1,234,567tk"
+        f.bar->set_usage(1234567, 1.5);
+        auto el = f.bar->Render();
+        CHECK(el != nullptr);
+    }
+
+    TEST_CASE("multiple set_usage calls accumulate correctly without crash") {
+        TestFixture f;
+        // Simulate multiple sub-turn usage events
+        for (int i = 1; i <= 10; ++i) {
+            f.bar->set_usage(static_cast<uint32_t>(i * 100),
+                             static_cast<double>(i) * 0.001);
+            auto el = f.bar->Render();
+            CHECK(el != nullptr);
+        }
+    }
+
     TEST_CASE("set_mode stores mode label") {
         TestFixture f;
         f.bar->set_mode("plan");

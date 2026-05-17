@@ -96,6 +96,15 @@ struct AppArgs {
     // headless execution so the parent process can parse stdout cleanly.
     bool         subagent{false};     ///< --subagent : internal sub-agent launch flag
 
+    // -- Tool control -------------------------------------------------------
+    // --no-tools: construct Conversation with registry=nullptr so the model
+    // does not receive any tool schemas in the ChatRequest.  This is the P0
+    // workaround for Magistral Small running under the default 8k context:
+    // 39 tool defs overflow the prompt budget; passing registry=nullptr elides
+    // them entirely.  Wave 3 ships the flag only; auto-trim is Wave 4 (gated
+    // on real "how often did we hit the ctx cap?" telemetry).
+    bool         no_tools{false};     ///< --no-tools : omit tool schemas from ChatRequest
+
     // -- Subcommands (populated by CLI11 subcommand callbacks) --------------
     bool         run_setup_sidecar{false}; ///< setup-sidecar subcommand selected
     bool         run_migrate{false};       ///< migrate subcommand selected

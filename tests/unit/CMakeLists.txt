@@ -852,3 +852,16 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_input_bar_segments.cpp)
             batbox_repl batbox_theme batbox_perf batbox_core)
     endif()
 endif()
+
+# TUI-FIX-T10 — InputBar input-queue (Codex hybrid): all 10 edge cases + G1/G10
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_input_queue.cpp)
+    if(TARGET batbox_tui)
+        batbox_add_unit_test(test_input_queue
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_input_queue.cpp
+            batbox_tui batbox_repl batbox_theme batbox_perf batbox_core)
+    else()
+        batbox_add_unit_test(test_input_queue
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_input_queue.cpp
+            batbox_repl batbox_theme batbox_perf batbox_core)
+    endif()
+endif()

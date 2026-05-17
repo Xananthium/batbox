@@ -1,9 +1,16 @@
 // src/tui/InputBar.cpp
 // ---------------------------------------------------------------------------
-// batbox::tui::InputBar implementation — TUI-FIX-T4 segment-model refactor.
+// batbox::tui::InputBar implementation — TUI-FIX-T10 input-queue + G1/G10.
 //
 // See include/batbox/tui/InputBar.hpp for design notes and API contract.
-// See include/batbox/tui/InputSegment.hpp for the segment type definitions.
+// See include/batbox/tui/InputSegment.hpp for the tagged-union segment type.
+//
+// Changes in TUI-FIX-T10:
+//   - G1: InputSegment is now a tagged-union struct (kind 0=Text, 1=Paste).
+//         All std::get_if<> call sites replaced with .kind checks.
+//   - G10: format_tokens() uses snprintf into a stack buffer (single alloc).
+//   - A2: InputQueue SoA; Tab/Enter/Esc edge-case dispatch (10 cases).
+//   - Queue rendering inside OnRender (NOT a new FTXUI Component).
 // ---------------------------------------------------------------------------
 
 #include <batbox/tui/InputBar.hpp>
@@ -15,10 +22,11 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
 #include <cstdlib>
 #include <cstddef>
+#include <cstring>
 #include <numeric>
-#include <sstream>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -69,24 +77,41 @@ constexpr std::string_view kSplashPlaceholder = "Try '/help' or 'plan a feature'
 /// Number of render frames between placeholder template advances (TUI-FLOW-T9).
 constexpr int kPlaceholderFrameThrottle = 120;
 
-/// Format a token count with comma separators.
+/// G10 — Format a token count with comma separators using snprintf (single alloc).
 std::string format_tokens(uint32_t n) {
-    if (n < 1000) return std::to_string(n) + "tk";
-    std::string s = std::to_string(n);
-    int insert_pos = static_cast<int>(s.size()) - 3;
-    while (insert_pos > 0) {
-        s.insert(static_cast<std::size_t>(insert_pos), ",");
-        insert_pos -= 3;
+    if (n < 1000) {
+        char buf[16];
+        int len = std::snprintf(buf, sizeof(buf), "%utk", n);
+        return std::string(buf, len > 0 ? static_cast<std::size_t>(len) : 0u);
     }
-    return s + "tk";
+    // Insert commas manually into a stack buffer.
+    // Max uint32 is 4,294,967,295 → 10 digits + 3 commas + "tk" + NUL = 17 chars.
+    char digits[11];
+    int  dlen = std::snprintf(digits, sizeof(digits), "%u", n);
+    if (dlen <= 0) return "0tk";
+
+    char buf[24];
+    int  bi      = 0;
+    int  di      = 0;
+    int  to_comma = dlen % 3;
+    if (to_comma == 0) to_comma = 3;
+
+    while (di < dlen) {
+        if (di > 0 && (di - (dlen % 3 == 0 ? 3 : dlen % 3)) % 3 == 0) {
+            buf[bi++] = ',';
+        }
+        buf[bi++] = digits[di++];
+    }
+    buf[bi++] = 't';
+    buf[bi++] = 'k';
+    return std::string(buf, static_cast<std::size_t>(bi));
 }
 
-/// Format a cost in USD as "$X.XXX".
+/// Format a cost in USD as "$X.XXX" using snprintf (single alloc, no ostringstream).
 std::string format_cost(double usd) {
-    std::ostringstream ss;
-    ss.precision(3);
-    ss << std::fixed << "$" << usd;
-    return ss.str();
+    char buf[32];
+    int n = std::snprintf(buf, sizeof(buf), "$%.3f", usd);
+    return std::string(buf, n > 0 ? static_cast<std::size_t>(n) : 0u);
 }
 
 /// Map a PermissionMode to the short display label shown in the footer chip.
@@ -128,6 +153,21 @@ bool ci_contains(std::string_view haystack, std::string_view needle) {
     return it != haystack.end();
 }
 
+/// Tagged-union segment helpers — return pointer or nullptr, matching
+/// the std::get_if<> interface pattern from the old variant API.
+inline const InputSegment* as_text_seg(const InputSegment& s) {
+    return is_text(s) ? &s : nullptr;
+}
+inline InputSegment* as_text_seg(InputSegment& s) {
+    return is_text(s) ? &s : nullptr;
+}
+inline const InputSegment* as_paste_seg(const InputSegment& s) {
+    return is_paste(s) ? &s : nullptr;
+}
+inline InputSegment* as_paste_seg(InputSegment& s) {
+    return is_paste(s) ? &s : nullptr;
+}
+
 /// Returns true when the event is a ToolRunning payload event.
 bool has_prefix_tool_running(const ftxui::Event& ev) {
     static constexpr const char* kPrefix = "batbox.tool-running";
@@ -155,6 +195,14 @@ bool has_prefix_thinking_started(const ftxui::Event& ev) {
 /// Returns true when the event is a ThinkingStopped payload event.
 bool has_prefix_thinking_stopped(const ftxui::Event& ev) {
     static constexpr const char* kPrefix = "batbox.thinking-stopped";
+    const std::string& s = ev.input();
+    const std::size_t plen = std::strlen(kPrefix);
+    return s.size() > plen && s.compare(0, plen, kPrefix) == 0 && s[plen] == ':';
+}
+
+/// Returns true when the event is a StatusUpdate payload event (A3 / TUI-FIX-T6).
+bool has_prefix_status_update(const ftxui::Event& ev) {
+    static constexpr const char* kPrefix = "batbox.status-update";
     const std::string& s = ev.input();
     const std::size_t plen = std::strlen(kPrefix);
     return s.size() > plen && s.compare(0, plen, kPrefix) == 0 && s[plen] == ':';
@@ -193,9 +241,9 @@ InputBar::InputBar(batbox::theme::ThemeRef       theme,
     , slash_provider_(std::move(slash_provider))
     , ac_provider_(std::move(ac_provider))
 {
-    // Initialise with a single empty TextSegment so the buffer is never empty
+    // Initialise with a single empty Text segment so the buffer is never empty
     // of segments (cursor operations always have a valid target).
-    segments_.emplace_back(TextSegment{""});
+    segments_.push_back(InputSegment::make_text(""));
     seg_cursor_ = SegCursor{0, 0};
 
     // Respect BATBOX_VIM_MODE env var at construction
@@ -316,7 +364,7 @@ void InputBar::toggle_vim() {
 
 void InputBar::clear() {
     segments_.clear();
-    segments_.emplace_back(TextSegment{""});
+    segments_.push_back(InputSegment::make_text(""));
     seg_cursor_ = SegCursor{0, 0};
     paste_id_counter_ = 0;  // reset paste counter on clear
     in_paste_seq_ = false;
@@ -325,29 +373,37 @@ void InputBar::clear() {
     palette_close();
     autocomplete_reset();
     vim_mode_.reset();
+    cursor_idx_ = -1;
 }
 
 void InputBar::set_buffer(std::string text) {
     segments_.clear();
-    segments_.emplace_back(TextSegment{text});
+    segments_.push_back(InputSegment::make_text(text));
     seg_cursor_ = SegCursor{0, text.size()};
     in_paste_seq_ = false;
     paste_accumulator_.clear();
     autocomplete_reset();
+    cursor_idx_ = -1;
+}
+
+// =============================================================================
+// Public API — queue control
+// =============================================================================
+
+void InputBar::clear_queue() {
+    queue_.clear();
+    cursor_idx_ = -1;
 }
 
 // =============================================================================
 // TUI-FIX-T4: segment model — flatten and cursor helpers
+// G1: all std::get_if replaced with .kind checks
 // =============================================================================
 
 std::string InputBar::flatten_for_submit() const {
     std::string result;
     for (const auto& seg : segments_) {
-        if (const auto* ts = std::get_if<TextSegment>(&seg)) {
-            result += ts->body;
-        } else if (const auto* ps = std::get_if<PasteSegment>(&seg)) {
-            result += ps->body;
-        }
+        result += seg.body;  // both Text and Paste use body
     }
     return result;
 }
@@ -355,18 +411,14 @@ std::string InputBar::flatten_for_submit() const {
 std::size_t InputBar::flat_cursor_offset() const noexcept {
     std::size_t offset = 0;
     for (std::size_t i = 0; i < seg_cursor_.seg_idx && i < segments_.size(); ++i) {
-        if (const auto* ts = std::get_if<TextSegment>(&segments_[i])) {
-            offset += ts->body.size();
-        } else if (const auto* ps = std::get_if<PasteSegment>(&segments_[i])) {
-            offset += ps->body.size();
-        }
+        offset += segments_[i].body.size();
     }
-    // Add byte offset within the current segment (only applies to TextSegments)
+    // Add byte offset within the current segment (only applies to Text segments)
     if (seg_cursor_.seg_idx < segments_.size()) {
-        if (std::get_if<TextSegment>(&segments_[seg_cursor_.seg_idx])) {
+        if (is_text(segments_[seg_cursor_.seg_idx])) {
             offset += seg_cursor_.byte_off;
         }
-        // For PasteSegments, byte_off is always 0; the cursor sits before them.
+        // For Paste segments, byte_off is always 0; the cursor sits before them.
     }
     return offset;
 }
@@ -374,34 +426,30 @@ std::size_t InputBar::flat_cursor_offset() const noexcept {
 void InputBar::set_seg_cursor_from_flat(std::size_t flat_offset) {
     std::size_t remaining = flat_offset;
     for (std::size_t i = 0; i < segments_.size(); ++i) {
-        std::size_t seg_len = 0;
-        if (const auto* ts = std::get_if<TextSegment>(&segments_[i])) {
-            seg_len = ts->body.size();
+        const auto& seg = segments_[i];
+        std::size_t seg_len = seg.body.size();
+        if (is_text(seg)) {
             if (remaining <= seg_len) {
                 seg_cursor_ = SegCursor{i, remaining};
                 return;
             }
-        } else if (const auto* ps = std::get_if<PasteSegment>(&segments_[i])) {
-            seg_len = ps->body.size();
+        } else {
+            // Paste segment
             if (remaining < seg_len) {
                 // Cursor cannot enter paste; place it before this segment.
                 seg_cursor_ = SegCursor{i, 0};
                 return;
             }
-            // If remaining == seg_len, the cursor is right after the paste segment.
-            // If remaining > seg_len, we fall through to next segment.
+            // If remaining == seg_len, the cursor is right after the paste.
         }
         remaining -= seg_len;
     }
-    // Cursor at end of buffer: point at (segments_.size() - 1, last_text_size)
-    // or create an end position.
+    // Cursor at end of buffer
     if (!segments_.empty()) {
         std::size_t last = segments_.size() - 1;
-        if (const auto* ts = std::get_if<TextSegment>(&segments_[last])) {
-            seg_cursor_ = SegCursor{last, std::min(remaining, ts->body.size())};
+        if (is_text(segments_[last])) {
+            seg_cursor_ = SegCursor{last, std::min(remaining, segments_[last].body.size())};
         } else {
-            // Last segment is paste — cursor sits at end (after paste)
-            // We represent this as seg_idx = segments_.size() (past end).
             seg_cursor_ = SegCursor{segments_.size(), 0};
         }
     } else {
@@ -411,28 +459,19 @@ void InputBar::set_seg_cursor_from_flat(std::size_t flat_offset) {
 
 bool InputBar::is_empty() const noexcept {
     for (const auto& seg : segments_) {
-        if (const auto* ts = std::get_if<TextSegment>(&seg)) {
-            if (!ts->body.empty()) return false;
-        } else {
-            // Any paste segment makes it non-empty
-            return false;
-        }
+        if (!seg.body.empty()) return false;
     }
     return true;
 }
 
 void InputBar::normalize_segments() {
-    // Step 1: Remove empty TextSegments (except keep one if all empty)
-    // Step 2: Merge adjacent TextSegments
-
-    // Build a new segment list
     std::vector<InputSegment> result;
     for (auto& seg : segments_) {
-        if (const auto* ts = std::get_if<TextSegment>(&seg)) {
-            if (ts->body.empty()) continue;
+        if (is_text(seg)) {
+            if (seg.body.empty()) continue;
             // Try to merge with last segment if it's also Text
-            if (!result.empty() && std::get_if<TextSegment>(&result.back())) {
-                std::get<TextSegment>(result.back()).body += ts->body;
+            if (!result.empty() && is_text(result.back())) {
+                result.back().body += seg.body;
             } else {
                 result.push_back(seg);
             }
@@ -441,33 +480,33 @@ void InputBar::normalize_segments() {
         }
     }
 
-    // Always keep at least one (empty) TextSegment
+    // Always keep at least one (empty) Text segment
     if (result.empty()) {
-        result.emplace_back(TextSegment{""});
-    } else if (!std::get_if<TextSegment>(&result.back())) {
-        // Ensure we end with a TextSegment so the cursor can sit at end
-        result.emplace_back(TextSegment{""});
+        result.push_back(InputSegment::make_text(""));
+    } else if (is_paste(result.back())) {
+        // Ensure we end with a Text segment so the cursor can sit at end
+        result.push_back(InputSegment::make_text(""));
     }
 
-    // Update segments_ and recompute cursor from flat offset
     std::size_t flat = flat_cursor_offset();
     segments_ = std::move(result);
     set_seg_cursor_from_flat(flat);
 }
 
 // static
-std::string InputBar::paste_chip_label(const PasteSegment& ps) {
+std::string InputBar::paste_chip_label(const InputSegment& ps) {
     if (ps.line_count > 0) {
-        return "[Pasted text #" + std::to_string(ps.id)
+        return "[Pasted text #" + std::to_string(ps.paste_id)
              + " +" + std::to_string(ps.line_count) + " lines]";
     } else {
-        return "[Pasted text #" + std::to_string(ps.id)
+        return "[Pasted text #" + std::to_string(ps.paste_id)
              + " (" + std::to_string(ps.char_count) + " chars)]";
     }
 }
 
 // =============================================================================
 // TUI-FIX-T4: insert_paste
+// G1: constructs InputSegment directly via make_paste
 // =============================================================================
 
 void InputBar::insert_paste(std::string body) {
@@ -480,44 +519,34 @@ void InputBar::insert_paste(std::string body) {
         return;
     }
 
-    // Build a PasteSegment chip
     ++paste_id_counter_;
-    PasteSegment ps;
-    ps.id          = paste_id_counter_;
-    ps.body        = std::move(body);
-    ps.line_count  = newlines;
-    ps.char_count  = char_cnt;
+    auto ps = InputSegment::make_paste(paste_id_counter_, std::move(body), newlines, char_cnt);
 
     // Insert at current cursor:
-    // Split the current TextSegment at the cursor position, insert paste in middle.
+    // Split the current Text segment at the cursor position, insert paste in middle.
     std::size_t si = seg_cursor_.seg_idx;
     std::size_t bo = seg_cursor_.byte_off;
 
-    if (si < segments_.size() && std::get_if<TextSegment>(&segments_[si])) {
-        auto& ts = std::get<TextSegment>(segments_[si]);
-        std::string before = ts.body.substr(0, bo);
-        std::string after  = ts.body.substr(bo);
+    if (si < segments_.size() && is_text(segments_[si])) {
+        std::string before = segments_[si].body.substr(0, bo);
+        std::string after  = segments_[si].body.substr(bo);
 
-        // Replace current text segment with: before_text + paste + after_text
         std::vector<InputSegment> replacement;
-        if (!before.empty()) replacement.emplace_back(TextSegment{before});
-        replacement.emplace_back(std::move(ps));
-        replacement.emplace_back(TextSegment{after});
+        if (!before.empty()) replacement.push_back(InputSegment::make_text(before));
+        replacement.push_back(std::move(ps));
+        replacement.push_back(InputSegment::make_text(after));
 
         segments_.erase(segments_.begin() + static_cast<std::ptrdiff_t>(si));
         segments_.insert(segments_.begin() + static_cast<std::ptrdiff_t>(si),
                          std::make_move_iterator(replacement.begin()),
                          std::make_move_iterator(replacement.end()));
 
-        // Cursor sits right after the paste segment (before the after_text)
         std::size_t paste_idx = si + (before.empty() ? 0 : 1);
         seg_cursor_ = SegCursor{paste_idx + 1, 0};
     } else {
-        // Cursor is not on a text segment (e.g. at end past all segments)
-        // Insert paste segment at current index and add trailing text
         if (si >= segments_.size()) {
-            segments_.emplace_back(std::move(ps));
-            segments_.emplace_back(TextSegment{""});
+            segments_.push_back(std::move(ps));
+            segments_.push_back(InputSegment::make_text(""));
             seg_cursor_ = SegCursor{segments_.size() - 1, 0};
         } else {
             segments_.insert(segments_.begin() + static_cast<std::ptrdiff_t>(si),
@@ -531,27 +560,26 @@ void InputBar::insert_paste(std::string body) {
 
 // =============================================================================
 // Internal: cursor_text_segment
+// G1: returns InputSegment& instead of TextSegment&
 // =============================================================================
 
-TextSegment& InputBar::cursor_text_segment() {
-    // If cursor is within or at the end of a TextSegment, return it.
+InputSegment& InputBar::cursor_text_segment() {
     if (seg_cursor_.seg_idx < segments_.size()) {
-        if (auto* ts = std::get_if<TextSegment>(&segments_[seg_cursor_.seg_idx])) {
-            return *ts;
+        if (is_text(segments_[seg_cursor_.seg_idx])) {
+            return segments_[seg_cursor_.seg_idx];
         }
-        // Cursor is AT a PasteSegment (byte_off == 0).
-        // Insert a new TextSegment before the paste segment.
+        // Cursor is AT a Paste segment (byte_off == 0).
+        // Insert a new Text segment before the paste segment.
         segments_.insert(
             segments_.begin() + static_cast<std::ptrdiff_t>(seg_cursor_.seg_idx),
-            TextSegment{""});
-        // seg_cursor_.seg_idx still points to the new TextSegment.
-        return std::get<TextSegment>(segments_[seg_cursor_.seg_idx]);
+            InputSegment::make_text(""));
+        return segments_[seg_cursor_.seg_idx];
     }
     // Cursor is past the end of segments_.
-    segments_.emplace_back(TextSegment{""});
+    segments_.push_back(InputSegment::make_text(""));
     seg_cursor_.seg_idx = segments_.size() - 1;
     seg_cursor_.byte_off = 0;
-    return std::get<TextSegment>(segments_.back());
+    return segments_.back();
 }
 
 // =============================================================================
@@ -565,6 +593,47 @@ void InputBar::insert_at_cursor(std::string_view text) {
 }
 
 // =============================================================================
+// TUI-FIX-T10: queue helpers
+// =============================================================================
+
+bool InputBar::queue_append_current() {
+    // Snapshot the current segment buffer (skip if logically empty)
+    if (is_empty()) return false;
+    // Limit queue depth
+    if (queue_.depth() >= InputQueue::kMaxQueueDepth) return false;
+    // Normalise first so we don't store dangling empty segments
+    normalize_segments();
+    queue_.append(segments_);
+    // Clear input row
+    segments_.clear();
+    segments_.push_back(InputSegment::make_text(""));
+    seg_cursor_ = SegCursor{0, 0};
+    autocomplete_reset();
+    cursor_idx_ = -1;
+    return true;
+}
+
+std::string InputBar::build_combined_submit() {
+    std::string current = flatten_for_submit();
+    std::string queued  = queue_.flatten_all();
+    std::string combined;
+    if (!current.empty() && !queued.empty()) {
+        combined = current + "\n" + queued;
+    } else if (!current.empty()) {
+        combined = current;
+    } else {
+        combined = queued;
+    }
+    // Clear both
+    segments_.clear();
+    segments_.push_back(InputSegment::make_text(""));
+    seg_cursor_ = SegCursor{0, 0};
+    queue_.clear();
+    cursor_idx_ = -1;
+    return combined;
+}
+
+// =============================================================================
 // Render
 // =============================================================================
 
@@ -575,11 +644,45 @@ ftxui::Element InputBar::OnRender() {
         rows.push_back(render_palette_overlay());
     }
 
+    // TUI-FIX-T10: render queue rows above the active input row.
+    // Oldest entry at top, newest just above the input row.
+    for (std::size_t i = 0; i < queue_.depth(); ++i) {
+        bool sel = (cursor_idx_ == static_cast<int>(i));
+        rows.push_back(render_queue_row(i, sel));
+    }
+
     rows.push_back(render_prompt_row());
     rows.push_back(render_status_row());
     rows.push_back(render_footer_chips_row());
 
     return vbox(std::move(rows));
+}
+
+ftxui::Element InputBar::render_queue_row(std::size_t entry_idx, bool selected) const {
+    auto muted_color   = color_for(theme_, ThemeRole::Muted);
+    auto accent_color  = color_for(theme_, ThemeRole::AccentCyan);
+    auto fg_color      = color_for(theme_, ThemeRole::Fg);
+
+    // Build the flattened entry text (truncate for display if very long)
+    std::string entry_text = queue_.flatten_entry(entry_idx);
+    // Collapse newlines to spaces for single-line display
+    for (char& c : entry_text) {
+        if (c == '\n') c = ' ';
+    }
+    // Truncate to 60 chars to keep it readable
+    if (entry_text.size() > 60) {
+        entry_text = entry_text.substr(0, 57) + "...";
+    }
+
+    char prefix_buf[12];
+    std::snprintf(prefix_buf, sizeof(prefix_buf), " [%zu] ", entry_idx + 1);
+
+    auto row_color = selected ? fg_color : muted_color;
+
+    return hbox({
+        text(prefix_buf) | ftxui::color(selected ? accent_color : muted_color),
+        text(entry_text) | ftxui::color(row_color),
+    });
 }
 
 ftxui::Element InputBar::render_prompt_row() const {
@@ -607,20 +710,16 @@ ftxui::Element InputBar::render_prompt_row() const {
     }
 
     // Normal rendering: build prompt as a sequence of text spans and paste chips.
-    // The cursor is positioned within the text.
     const std::size_t flat_cur = flat_cursor_offset();
-    const std::string flat_buf = flatten_for_submit();
-
-    // Split the flattened buffer into before/at/after cursor for cursor highlight.
-    // However, we want to preserve paste chip rendering for PasteSegments.
-    // Strategy: render segment by segment, tracking flat offset to place cursor.
 
     Elements prompt_parts;
     std::size_t flat_pos = 0;
 
     for (std::size_t si = 0; si < segments_.size(); ++si) {
-        if (const auto* ts = std::get_if<TextSegment>(&segments_[si])) {
-            const std::string& body = ts->body;
+        const auto& seg = segments_[si];
+
+        if (is_text(seg)) {
+            const std::string& body = seg.body;
 
             if (flat_cur >= flat_pos && flat_cur <= flat_pos + body.size()) {
                 // Cursor is within this text segment
@@ -653,22 +752,18 @@ ftxui::Element InputBar::render_prompt_row() const {
                     prompt_parts.push_back(text(after) | ftxui::color(fg_color));
                 }
             } else {
-                // Cursor not in this segment — render plain text
                 if (!body.empty()) {
                     prompt_parts.push_back(text(body) | ftxui::color(fg_color));
                 }
             }
             flat_pos += body.size();
 
-        } else if (const auto* ps = std::get_if<PasteSegment>(&segments_[si])) {
-            // Render as chip (inverse/muted style)
-            std::string chip = paste_chip_label(*ps);
-
-            // Check if cursor is exactly before this paste segment
+        } else {
+            // Paste segment — render as chip
+            std::string chip = paste_chip_label(seg);
             bool cursor_before = (flat_cur == flat_pos);
 
             if (cursor_before) {
-                // Render a block cursor before the chip
                 prompt_parts.push_back(
                     text(" ")
                     | ftxui::color(color_for(theme_, ThemeRole::Bg))
@@ -680,19 +775,15 @@ ftxui::Element InputBar::render_prompt_row() const {
                 | ftxui::color(color_for(theme_, ThemeRole::Bg))
                 | bgcolor(muted_color));
 
-            flat_pos += ps->body.size();
+            flat_pos += seg.body.size();
         }
     }
 
     // If cursor is at the very end (after all segments)
     if (flat_cur == flat_pos) {
-        // Check that we haven't already added a cursor character
-        // (this happens when the last segment is Text and cursor == its end)
-        // The loop above handles this case by putting at_cur = " ".
-        // If the last segment is a Paste, we need a trailing cursor.
         bool needs_end_cursor = true;
         if (!segments_.empty()) {
-            if (std::get_if<TextSegment>(&segments_.back())) {
+            if (is_text(segments_.back())) {
                 // Already handled in the loop above (at_cur = " " at segment end)
                 needs_end_cursor = false;
             }
@@ -725,8 +816,17 @@ ftxui::Element InputBar::render_status_row() const {
     auto accent_color  = color_for(theme_, ThemeRole::AccentCyan);
     auto magenta_color = color_for(theme_, ThemeRole::AccentMagenta);
     std::string model  = status_.model_name.empty() ? "no model" : status_.model_name;
-    std::string tokens = format_tokens(status_.token_count);
-    std::string cost   = format_cost(status_.cost_usd);
+
+    // A3: dirty-string cache — rebuild formatted strings only when usage changed.
+    // set_usage() sets status_strs_dirty_ = true; we clear it after rebuild.
+    // Combined with snprintf helpers: 1 allocation per turn instead of per frame.
+    if (status_strs_dirty_) {
+        cached_token_str_  = format_tokens(status_.token_count);
+        cached_cost_str_   = format_cost(status_.cost_usd);
+        status_strs_dirty_ = false;
+    }
+    const std::string& tokens = cached_token_str_;
+    const std::string& cost   = cached_cost_str_;
     std::string mode   = status_.mode_label.empty() ? "default" : status_.mode_label;
 
     Elements parts;
@@ -750,14 +850,13 @@ ftxui::Element InputBar::render_status_row() const {
 
     if (perf_hud_enabled_) {
         auto snap = batbox::perf::g_perf.snapshot();
-        std::string hud = " ⚡ first="
-                        + std::to_string(snap.first_token_ms)
-                        + "ms · paint="
-                        + std::to_string(snap.stream_to_paint_ms)
-                        + "ms · frame="
-                        + std::to_string(snap.frame_ms)
-                        + "ms";
-        parts.push_back(text(hud) | ftxui::color(magenta_color));
+        char hud_buf[128];
+        std::snprintf(hud_buf, sizeof(hud_buf),
+            " ⚡ first=%ldms · paint=%ldms · frame=%ldms",
+            static_cast<long>(snap.first_token_ms),
+            static_cast<long>(snap.stream_to_paint_ms),
+            static_cast<long>(snap.frame_ms));
+        parts.push_back(text(hud_buf) | ftxui::color(magenta_color));
     }
 
     return hbox(std::move(parts));
@@ -817,15 +916,40 @@ ftxui::Element InputBar::render_palette_overlay() const {
 }
 
 // =============================================================================
-// Footer hint chips (TUI-FLOW-T6)
+// Footer hint chips (TUI-FLOW-T6 + TUI-FIX-T10)
 // =============================================================================
 
 std::pair<std::string, std::string> InputBar::compute_footer_chips() const {
     if (splash_showing_) {
         return {"? for shortcuts", "@ for agents"};
     }
-    std::string left = stream_active_ ? "esc to interrupt" : "";
+
+    std::string left  = stream_active_ ? "esc to interrupt" : "";
     std::string right;
+
+    // TUI-FIX-T10: queue chip takes priority when queue is non-empty.
+    if (!queue_.empty()) {
+        const std::size_t depth = queue_.depth();
+        char chip_buf[64];
+        // Truncation rule: TERM_WIDTH < 80 → drop hint, keep "[N queued]"
+        // We check terminal width via the COLUMNS env var (set by most shells),
+        // or fall back to 80 columns.  This is resolved here (not in hot render).
+        int term_width = 80;
+        const char* cols_env = std::getenv("COLUMNS");
+        if (cols_env) {
+            int w = std::atoi(cols_env);
+            if (w > 0) term_width = w;
+        }
+        if (term_width < 80) {
+            std::snprintf(chip_buf, sizeof(chip_buf), "[%zu queued]", depth);
+        } else {
+            std::snprintf(chip_buf, sizeof(chip_buf),
+                          "[%zu queued · Tab: add · Enter: steer · ↑: edit]", depth);
+        }
+        right = chip_buf;
+        return {left, right};
+    }
+
     const int mcp_n = mcp_failed_.load(std::memory_order_relaxed);
     if (mcp_n > 0) {
         right = std::to_string(mcp_n) + " MCP server failed · /mcp";
@@ -887,7 +1011,7 @@ ftxui::Element InputBar::render_footer_chips_row() const {
 }
 
 // =============================================================================
-// OnEvent
+// OnEvent — all 10 TUI-FIX-T10 edge cases plus existing behaviour
 // =============================================================================
 
 bool InputBar::OnEvent(ftxui::Event event) {
@@ -922,13 +1046,25 @@ bool InputBar::OnEvent(ftxui::Event event) {
         return true;
     }
 
+    // --- A3: StatusUpdate with usage counters (TUI-FIX-T6) ---
+    // Worker thread posts make_status_update_event_with_usage() from Conversation
+    // after each terminal UsageDelta.  We extract here on the UI thread and call
+    // set_usage() — never cross threads directly onto InputBar::status_.
+    if (has_prefix_status_update(event)) {
+        auto p = batbox::tui::extract_status_update(event);
+        if (p.has_value() && p->tokens.has_value() && p->cost_usd.has_value()) {
+            set_usage(*p->tokens, *p->cost_usd);
+        }
+        return true;
+    }
+
     const auto& inp = event.input();
 
     // --- TUI-FIX-T4: Bracketed paste accumulation ---
-    // Check for paste-end FIRST (before start) to correctly handle any ordering.
+    // Edge case #4: Tab during in_paste_seq_ is ignored as a queue command
+    // because the paste accumulator owns all keystrokes until \e[201~.
     if (in_paste_seq_) {
         if (inp == kBracketedPasteEnd) {
-            // End of bracketed paste — commit
             in_paste_seq_ = false;
             std::string body = std::move(paste_accumulator_);
             paste_accumulator_.clear();
@@ -936,7 +1072,7 @@ bool InputBar::OnEvent(ftxui::Event event) {
             autocomplete_reset();
             return true;
         }
-        // Accumulate bytes (the paste content arrives as one or more events)
+        // Accumulate bytes (including any Tab that arrives during paste)
         paste_accumulator_ += inp;
         return true;
     }
@@ -946,10 +1082,7 @@ bool InputBar::OnEvent(ftxui::Event event) {
         return true;
     }
 
-    // --- TUI-FIX-T4: Additional Shift+Enter aliases (non-kitty terminals) ---
-    // \e\r (common in xterm, Terminal.app when enhanced keyboard protocol is off)
-    // \e[27;2;13~ (libvte CSI-u variant)
-    // The kitty \x1b[13;2u is already handled by Keybindings as ReplAction::Newline.
+    // --- TUI-FIX-T4: Additional Shift+Enter aliases ---
     if (inp == kShiftEnterAlt || inp == kShiftEnterCSIU) {
         insert_at_cursor("\n");
         autocomplete_reset();
@@ -994,6 +1127,95 @@ bool InputBar::OnEvent(ftxui::Event event) {
         return false;
     }
 
+    // =========================================================================
+    // TUI-FIX-T10: Tab key — queue dispatch
+    // Edge case #1: Tab idle + queue empty → existing autocomplete.
+    // Edge case #2: Tab idle + queue non-empty → existing autocomplete.
+    // Edge case #3: Tab mid-turn → append current to queue; clear input row.
+    // Edge case #4: Tab during in_paste_seq_ → already handled above (IGNORED).
+    // =========================================================================
+    if (inp == kInputTab) {
+        if (stream_active_) {
+            // Edge case #3: turn in flight — append to queue
+            queue_append_current();
+            // cursor_idx_ stays at -1 (input row); queue depth shown in footer chip
+        } else {
+            // Edge case #1 / #2: idle — existing autocomplete (regardless of queue depth)
+            autocomplete_next();
+        }
+        return true;
+    }
+
+    // =========================================================================
+    // TUI-FIX-T10: Escape key — cancel-stream + preserve queue
+    // Edge case #9: Esc streaming + queue empty → existing cancel (T3 path).
+    // Edge case #10: Esc streaming + queue non-empty → cancel, PRESERVE queue.
+    // =========================================================================
+    if (inp == kInputEscape) {
+        if (stream_active_ && on_interrupt_) {
+            // Edge case #9 and #10: fire interrupt; queue is NOT cleared.
+            on_interrupt_();
+            return true;
+        }
+        if (!is_empty()) {
+            clear();
+            return true;
+        }
+        return false;
+    }
+
+    // =========================================================================
+    // TUI-FIX-T10: Enter key — four paths
+    // Edge case #5: Enter mid-turn → interrupt + submit combined message.
+    // Edge case #6: Enter idle + queue empty → existing submit.
+    // Edge case #7: Enter idle + current empty + queue non-empty → submit queue.
+    // Edge case #8: Enter idle + current non-empty + queue non-empty → submit combined.
+    // =========================================================================
+    if (inp == kInputReturn || inp == kInputCtrlM) {
+        if (stream_active_) {
+            // Edge case #5: interrupt and submit combined message.
+            if (on_interrupt_) on_interrupt_();
+            std::string combined = build_combined_submit();
+            if (!combined.empty()) {
+                history_.push(combined);
+                if (on_submit_) on_submit_(std::move(combined));
+            }
+            return true;
+        }
+
+        // Idle paths:
+        if (queue_.empty()) {
+            // Edge case #6: existing submit.
+            if (!is_empty()) {
+                auto submitted = flatten_for_submit();
+                history_.push(submitted);
+                clear();
+                if (on_submit_) on_submit_(std::move(submitted));
+                return true;
+            }
+            return false;
+        }
+
+        // Queue is non-empty:
+        if (is_empty()) {
+            // Edge case #7: empty current + non-empty queue → submit queue alone.
+            std::string queued = build_combined_submit();
+            if (!queued.empty()) {
+                history_.push(queued);
+                if (on_submit_) on_submit_(std::move(queued));
+            }
+            return true;
+        }
+
+        // Edge case #8: non-empty current + non-empty queue → submit combined.
+        std::string combined = build_combined_submit();
+        if (!combined.empty()) {
+            history_.push(combined);
+            if (on_submit_) on_submit_(std::move(combined));
+        }
+        return true;
+    }
+
     // --- ReplAction dispatch via Keybindings ---
     auto action = keybindings_.event_to_action(event);
     if (action != batbox::repl::ReplAction::None) {
@@ -1003,7 +1225,6 @@ bool InputBar::OnEvent(ftxui::Event event) {
     // --- Vim mode ---
     if (vim_mode_.is_enabled()) {
         if (!inp.empty() && event != ftxui::Event::Custom) {
-            // For vim mode, work on the flattened buffer then re-set
             std::string flat_buf = flatten_for_submit();
             std::size_t flat_cur = flat_cursor_offset();
             auto vim_action = vim_mode_.handle_key(inp, flat_buf, flat_cur);
@@ -1024,15 +1245,42 @@ bool InputBar::OnEvent(ftxui::Event event) {
         }
     }
 
-    // --- Arrow keys for history (when vim mode off or in passthrough) ---
+    // =========================================================================
+    // TUI-FIX-T10: Arrow keys — queue navigation
+    // Up from input row (-1) with non-empty queue → cursor_idx_ = N-1.
+    // Down from queue row → cursor_idx_ = -1.
+    // =========================================================================
     if (inp == kInputArrowUp) {
-        if (auto prev = history_.previous()) {
-            set_buffer(*prev);
+        if (cursor_idx_ == -1 && !queue_.empty()) {
+            // Move cursor to last (most recent) queue row for editing
+            cursor_idx_ = static_cast<int>(queue_.depth()) - 1;
             return true;
         }
-        return false;
+        if (cursor_idx_ > 0) {
+            --cursor_idx_;
+            return true;
+        }
+        if (cursor_idx_ == -1) {
+            // History navigation when queue is empty
+            if (auto prev = history_.previous()) {
+                set_buffer(*prev);
+                return true;
+            }
+            return false;
+        }
+        return true;
     }
     if (inp == kInputArrowDown) {
+        if (cursor_idx_ >= 0) {
+            if (cursor_idx_ < static_cast<int>(queue_.depth()) - 1) {
+                ++cursor_idx_;
+            } else {
+                // Bottom of queue → back to input row
+                cursor_idx_ = -1;
+            }
+            return true;
+        }
+        // cursor_idx_ == -1: existing history-down behaviour
         if (auto nxt = history_.next()) {
             set_buffer(*nxt);
         } else {
@@ -1041,27 +1289,25 @@ bool InputBar::OnEvent(ftxui::Event event) {
         return true;
     }
 
-    // --- TUI-FIX-T4: Cursor movement skipping paste segments as atoms ---
+    // --- Non-queue arrow/cursor movements (when cursor_idx_ == -1) ---
     if (inp == kInputArrowLeft) {
         if (seg_cursor_.seg_idx == 0 && seg_cursor_.byte_off == 0) {
             return true; // at start, clamp
         }
         if (seg_cursor_.byte_off > 0) {
-            // Move back one byte (UTF-8 aware: skip continuation bytes)
             --seg_cursor_.byte_off;
-            const auto& ts = std::get<TextSegment>(segments_[seg_cursor_.seg_idx]);
+            const auto& ts = segments_[seg_cursor_.seg_idx];
             while (seg_cursor_.byte_off > 0 &&
                    (static_cast<unsigned char>(ts.body[seg_cursor_.byte_off]) & 0xC0) == 0x80) {
                 --seg_cursor_.byte_off;
             }
         } else {
-            // Move to previous segment
             if (seg_cursor_.seg_idx > 0) {
                 --seg_cursor_.seg_idx;
-                if (const auto* ts = std::get_if<TextSegment>(&segments_[seg_cursor_.seg_idx])) {
-                    seg_cursor_.byte_off = ts->body.size();
+                const auto& prev = segments_[seg_cursor_.seg_idx];
+                if (is_text(prev)) {
+                    seg_cursor_.byte_off = prev.body.size();
                 } else {
-                    // Previous is a paste segment — skip to before it
                     seg_cursor_.byte_off = 0;
                 }
             }
@@ -1069,24 +1315,22 @@ bool InputBar::OnEvent(ftxui::Event event) {
         return true;
     }
     if (inp == kInputArrowRight) {
-        if (seg_cursor_.seg_idx >= segments_.size()) return true; // past end
+        if (seg_cursor_.seg_idx >= segments_.size()) return true;
 
-        if (const auto* ts = std::get_if<TextSegment>(&segments_[seg_cursor_.seg_idx])) {
-            if (seg_cursor_.byte_off < ts->body.size()) {
-                // Advance one UTF-8 character
-                unsigned char c = static_cast<unsigned char>(ts->body[seg_cursor_.byte_off]);
+        const auto& seg = segments_[seg_cursor_.seg_idx];
+        if (is_text(seg)) {
+            if (seg_cursor_.byte_off < seg.body.size()) {
+                unsigned char c = static_cast<unsigned char>(seg.body[seg_cursor_.byte_off]);
                 std::size_t char_len = 1;
                 if (c >= 0xF0)      char_len = 4;
                 else if (c >= 0xE0) char_len = 3;
                 else if (c >= 0xC0) char_len = 2;
-                seg_cursor_.byte_off += std::min(char_len, ts->body.size() - seg_cursor_.byte_off);
+                seg_cursor_.byte_off += std::min(char_len, seg.body.size() - seg_cursor_.byte_off);
             } else {
-                // At end of this text segment; move to next
                 if (seg_cursor_.seg_idx + 1 < segments_.size()) {
                     ++seg_cursor_.seg_idx;
                     seg_cursor_.byte_off = 0;
-                    // If next is a paste segment, skip over it to the segment after
-                    if (std::get_if<PasteSegment>(&segments_[seg_cursor_.seg_idx])) {
+                    if (is_paste(segments_[seg_cursor_.seg_idx])) {
                         if (seg_cursor_.seg_idx + 1 < segments_.size()) {
                             ++seg_cursor_.seg_idx;
                             seg_cursor_.byte_off = 0;
@@ -1095,7 +1339,6 @@ bool InputBar::OnEvent(ftxui::Event event) {
                 }
             }
         } else {
-            // Current is paste segment — skip over it
             if (seg_cursor_.seg_idx + 1 < segments_.size()) {
                 ++seg_cursor_.seg_idx;
                 seg_cursor_.byte_off = 0;
@@ -1108,13 +1351,11 @@ bool InputBar::OnEvent(ftxui::Event event) {
         return true;
     }
     if (inp == kInputEnd) {
-        // Move to end of last text segment
         if (!segments_.empty()) {
             std::size_t last = segments_.size() - 1;
-            if (const auto* ts = std::get_if<TextSegment>(&segments_[last])) {
-                seg_cursor_ = SegCursor{last, ts->body.size()};
+            if (is_text(segments_[last])) {
+                seg_cursor_ = SegCursor{last, segments_[last].body.size()};
             } else {
-                // Last is paste, cursor sits after it (logically at segments_.size())
                 seg_cursor_ = SegCursor{last + 1, 0};
             }
         }
@@ -1131,29 +1372,10 @@ bool InputBar::OnEvent(ftxui::Event event) {
         return handle_delete();
     }
 
-    // --- Plain Enter / Ctrl+M: submit ---
-    if (inp == kInputReturn || inp == kInputCtrlM) {
-        if (!is_empty()) {
-            auto submitted = flatten_for_submit();
-            history_.push(submitted);
-            clear();
-            if (on_submit_) on_submit_(std::move(submitted));
-            return true;
-        }
-        return false;
-    }
-
-    // --- Tab: autocomplete ---
-    if (inp == kInputTab) {
-        autocomplete_next();
-        return true;
-    }
-
     // --- '/' as first character: open palette ---
     if (inp == "/" && is_empty() && seg_cursor_.seg_idx == 0 && seg_cursor_.byte_off == 0) {
-        // Set buffer to "/" and open palette
         segments_.clear();
-        segments_.emplace_back(TextSegment{"/"});
+        segments_.push_back(InputSegment::make_text("/"));
         seg_cursor_ = SegCursor{0, 1};
         palette_open();
         return true;
@@ -1181,8 +1403,7 @@ bool InputBar::handle_backspace() {
     if (seg_cursor_.seg_idx == 0 && seg_cursor_.byte_off == 0) return false;
 
     if (seg_cursor_.byte_off > 0) {
-        // Delete one UTF-8 character before cursor within current Text segment
-        auto& ts = std::get<TextSegment>(segments_[seg_cursor_.seg_idx]);
+        auto& ts = segments_[seg_cursor_.seg_idx];
         std::size_t byte_pos = seg_cursor_.byte_off;
         --byte_pos;
         while (byte_pos > 0 &&
@@ -1196,10 +1417,9 @@ bool InputBar::handle_backspace() {
         return true;
     }
 
-    // byte_off == 0 — look at the previous segment
     if (seg_cursor_.seg_idx > 0) {
         std::size_t prev_idx = seg_cursor_.seg_idx - 1;
-        if (std::get_if<PasteSegment>(&segments_[prev_idx])) {
+        if (is_paste(segments_[prev_idx])) {
             // TUI-FIX-T4 AC4: single backspace deletes entire paste segment
             segments_.erase(segments_.begin() + static_cast<std::ptrdiff_t>(prev_idx));
             seg_cursor_.seg_idx = prev_idx;
@@ -1208,15 +1428,16 @@ bool InputBar::handle_backspace() {
             normalize_segments();
             return true;
         }
-        if (auto* ts = std::get_if<TextSegment>(&segments_[prev_idx])) {
-            if (!ts->body.empty()) {
-                std::size_t byte_pos = ts->body.size();
+        if (is_text(segments_[prev_idx])) {
+            auto& ts = segments_[prev_idx];
+            if (!ts.body.empty()) {
+                std::size_t byte_pos = ts.body.size();
                 --byte_pos;
                 while (byte_pos > 0 &&
-                       (static_cast<unsigned char>(ts->body[byte_pos]) & 0xC0) == 0x80) {
+                       (static_cast<unsigned char>(ts.body[byte_pos]) & 0xC0) == 0x80) {
                     --byte_pos;
                 }
-                ts->body.erase(byte_pos, ts->body.size() - byte_pos);
+                ts.body.erase(byte_pos, ts.body.size() - byte_pos);
                 seg_cursor_.seg_idx = prev_idx;
                 seg_cursor_.byte_off = byte_pos;
                 autocomplete_reset();
@@ -1231,9 +1452,10 @@ bool InputBar::handle_backspace() {
 bool InputBar::handle_delete() {
     if (seg_cursor_.seg_idx >= segments_.size()) return false;
 
-    if (const auto* ts = std::get_if<TextSegment>(&segments_[seg_cursor_.seg_idx])) {
-        if (seg_cursor_.byte_off < ts->body.size()) {
-            auto& ts_mut = std::get<TextSegment>(segments_[seg_cursor_.seg_idx]);
+    const auto& seg = segments_[seg_cursor_.seg_idx];
+    if (is_text(seg)) {
+        if (seg_cursor_.byte_off < seg.body.size()) {
+            auto& ts_mut = segments_[seg_cursor_.seg_idx];
             std::size_t char_len = 1;
             unsigned char c = static_cast<unsigned char>(ts_mut.body[seg_cursor_.byte_off]);
             if (c >= 0xF0)      char_len = 4;
@@ -1245,10 +1467,8 @@ bool InputBar::handle_delete() {
             normalize_segments();
             return true;
         }
-        // At end of text segment — delete from next segment
         if (seg_cursor_.seg_idx + 1 < segments_.size()) {
-            if (std::get_if<PasteSegment>(&segments_[seg_cursor_.seg_idx + 1])) {
-                // Delete the paste segment after this text segment
+            if (is_paste(segments_[seg_cursor_.seg_idx + 1])) {
                 segments_.erase(segments_.begin() +
                     static_cast<std::ptrdiff_t>(seg_cursor_.seg_idx + 1));
                 autocomplete_reset();
@@ -1256,9 +1476,7 @@ bool InputBar::handle_delete() {
                 return true;
             }
         }
-    } else if (std::get_if<PasteSegment>(&segments_[seg_cursor_.seg_idx])) {
-        // Cursor is before a paste segment (should not normally happen in
-        // well-maintained segment state, but handle gracefully)
+    } else if (is_paste(seg)) {
         return false;
     }
     return false;
@@ -1268,6 +1486,28 @@ bool InputBar::handle_action(batbox::repl::ReplAction action) {
     using RA = batbox::repl::ReplAction;
     switch (action) {
         case RA::Send: {
+            // ReplAction::Send mirrors the Enter key path (non-keybinding Enter
+            // is intercepted above, but a keybinding-mapped Send lands here).
+            if (stream_active_) {
+                // Mid-turn: interrupt + submit combined
+                if (on_interrupt_) on_interrupt_();
+                std::string combined = build_combined_submit();
+                if (!combined.empty()) {
+                    history_.push(combined);
+                    if (on_submit_) on_submit_(std::move(combined));
+                }
+                return true;
+            }
+            if (!queue_.empty()) {
+                // Idle with queue: combined submit
+                std::string combined = build_combined_submit();
+                if (!combined.empty()) {
+                    history_.push(combined);
+                    if (on_submit_) on_submit_(std::move(combined));
+                }
+                return true;
+            }
+            // Plain idle submit
             if (is_empty()) return false;
             auto submitted = flatten_for_submit();
             history_.push(submitted);
@@ -1282,6 +1522,7 @@ bool InputBar::handle_action(batbox::repl::ReplAction action) {
         }
         case RA::Cancel: {
             if (stream_active_ && on_interrupt_) {
+                // Edge case #9 / #10: Esc cancels stream; queue preserved.
                 on_interrupt_();
                 return true;
             }
@@ -1296,13 +1537,29 @@ bool InputBar::handle_action(batbox::repl::ReplAction action) {
             return false;
         }
         case RA::HistoryUp: {
-            if (auto prev = history_.previous()) {
-                set_buffer(*prev);
+            if (cursor_idx_ == -1 && !queue_.empty()) {
+                cursor_idx_ = static_cast<int>(queue_.depth()) - 1;
                 return true;
             }
-            return false;
+            if (cursor_idx_ == -1) {
+                if (auto prev = history_.previous()) {
+                    set_buffer(*prev);
+                    return true;
+                }
+                return false;
+            }
+            if (cursor_idx_ > 0) { --cursor_idx_; return true; }
+            return true;
         }
         case RA::HistoryDown: {
+            if (cursor_idx_ >= 0) {
+                if (cursor_idx_ < static_cast<int>(queue_.depth()) - 1) {
+                    ++cursor_idx_;
+                } else {
+                    cursor_idx_ = -1;
+                }
+                return true;
+            }
             if (auto nxt = history_.next()) {
                 set_buffer(*nxt);
             } else {
@@ -1380,9 +1637,8 @@ void InputBar::palette_commit() {
                              static_cast<int>(palette_filtered_.size()) - 1)));
     std::string chosen = "/" + palette_filtered_[idx];
     palette_close();
-    // Replace entire buffer with the chosen slash command
     segments_.clear();
-    segments_.emplace_back(TextSegment{chosen});
+    segments_.push_back(InputSegment::make_text(chosen));
     seg_cursor_ = SegCursor{0, chosen.size()};
 }
 
@@ -1403,7 +1659,7 @@ void InputBar::autocomplete_next() {
     ac_index_ = (ac_index_ + 1) % static_cast<int>(ac_candidates_.size());
     const std::string& candidate = ac_candidates_[static_cast<std::size_t>(ac_index_)];
     segments_.clear();
-    segments_.emplace_back(TextSegment{candidate});
+    segments_.push_back(InputSegment::make_text(candidate));
     seg_cursor_ = SegCursor{0, candidate.size()};
 }
 
@@ -1419,10 +1675,6 @@ void InputBar::autocomplete_reset() {
 
 void InputBar::apply_vim_action(const batbox::repl::VimAction& action) {
     using K = batbox::repl::VimActionKind;
-
-    // For vim operations, we work on the flattened buffer and then re-set segments.
-    // This is acceptable because vim mode is an advanced feature and the flattened
-    // representation is what the user is editing visually.
 
     std::string flat_buf = flatten_for_submit();
     std::size_t flat_cur = flat_cursor_offset();

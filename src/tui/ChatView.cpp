@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cassert>
+#include <cstdio>
 #include <chrono>
 #include <cstddef>
 #include <functional>
@@ -213,26 +214,44 @@ ftxui::Element ChatView::render_spinner_row() const {
 
     if (spinner_active_) {
         // Live spinner row: bullet + tagline + (Ns · arrow N tokens)
+        // G3: rebuild suffix string only when counters tick (at most 1Hz).
+        const char* arrow = spinner_tool_in_flight_ ? "\u2191" : "\u2193"; // ↑ or ↓
+        if (spinner_elapsed_s_     != cached_spinner_elapsed_s_   ||
+            spinner_token_count_   != cached_spinner_token_count_  ||
+            spinner_tool_in_flight_ != cached_spinner_tool_in_flight_) {
+            char buf[64];
+            int len = std::snprintf(buf, sizeof(buf), "(%ds \xc2\xb7 %s %d tokens)",
+                                    spinner_elapsed_s_,
+                                    arrow,
+                                    spinner_token_count_);
+            cached_spinner_suffix_       = std::string(buf, (len > 0 && len < 64) ? len : 0);
+            cached_spinner_elapsed_s_    = spinner_elapsed_s_;
+            cached_spinner_token_count_  = spinner_token_count_;
+            cached_spinner_tool_in_flight_ = spinner_tool_in_flight_;
+        }
         const char* bullet = spinner_tokens_started_ ? "* " : "+ ";
-        const char* arrow  = spinner_tool_in_flight_  ? "\u2191" : "\u2193"; // ↑ or ↓
-        std::string elapsed_str = std::to_string(spinner_elapsed_s_) + "s";
-        std::string tok_str     = std::to_string(spinner_token_count_) + " tokens";
-        std::string suffix = "(" + elapsed_str + " \u00b7 " + arrow + " " + tok_str + ")";
-        // · is U+00B7
         return hbox({
             text(bullet)                       | ftxui::color(accent),
             text(spinner_tagline_)             | ftxui::color(muted),
             text("  ")                         | ftxui::color(muted),
-            text(suffix)                       | ftxui::color(muted),
+            text(cached_spinner_suffix_)       | ftxui::color(muted),
         });
     }
 
     if (spinner_show_summary_) {
         // Frozen summary row after stream completes.
-        std::string summary = "  (" + std::to_string(spinner_frozen_elapsed_s_) +
-                              "s \u00b7 " + std::to_string(spinner_frozen_token_count_) +
-                              " tokens)";
-        return text(summary) | ftxui::color(muted) | dim;
+        // G3: rebuild only when frozen counters change (happens once at StreamDone).
+        if (spinner_frozen_elapsed_s_   != cached_frozen_elapsed_s_ ||
+            spinner_frozen_token_count_ != cached_frozen_token_count_) {
+            char buf[64];
+            int len = std::snprintf(buf, sizeof(buf), "  (%ds \xc2\xb7 %d tokens)",
+                                    spinner_frozen_elapsed_s_,
+                                    spinner_frozen_token_count_);
+            cached_spinner_frozen_summary_ = std::string(buf, (len > 0 && len < 64) ? len : 0);
+            cached_frozen_elapsed_s_       = spinner_frozen_elapsed_s_;
+            cached_frozen_token_count_     = spinner_frozen_token_count_;
+        }
+        return text(cached_spinner_frozen_summary_) | ftxui::color(muted) | dim;
     }
 
     return emptyElement();

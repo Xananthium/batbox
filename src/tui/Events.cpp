@@ -160,7 +160,18 @@ ftxui::Event make_demon_dirty_event(std::string demon_id) {
 }
 
 ftxui::Event make_status_update_event(SidecarState state, std::string detail) {
-    StatusUpdatePayload p{state, std::move(detail)};
+    StatusUpdatePayload p;
+    p.state  = state;
+    p.detail = std::move(detail);
+    std::string key = store_payload(kNameStatusUpdate, std::move(p));
+    return ftxui::Event::Special(key);
+}
+
+ftxui::Event make_status_update_event_with_usage(uint32_t tokens, double cost_usd) {
+    StatusUpdatePayload p;
+    p.state    = SidecarState::Running;  // treat as "Running" for state consumers
+    p.tokens   = tokens;
+    p.cost_usd = cost_usd;
     std::string key = store_payload(kNameStatusUpdate, std::move(p));
     return ftxui::Event::Special(key);
 }

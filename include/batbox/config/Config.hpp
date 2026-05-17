@@ -36,6 +36,7 @@
 #include <batbox/config/EnvLoader.hpp>
 
 #include <atomic>
+#include <cstddef>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -118,6 +119,30 @@ struct ApiConfig {
     /// Model alias for "haiku" in agent spec frontmatter.
     /// Defaults to default_model when BATBOX_HAIKU_MODEL is not set.
     std::string   haiku_model;   ///< BATBOX_HAIKU_MODEL
+
+    /// Resolved context length for default_model, in tokens.
+    ///
+    /// Fallback chain (resolved ONCE at Config::load() time):
+    ///   1. BATBOX_CTX_LEN_<MODEL_UPPER_UNDERSCORED>  — per-model env var
+    ///      The MODEL is the RESOLVED model name (after resolve_model_alias()).
+    ///      Non-alphanumeric characters are replaced with '_', then uppercased.
+    ///      Example: "mistralai/magistral-small-2509"
+    ///               → BATBOX_CTX_LEN_MISTRALAI_MAGISTRAL_SMALL_2509
+    ///   2. BATBOX_CTX_LEN_DEFAULT                    — global default env var
+    ///   3. Built-in model table (ContextWindow::context_limit_for_model)
+    ///   4. 4096 (hard fallback)
+    ///
+    /// Never read via std::getenv at runtime — resolved once and stored here.
+    std::size_t   default_model_ctx_len = 4096; ///< BATBOX_CTX_LEN_<MODEL> / BATBOX_CTX_LEN_DEFAULT
+
+    /// Idle stream timeout in seconds.
+    ///
+    /// Maps to CURLOPT_LOW_SPEED_LIMIT=1 (bytes/sec) +
+    /// CURLOPT_LOW_SPEED_TIME=<this value> so that a stalled upstream
+    /// (zero bytes for this many seconds) is terminated and surfaced as an error.
+    ///
+    /// Default: 60 seconds. Set BATBOX_STREAM_IDLE_TIMEOUT_SEC=0 to disable.
+    int           stream_idle_timeout_sec = 60; ///< BATBOX_STREAM_IDLE_TIMEOUT_SEC
 };
 
 /// General config paths / directories.

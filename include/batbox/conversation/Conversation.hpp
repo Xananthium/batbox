@@ -386,6 +386,30 @@ public:
     void set_on_reasoning_stopped_cb(std::function<void()> cb);
 
     // -------------------------------------------------------------------------
+    // set_on_usage_delta_cb()
+    //
+    // Register a callback invoked from the worker thread after each terminal
+    // UsageDelta is received (once per sub-turn / streaming call).  The
+    // callback receives CUMULATIVE session totals (all turns combined).
+    //
+    // Use this to forward usage to the TUI status row via the event system:
+    //   conv->set_on_usage_delta_cb([&screen_mgr](uint32_t tok, double cost) {
+    //       screen_mgr.post_event(
+    //           batbox::tui::make_status_update_event_with_usage(tok, cost));
+    //   });
+    //
+    // Thread safety: this setter MUST be called before any background thread
+    // calls run_turn().  The callback is invoked on the worker thread; it must
+    // NOT call InputBar::set_usage() directly (UI-thread only).  Use
+    // make_status_update_event_with_usage() → ScreenManager::post_event() instead.
+    //
+    // Blueprint contract (TUI-FIX-T6 / A3):
+    //   void set_on_usage_delta_cb(std::function<void(uint32_t, double)>)
+    // -------------------------------------------------------------------------
+    void set_on_usage_delta_cb(std::function<void(uint32_t /*tokens*/,
+                                                   double   /*cost_usd*/)> cb);
+
+    // -------------------------------------------------------------------------
     // compose_system_prompt()
     //
     // Composes the final system prompt for one inference turn by merging:
@@ -465,6 +489,17 @@ private:
     // chunk arrives, or finish_reason seen while still in reasoning phase).
     // Fires at most once per tool-call iteration.
     std::function<void()> on_reasoning_stopped_cb_;
+
+    // Usage-delta callback (A3 / TUI-FIX-T6 — may be nullptr).
+    // Called from the worker thread after each terminal UsageDelta in run_turn().
+    // Receives CUMULATIVE session token count + cost (accumulated across all turns).
+    std::function<void(uint32_t /*tokens*/, double /*cost_usd*/)> on_usage_delta_cb_;
+
+    // Cumulative session usage accumulators (A3).
+    // Incremented on every terminal UsageDelta in run_turn().
+    // Reset only when a new Conversation object is created (not on /clear).
+    uint32_t session_tokens_{0};
+    double   session_cost_usd_{0.0};
 
     // -------------------------------------------------------------------------
     // Private helpers
