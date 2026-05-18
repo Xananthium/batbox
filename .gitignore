@@ -71,3 +71,6 @@ docs/_build/
 
 # os
 Thumbs.db
+
+# Internal dev workflow — not for public repo
+agentic/

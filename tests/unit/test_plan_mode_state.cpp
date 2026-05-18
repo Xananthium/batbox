@@ -17,7 +17,7 @@
 //
 // Build (standalone, no CMake):
 //   c++ -std=c++20 \
-//       -I/Users/xananthium/CLAUDECODE/claude-code/include \
+//       -I<repo-root>/include \
 //       -I$(DOCTEST_INCLUDE) \
 //       tests/unit/test_plan_mode_state.cpp \
 //       src/conversation/PlanMode.cpp \
