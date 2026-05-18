@@ -32,6 +32,9 @@ endif()
 
 include(CTest)
 include(doctest)
+# Patch: overrides doctest_discover_tests() to escape semicolons in test names;
+# see cmake/DoctestDiscoverPatched.cmake for details.
+include(${CMAKE_SOURCE_DIR}/cmake/DoctestDiscoverPatched.cmake)
 
 # ---------------------------------------------------------------------------
 # Helper macro: batbox_add_unit_test(<name> <source> [link_libs...])
@@ -589,6 +592,7 @@ batbox_add_unit_test(test_splash
     unit/test_splash.cpp  batbox_core)
 target_sources(test_splash PRIVATE
     ${PROJECT_SOURCE_DIR}/src/tui/Splash.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/AccountLabel.cpp
     ${PROJECT_SOURCE_DIR}/src/tui/ThemeApply.cpp
     ${PROJECT_SOURCE_DIR}/src/theme/Theme.cpp
     ${PROJECT_SOURCE_DIR}/src/theme/themes.cpp)
@@ -1252,7 +1256,8 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_permission_card.cpp)
         ${PROJECT_SOURCE_DIR}/src/permissions/PermissionRule.cpp
         ${PROJECT_SOURCE_DIR}/src/permissions/PatternMatcher.cpp
         ${PROJECT_SOURCE_DIR}/src/permissions/PermissionMode.cpp
-        ${PROJECT_SOURCE_DIR}/src/permissions/PermissionStore.cpp)
+        ${PROJECT_SOURCE_DIR}/src/permissions/PermissionStore.cpp
+        ${PROJECT_SOURCE_DIR}/src/util/EditorLaunch.cpp)
     set_target_properties(test_permission_card PROPERTIES
         CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
     target_include_directories(test_permission_card PRIVATE
