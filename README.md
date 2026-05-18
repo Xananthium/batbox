@@ -12,7 +12,7 @@ via `~/.batbox/.env`.
 
 ## Build
 
-    git clone https://github.com/<user>/batbox.git
+    git clone https://github.com/Xananthium/batbox.git
     cd batbox
     cmake -B build -S .
     cmake --build build -j
