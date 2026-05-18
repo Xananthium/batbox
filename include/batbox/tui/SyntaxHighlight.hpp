@@ -5,19 +5,10 @@
 // Design
 // ------
 // highlight_code(language, code, theme) converts a fenced code block into a
-// coloured ftxui::Element.  Two paths exist:
-//
-//   BATBOX_SYNTAX == 1 (default ON):
-//     Uses the tree-sitter C API with one of 10 vendored grammars (c, cpp,
-//     python, javascript, typescript, rust, go, bash, json, markdown).
-//     Node-type strings from the parse tree are mapped to ThemeRoles; the
-//     resulting coloured spans are assembled into an ftxui vbox of hbox lines.
-//
-//   BATBOX_SYNTAX == 0:
-//     Falls back to hand-rolled manual lexers for 5 languages:
-//     C++, Python, JS/TS, Rust, Go.  Each lexer emits token kinds
-//     (Keyword, String, Comment, Number, Operator, Plain) which are mapped to
-//     the same ThemeRoles as the tree-sitter path.
+// coloured ftxui::Element using hand-rolled manual lexers for 5 languages:
+// C++, Python, JS/TS, Rust, Go.  Each lexer emits token kinds
+// (Keyword, String, Comment, Number, Operator, Plain) which are mapped to
+// ThemeRoles.  Tree-sitter removed in PEXT2 1.4a.
 //
 // Unknown or empty language string → plain monospace rendering; no exception.
 //
@@ -56,8 +47,7 @@ namespace batbox::tui {
 // ============================================================================
 
 /// Tokenise and colour `code` according to `language` using either the
-/// tree-sitter backend (BATBOX_SYNTAX=1) or the manual-lexer fallback
-/// (BATBOX_SYNTAX=0).
+/// manual-lexer backend (C++, Python, JS/TS, Rust, Go).
 ///
 /// Parameters:
 ///   language — fence language tag (e.g. "cpp", "python", "rust").

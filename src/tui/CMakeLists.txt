@@ -32,7 +32,6 @@ target_link_libraries(batbox_tui
         batbox_permissions
         batbox_repl
     # ftxui::screen ftxui::dom ftxui::component added by cmake/Dependencies.cmake (CPP B.5)
-    # tree-sitter vendor targets added when BATBOX_SYNTAX=ON (CPP B.2)
 )
 
 # ---------------------------------------------------------------------------
@@ -78,22 +77,17 @@ target_sources(batbox_tui
 )
 
 # ---------------------------------------------------------------------------
-# SyntaxHighlight: tree-sitter (ON) or manual lexers (OFF)
+# SyntaxHighlight: manual lexers only (tree-sitter removed in PEXT2 1.4a)
 # ---------------------------------------------------------------------------
-if(BATBOX_SYNTAX)
-    # Tree-sitter backend — link vendored grammar library and define the macro.
-    target_link_libraries(batbox_tui PRIVATE batbox_treesitter)
-    target_compile_definitions(batbox_tui PRIVATE BATBOX_SYNTAX=1)
-else()
-    # Manual lexer fallback — compile the 5 hand-rolled lexers directly into
-    # the batbox_tui OBJECT library.
-    target_sources(batbox_tui
-        PRIVATE
-            manual_lexers/cpp_lexer.cpp
-            manual_lexers/python_lexer.cpp
-            manual_lexers/js_lexer.cpp
-            manual_lexers/rust_lexer.cpp
-            manual_lexers/go_lexer.cpp
-    )
-    target_compile_definitions(batbox_tui PRIVATE BATBOX_SYNTAX=0)
-endif()
+target_sources(batbox_tui
+    PRIVATE
+        manual_lexers/cpp_lexer.cpp
+        manual_lexers/python_lexer.cpp
+        manual_lexers/js_lexer.cpp
+        manual_lexers/rust_lexer.cpp
+        manual_lexers/go_lexer.cpp
+        manual_lexers/json_lexer.cpp
+        manual_lexers/html_lexer.cpp
+        manual_lexers/ts_lexer.cpp
+        manual_lexers/css_lexer.cpp
+)

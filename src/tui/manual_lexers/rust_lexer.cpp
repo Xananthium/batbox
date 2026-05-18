@@ -1,6 +1,6 @@
 // src/tui/manual_lexers/rust_lexer.cpp
 // ---------------------------------------------------------------------------
-// Manual Rust lexer for BATBOX_SYNTAX=0 fallback.
+// Manual Rust lexer manual lexer.
 //
 // Recognises:
 //   - Rust keywords (edition 2021, including reserved words)

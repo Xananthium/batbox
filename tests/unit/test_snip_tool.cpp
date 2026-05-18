@@ -27,10 +27,13 @@
 #include <batbox/permissions/PermissionMode.hpp>
 #include <batbox/core/CancelToken.hpp>
 
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <thread>
+#include <unistd.h>
 
 namespace fs = std::filesystem;
 using namespace batbox;
@@ -54,9 +57,12 @@ struct ScopedHome {
         original_home = h ? h : "";
 
         // Create a unique temp directory.
+        const auto unique_id =
+            static_cast<unsigned long>(::getpid()) * 1000000UL
+            + static_cast<unsigned long>(
+                std::chrono::steady_clock::now().time_since_epoch().count() % 1000000);
         tmp_dir = fs::temp_directory_path()
-                / ("batbox_snip_test_" + std::to_string(
-                       std::hash<std::thread::id>{}(std::this_thread::get_id())));
+                / ("batbox_snip_test_" + std::to_string(unique_id));
         fs::create_directories(tmp_dir);
 
         // Point HOME at the temp dir.

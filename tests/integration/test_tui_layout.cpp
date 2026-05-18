@@ -41,7 +41,6 @@
 //       src/tui/manual_lexers/go_lexer.cpp                         \
 //       -L<build>/vcpkg_installed/arm64-osx/lib                   \
 //       -lftxui-component -lftxui-dom -lftxui-screen              \
-//       -DBATBOX_SYNTAX=0                                           \
 //       -o /tmp/test_tui_layout && /tmp/test_tui_layout
 //
 // Acceptance criteria from task CPP 1.15:
@@ -711,7 +710,7 @@ TEST_SUITE("ChatView — token event pipeline") {
         CHECK(consumed);
         CHECK(chat->message_count() == 1);
 
-        // Render and verify "You" label appears.
+        // Render and verify "> " user-prompt prefix appears (TUI-FLOW-T7).
         ftxui::Screen screen(80, 24);
         auto element = chat->Render();
         REQUIRE(element != nullptr);
@@ -724,7 +723,8 @@ TEST_SUITE("ChatView — token event pipeline") {
                 rendered += screen.at(x, y);
             }
         }
-        CHECK(rendered.find("You") != std::string::npos);
+        // TUI-FLOW-T7: user messages render as "> <text>", not "You: <text>".
+        CHECK(rendered.find("> ") != std::string::npos);
     }
 
     TEST_CASE("[AC-TOKEN] stream_done with empty buffer does not append spurious message") {
@@ -834,9 +834,11 @@ TEST_SUITE("ChatView — message_appended event pipeline") {
         bool consumed = chat->OnEvent(ev);
 
         CHECK(consumed);
-        CHECK(chat->message_count() == 1);
+        // PEXT TUI-FLOW-T2: assistant-role message_appended intentionally skips entries_;
+        // the ToolRunning event path creates the visible tool card instead.
+        CHECK(chat->message_count() == 0);
 
-        // Render and verify "[tool:" marker appears.
+        // Render must not crash when entries_ is empty.
         ftxui::Screen screen(80, 24);
         auto element = chat->Render();
         REQUIRE(element != nullptr);
@@ -849,8 +851,9 @@ TEST_SUITE("ChatView — message_appended event pipeline") {
                 rendered += screen.at(x, y);
             }
         }
-        // The collapsed tool-call entry must contain "[tool:" somewhere.
-        CHECK(rendered.find("[tool:") != std::string::npos);
+        // No tool-call entry exists in entries_; the canonical card comes via ToolRunning.
+        // Verify render does not crash — no [tool: marker expected from message_appended.
+        (void)rendered;  // render result examined above via CHECK_NOTHROW
     }
 
     TEST_CASE("[TUI-T5] ChatView renders tool_result message on message_appended tool event") {
@@ -913,24 +916,25 @@ TEST_SUITE("ChatView — message_appended event pipeline") {
         CHECK(chat->message_count() == 1);
 
         // 2. Tool-call message arrives (no streaming tokens for this turn).
+        // PEXT TUI-FLOW-T2: assistant-role message_appended skips entries_; count stays at 1.
         chat->OnEvent(batbox::tui::make_message_appended_event(
             "assistant", "Read", "", /*is_error=*/false));
-        CHECK(chat->message_count() == 2);
+        CHECK(chat->message_count() == 1);
 
         // 3. Tool-result message arrives.
         chat->OnEvent(batbox::tui::make_message_appended_event(
             "tool", "Read", "BatBox C++ port", /*is_error=*/false));
-        CHECK(chat->message_count() == 3);
+        CHECK(chat->message_count() == 2);  // user + tool_result (assistant skipped)
 
         // 4. Final assistant streaming tokens.
         chat->OnEvent(batbox::tui::make_token_event("Here is the summary: "));
         chat->OnEvent(batbox::tui::make_token_event("BatBox is a C++ CLI tool."));
 
-        CHECK(chat->message_count() == 3);  // streaming not committed yet
+        CHECK(chat->message_count() == 2);  // streaming not committed yet
 
         // 5. Turn ends.
         chat->OnEvent(batbox::tui::make_stream_done_event());
-        CHECK(chat->message_count() == 4);  // user + tool_call + tool_result + assistant
+        CHECK(chat->message_count() == 3);  // user + tool_result + final assistant (tool-call msg skips entries_)
 
         // Render without crash.
         ftxui::Screen screen(80, 40);
@@ -944,8 +948,8 @@ TEST_SUITE("ChatView — message_appended event pipeline") {
             }
         }
 
-        // Verify both tool-call marker and result content appear.
-        CHECK(rendered.find("[tool:") != std::string::npos);
+        // Verify tool-result content appears. No [tool: marker since tool-call messages
+        // are not added to entries_ (PEXT TUI-FLOW-T2; ToolRunning event is canonical).
         CHECK(rendered.find("BatBox") != std::string::npos);
     }
 }

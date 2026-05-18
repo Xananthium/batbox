@@ -2,9 +2,7 @@
 // ---------------------------------------------------------------------------
 // doctest suite for batbox::tui::highlight_code()
 //
-// This test suite exercises the MANUAL LEXER path only (BATBOX_SYNTAX=0).
-// The tree-sitter path requires vendored git submodules not present in the
-// test build, so we compile with -DBATBOX_SYNTAX=0 (see tests/CMakeLists.txt).
+// This test suite exercises the manual lexer path (tree-sitter removed in PEXT2 1.4a).
 //
 // Coverage:
 //   1.  C++ — keywords are present in output (AccentMagenta path exercises)

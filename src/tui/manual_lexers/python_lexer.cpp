@@ -1,6 +1,6 @@
 // src/tui/manual_lexers/python_lexer.cpp
 // ---------------------------------------------------------------------------
-// Manual Python 3 lexer for BATBOX_SYNTAX=0 fallback.
+// Manual Python 3 lexer manual lexer.
 //
 // Recognises:
 //   - Python 3 keywords

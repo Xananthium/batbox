@@ -1,6 +1,6 @@
 // src/tui/manual_lexers/cpp_lexer.cpp
 // ---------------------------------------------------------------------------
-// Manual C++ lexer for BATBOX_SYNTAX=0 fallback.
+// Manual C++ lexer manual lexer.
 //
 // Recognises:
 //   - C++20 keywords (including auto, constexpr, concept, co_await, etc.)

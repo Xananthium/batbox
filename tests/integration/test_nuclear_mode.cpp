@@ -24,7 +24,6 @@
 //       src/core/Uuid.cpp                                   \
 //       -L<build>/vcpkg_installed/arm64-osx/lib             \
 //       -lftxui-component -lftxui-dom -lftxui-screen        \
-//       -DBATBOX_SYNTAX=0                                    \
 //       -o /tmp/test_nuclear_mode && /tmp/test_nuclear_mode
 // ---------------------------------------------------------------------------
 

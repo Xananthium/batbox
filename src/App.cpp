@@ -1154,7 +1154,12 @@ int App::run(const AppArgs& args) {
             screen_mgr.post_token(chunk);
         },
         tui_registry_ptr,
-        tui_gate_ptr);
+        tui_gate_ptr,
+        /*plan_mode=*/nullptr,
+        // PEXT2 3.4 (D-8): pass cfg_mutex so run_turn() can snapshot
+        // cfg.api.default_model and cfg.api.api_key under the lock,
+        // eliminating the data race with /model switches on the UI thread.
+        &cfg_mutex);
 
     // Wire the message-appended callback so tool-call and tool-result messages
     // are forwarded to ChatView via a make_message_appended_event.

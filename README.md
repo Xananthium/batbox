@@ -1,229 +1,220 @@
 # BatBox
 
-There's a terminal. It's yours. It doesn't sell your prompts, it doesn't call
-home, it doesn't put you on a waiting list or ask you to upgrade to see the
-good stuff. It runs against whatever backend you point it at — local Ollama,
-LM Studio in the other room, DeepSeek direct, Kimi, GLM-5, Qwen3-Coder,
-a $5/month API key you found — anything that speaks OpenAI. C++20. Single
-binary. No telemetry. No marketplace. No bouncer at the door.
+Okay so listen. You use Claude Code. Or Codex. Or Cursor. Or Aider. They're
+good. They're, like, genuinely good. But every single one of them is a
+frontend that wires to exactly one company's API, and that company decides
+what you can ask, how fast you can ask it, and whether your prompts get used
+to train the next model. And like — that's fine, that's their business model,
+nobody's mad — but what if you didn't want that? What if you wanted the
+frontend without the company?
 
-This is a terminal that won't sell you to anyone.
+That's BatBox. It's a terminal that talks to AI. It does what those tools do.
+It just doesn't belong to anybody.
 
----
+```
+you ──→ BatBox ──→ any OpenAI-compatible endpoint ──→ any model
+```
 
-## The Crew
+That's the whole thing. Local Ollama on your laptop. LM Studio on the machine
+in the closet. DeepSeek. Kimi. GLM. Qwen. OpenAI if you really want. A janky
+$3/month API key you found on the internet. If it speaks OpenAI-compatible
+HTTP, BatBox speaks back. C++20. Single binary. No daemon, no account, no
+phone-home, no marketplace, nobody between you and the model.
 
-BatBox isn't just a TUI. It ships with a full agentic development system — a
-crew, really. You describe what you want to build. They argue about the best
-way to do it. They do the work. They keep receipts.
-
-Here's everyone:
-
-**Project Manager** — the one who sits you down and asks the actual questions.
-What are you building? Who's it for? What does the user *feel* when they use it?
-Writes the plan. The voice of the group.
-
-**Architecture Ned** — Ned reads the plan and designs the whole thing. Systems,
-platforms, data flows. Ned doesn't guess. Ned reads the research first, then
-commits. Ned's a little intense but you want that.
-
-**Karla Fant** — picky, brilliant, doesn't let anything wasteful through. Karla
-reviews every plan before a single line of code gets written. If there's a
-redundant round-trip, a table that should be a join, a service that should be
-a function, Karla will find it. The plan doesn't move until Karla says PASS.
-
-**Task Creator** — takes Ned's architecture and breaks it into work. Granular,
-sequenced, dependency-mapped. Every task knows what it needs before it can
-start.
-
-**Database Manager** — runs the whole planning phase. Calls PM, waits for Karla,
-hands off to Ned, imports everything into the ledger. The one who makes sure
-the crew actually *starts*.
-
-**Junior Dev** — owns each task end to end. Gets the details, does the research,
-calls Senior Dev, runs QA, writes the docs, marks it done. The one who holds
-the thread.
-
-**Senior Dev** — writes the actual code. Production-ready, no stubs, no TODOs,
-no "I'll come back to this." Senior Dev has been paged at 3am before and will
-not let that happen to you.
-
-**QA Dev** — tests everything. Reads the acceptance criteria, verifies the
-output, checks for security holes. If it passes QA it's because it actually
-passed QA.
-
-**Doc Agent** — extracts function signatures and summaries after every
-implementation, writes them to the docs table. So the next agent that needs
-to know what `createSession` does doesn't have to re-read the file.
-
-**Database Agent** — reads and writes `agentic.db`. Every query during
-development goes through here. This is the agent that knows where everything
-is.
-
-**Research Agent** — parallel web searches for best practices, current API
-patterns, framework-specific gotchas. Runs before architecture, runs before
-implementation. Nobody ships stale patterns.
-
-**Non-technical Deb / blueprint-agent** — locks every symbol name before code
-lands. Class names, function names, table names, route handlers — all frozen
-in the blueprints table before Senior Dev writes line one. Because renaming
-things mid-build is how projects die.
-
-They love each other. They argue. They get it done. You're invited.
+This is the version of the tool where you own the wire.
 
 ---
 
-## The Map
+## What BatBox Actually Is
 
-Most AI tools forget everything the moment the conversation ends. You explain
-your architecture, you get your answer, the session closes, and tomorrow you're
-explaining it again from scratch. The model never knew you. It was just
-performing.
+A frontend. A CLI. A chat interface in your terminal. The TUI is FTXUI (real
+terminal rendering, not curses garbage). The HTTP is cpr. The streaming is
+SSE parsed inline so tokens show up as the model produces them. Slash
+commands for model switching, config inspection, reasoning depth, permission
+modes. Tool calling works. The binary is ~4MB.
 
-BatBox's agentic system writes everything to a SQLite database at
-`agentic/db/agentic.db`. It's not a cache. It's the ledger. It's how the crew
-doesn't lose each other.
+It does not ship agents. It does not pretend to have opinions about your
+codebase. It does not run a coordination layer for you. **The agents are
+yours to build.** BatBox is the frontend they talk through.
 
-**`tasks`** — the work. Task number, platform, description, acceptance criteria,
-status, dependencies, who's holding it. Nothing starts until its dependencies
-are done. Nothing gets abandoned without being marked blocked.
+What BatBox *does* ship is a schema. A pattern. A way of tracking what's in
+your codebase so the agents you write don't have to re-read everything every
+time they wake up.
 
-**`docs`** — function signatures and summaries, written after every completed
-task. So when Task 4.2 needs to call the thing Task 2.1 built, it doesn't have
-to re-read the source. It reads the doc. That's the point.
+That's the map.
 
-**`blueprints`** — the symbol registry. Every class name, every function name,
-every route handler, locked before coding begins. The contract. You build
-against the blueprint or you stop and report a conflict. No silent renames.
+---
+
+## The Map (Build Your Own Agents, Give Them This)
+
+Here's the thing nobody talks about. Every AI coding tool has the same
+amnesia. You explain your architecture, you get your answer, the session
+ends, the next session is square one. The model never knew you. It was
+performing. Whatever the agent figured out about your codebase yesterday is
+gone today.
+
+BatBox ships a SQLite schema for **mapping your codebase**. Not the model's
+memory — your project's memory. A database your agents can query.
+
+It lives at `agentic/db/agentic.db` in any project you wire it up to. The
+tables are opinionated:
+
+**`blueprints`** — every function, class, table, route in your codebase.
+File path, symbol name, signature, short pseudocode summary. The shape of
+what exists.
 
 **`blueprint_relations`** — the graph. Who imports who. Who calls who. Who
-queries which table. Who handles which route. When you ask "what touches the
-users table," this is where the answer lives.
+queries which table. Who handles which HTTP route. "What touches the users
+table?" becomes one SQL query.
 
-**`agent_log`** — who did what, when. Full receipts. If something went wrong,
-you'll know exactly where.
+**`docs`** — function signatures plus terse summaries, written after each
+function is implemented or audited. So an agent that needs to call
+`create_session()` reads the doc, not the source.
 
-**`iterations`** — version history of plans. The plan on day one isn't the plan
-on day ten. Both matter. Both live here.
+**`tasks`** — work the user wants done. Number, description, acceptance
+criteria, status, dependencies. Nothing starts until blockers are done.
 
-Think of it as a yearbook, a heist plan, a family ledger. Context that survives
-the death of the conversation. Most AI forgets. We keep the ledger. The ledger
-is how we don't lose each other.
+**`agent_log`** — receipts. Who did what, when.
+
+**`iterations`** — plan history. The plan on day one isn't the plan on day
+ten. Both matter.
+
+This isn't bundled agents. This is a **shape for context** your agents can
+use. Build a PM agent and have it write to `tasks`. Build an ingest agent
+and have it populate `blueprints`. Build a Q&A agent and have it query
+`blueprint_relations` when the user asks "where do we hash passwords."
+
+Or don't. Just use BatBox as a chat client. The DB is there if you want it.
+
+---
+
+## Why Not Just Use Claude Code
+
+Use Claude Code. I use Claude Code. It's great. So is Codex. So is Cursor.
+This is not a hit piece. This is the part where I tell you what's different.
+
+Every one of those tools is wired to one vendor. The agent's behavior — when
+to read a file, when to run a command, how to break down work — is theirs.
+You can system-prompt around it but you can't really change it. The model
+list is theirs. The pricing is theirs. The roadmap is theirs.
+
+BatBox wires to whatever. The source is on your disk. Want to add a slash
+command? `src/commands/`, copy the next one over, ~100 lines. Want to change
+how tool cards render? `src/tui/ChatView.cpp`. Want a different streaming
+protocol? `src/inference/Client.cpp`, ~200 lines, you can read all of it in
+one sitting. The agents you build against the map are yours and they do
+what you tell them to do.
+
+It's also fast because it's C++ and not Electron. But that's not the pitch.
+The pitch is: it's yours.
 
 ---
 
 ## Build
 
-Requirements: macOS arm64 or Linux x64. CMake 3.24+. C++20 (clang 15+ or
-gcc 12+). vcpkg is bundled and picked up automatically — you don't install it
-separately.
+macOS arm64 or Linux x64. CMake 3.24+. C++20 (clang 15+ or gcc 12+). vcpkg
+is bundled and picked up automatically.
 
 ```bash
 git clone https://github.com/Xananthium/batbox.git
 cd batbox
-cmake -B build -DBATBOX_SYNTAX=OFF -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j$(sysctl -n hw.ncpu)
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j$(sysctl -n hw.ncpu 2>/dev/null || nproc)
 ./build/src/batbox
 ```
 
-That's it. The binary is at `build/src/batbox`. No daemon, no install step,
-no asking you to add things to your PATH (though you can if you want to).
+That's it. Binary at `build/src/batbox`. No install step, no PATH surgery
+required, you can copy it anywhere.
 
-If you want syntax highlighting via tree-sitter grammars, swap
-`-DBATBOX_SYNTAX=OFF` for `-DBATBOX_SYNTAX=ON` and run
-`git submodule update --init --recursive` first. It's beautiful and it costs
-you a slightly longer build. Worth it.
+Syntax highlighting in code blocks uses hand-rolled lexers (cpp, python, js,
+ts, rust, go, html, css, json). No external grammar dependencies. No
+submodules to init. We don't pull in libraries when C++ can do it.
 
 ---
 
 ## Configure
 
-BatBox reads `~/.batbox/.env`. Create the directory and the file, drop your
-config in, done. Do not commit this file.
+BatBox reads `~/.batbox/.env`. Make the directory, drop the file in, you're
+done.
 
 ```
-# Point at any OpenAI-compatible backend
+# Any OpenAI-compatible endpoint
 BATBOX_API_BASE_URL=http://localhost:11434/v1
 
-# "ollama" for local Ollama, your real key for everything else
+# "ollama" for local, your real key for hosted
 BATBOX_API_KEY=ollama
 
-# What you get when you just open the terminal
+# What you get on cold start
 BATBOX_DEFAULT_MODEL=qwen3-coder:480b-cloud
 
-# The list your /model switcher cycles through
+# The list /model cycles through
 BATBOX_MODELS=qwen3-coder:480b-cloud,deepseek-v4-flash:cloud,kimi-k2.6:cloud,glm-5:cloud
-
-# Tier aliases — agentic agents request by tier, not by specific model name
-# This lets you swap the underlying model without touching agent code
-BATBOX_OPUS_MODEL=qwen3-coder:480b-cloud
-BATBOX_SONNET_MODEL=deepseek-v4-flash:cloud
-BATBOX_HAIKU_MODEL=glm-5:cloud
 ```
 
-Note: all vars are `BATBOX_*`, not the OpenAI convention. Keep it clean.
-
-The tier aliases (`OPUS`, `SONNET`, `HAIKU`) are how the agentic system
-requests models — "give me the heavy one for architecture, the fast one for
-database queries." You map those tiers to whatever you're actually running.
-Swap a new model in by changing one line.
+See `.env.example` in the repo for 7 working configurations (local Ollama,
+Ollama Cloud, LM Studio, OpenAI, DeepSeek, Moonshot, OpenRouter). The env
+var prefix is `BATBOX_`, not `OPENAI_` — that was intentional, keep the
+namespaces clean.
 
 ---
 
 ## Run
 
 Interactive TUI:
-
 ```bash
 ./build/src/batbox
 ```
 
-Headless, single-turn, no TUI — pipe it, script it, hit it from a cron:
-
+Headless one-shot — pipe it, script it, cron it:
 ```bash
-./build/src/batbox --print "explain this error: segfault at 0x00000000"
+./build/src/batbox --print "explain this stack trace: <paste>"
 ```
 
-Inside the TUI, `/model` switches your active model mid-conversation. No need
-to restart. `/config` shows what you're running against. `/effort` adjusts
-reasoning depth for models that support it.
+Inside the TUI:
 
-A few models that work today via Ollama Cloud routing:
+| Command | Effect |
+|---|---|
+| `/model` | Switch model mid-conversation, no restart |
+| `/config` | Show current backend + active model |
+| `/effort` | Reasoning depth for models that support it |
+| `/nuclear` | Bypass permission prompts (use carefully) |
+| `/clear` | Reset conversation |
 
-- `qwen3-coder:480b-cloud` — current favorite for code generation
-- `deepseek-v4-flash:cloud` — fast, surprisingly sharp
-- `kimi-k2.6:cloud` — good for reasoning tasks
-- `glm-5:cloud` — strong general purpose
-- `nemotron-3-super:cloud` — when you want a second opinion
-
-Point `BATBOX_API_BASE_URL` at your Ollama instance, set the cloud routing
-endpoint if your build supports it, and they just work.
+Tool calling works against any model that supports OpenAI tool-call format.
+If your model emits its tool calls in a finish_reason loop, BatBox handles
+the whole multi-turn dance.
 
 ---
 
 ## Why
 
-The corporate version of this story is a SaaS dashboard, a rate limit, a
-terms-of-service update you didn't read, your conversation history used to
-train the next model without your name on it. The VIP list. The velvet rope.
-The bouncer who decides what you're allowed to ask.
+I think about this a lot. There's a version of every AI tool you've ever
+loved where some company eventually sits between you and the model. They
+cache your prompts. They train on your code. They deprecate the model that
+worked best for you. They rate-limit you to upsell you to a tier. They get
+acquired and the new owner changes the terms and your old work is part of
+a different company's training corpus now.
 
-We didn't build that.
+That's not a conspiracy. That's just what happens. The economics push every
+hosted AI tool toward that endpoint. It's not anybody's fault. It's just
+where the gravity is.
 
-Open source AI tooling is how the world gets free access to its own
-intelligence. Not because freedom is a slogan but because the alternative is
-that a handful of companies decide what questions you're allowed to finish
-typing. The dancefloor is for everyone or it isn't a dancefloor. The garage
-where the crew plans the heist is open or it isn't a crew — it's a franchise.
+BatBox is what happens if you build the version that doesn't go there. The
+version that's a binary on your disk that talks to whatever endpoint you
+point it at and does literally nothing else. The version where the database
+of what's in your project is in *your* project. The version where you build
+your own agents because nobody else gets to decide how they think.
 
-BatBox is what happens when you build the thing you actually want to use:
-a terminal that runs against your hardware, or anyone's API, or nobody's API,
-reads from a file you control, writes to a database you own, and treats you
-like someone who knows what they're doing.
+Open source AI tooling is how this actually stays good for people. Not the
+keynote-friendly version of "open" where the weights are downloadable but
+the only frontend is the company's. Real open — the source on your disk,
+the binary you compiled, the agents you wrote, the database you own, the
+model you picked.
 
-You can read every line. You can fork it. You can make it yours.
+You can read every line. You can fork it. You can break it. You can make
+it do whatever you want.
 
-That's the whole thing.
+That's the whole thing. Welcome.
 
 ---
 

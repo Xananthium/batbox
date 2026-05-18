@@ -50,6 +50,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <unistd.h>
 
 namespace fs = std::filesystem;
 using namespace batbox;
@@ -66,14 +67,12 @@ struct TempDir {
     fs::path path;
 
     TempDir() {
+        const auto unique_id =
+            static_cast<unsigned long>(::getpid()) * 1000000UL
+            + static_cast<unsigned long>(
+                std::chrono::steady_clock::now().time_since_epoch().count() % 1000000);
         path = fs::temp_directory_path() /
-               ("batbox_test_config_tool_" +
-                std::to_string(
-                    std::hash<std::thread::id>{}(std::this_thread::get_id()) ^
-                    static_cast<std::size_t>(
-                        std::chrono::steady_clock::now()
-                            .time_since_epoch()
-                            .count())));
+               ("batbox_test_config_tool_" + std::to_string(unique_id));
         fs::create_directories(path);
     }
 

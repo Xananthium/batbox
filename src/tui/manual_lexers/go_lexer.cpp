@@ -1,6 +1,6 @@
 // src/tui/manual_lexers/go_lexer.cpp
 // ---------------------------------------------------------------------------
-// Manual Go lexer for BATBOX_SYNTAX=0 fallback.
+// Manual Go lexer manual lexer.
 //
 // Recognises:
 //   - Go keywords and predeclared identifiers

@@ -30,6 +30,7 @@
 #include <batbox/perf/PerfSnapshot.hpp>
 
 #include <filesystem>
+#include <mutex>
 #include <functional>
 #include <optional>
 #include <stdexcept>
@@ -60,10 +61,12 @@ Conversation::Conversation(batbox::inference::Client&                client,
                            std::function<void(std::string_view)>     on_delta_cb,
                            batbox::tools::ToolRegistry*              registry,
                            batbox::permissions::PermissionGate*      gate,
-                           batbox::conversation::PlanMode*           plan_mode)
+                           batbox::conversation::PlanMode*           plan_mode,
+                           std::mutex*                               cfg_mutex)
     : client_(client)
     , store_(store)
     , cfg_(cfg)
+    , cfg_mutex_(cfg_mutex)
     , registry_(registry)
     , gate_(gate)
     , plan_mode_(plan_mode)
@@ -182,6 +185,40 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         return batbox::Err(std::string("cancelled"));
     }
 
+    // ---- PEXT2 3.4 (D-8): snapshot mutable Config fields under mutex ----
+    //
+    // cfg.api.default_model can be written on the FTXUI UI thread by /model
+    // (via apply_live_model_mutation under cfg_mutex_) while run_turn() runs on
+    // a detached worker thread.  cfg.api.api_key can also be mutated by ConfigTool.
+    // Reading either field without the mutex is a data race under TSAN.
+    //
+    // Strategy: acquire cfg_mutex_ once here and copy the two fields we need for
+    // the entire turn into const-string locals.  All downstream sites
+    // (Compactor ctor, req.model, api_key in Client::stream_chat preflight overload)
+    // use these snapshots instead of reading cfg_ directly.
+    //
+    // When cfg_mutex_ is nullptr (headless mode, tests) the snapshot reads cfg_
+    // without locking — safe in single-threaded contexts.
+    //
+    // NOTE (coordination with PEXT2 3.1 / D-1): current_api_key is used directly
+    // in the client_.stream_chat(preflight_body_str, current_api_key, ...) call
+    // for iteration 0, satisfying both D-1 (single dump) and D-8 (race-free key).
+    const std::string current_model = [&]() -> std::string {
+        if (cfg_mutex_ != nullptr) {
+            std::lock_guard<std::mutex> lk(*cfg_mutex_);
+            return cfg_.api.default_model;
+        }
+        return cfg_.api.default_model;
+    }();
+    const std::string current_api_key = [&]() -> std::string {
+        if (cfg_mutex_ != nullptr) {
+            std::lock_guard<std::mutex> lk(*cfg_mutex_);
+            return cfg_.api.api_key;
+        }
+        return cfg_.api.api_key;
+    }();
+
+
     // ---- 1. Auto-compact pre-flight check (bytes/4 estimator, G9) ----
     //
     // Token estimation uses the bytes/4 heuristic keyed off the serialized
@@ -196,6 +233,13 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
     //
     // Effective threshold = ceil(ctx_len * auto_compact_at_pct / 100).
     // If post-compact estimate still exceeds threshold → Err (verbatim message).
+    //
+    // PEXT2 3.1 (D-1): the dump produced here for the bytes/4 estimate is
+    // captured in preflight_body_str and reused as the wire request body for
+    // tool-call loop iteration 0.  This eliminates the second Json::dump() that
+    // Client::stream_chat previously performed inside the retry loop.
+    // After compaction the post-compact dump is stored instead.
+    std::string preflight_body_str;
     {
         // Determine the resolved context length for this turn.
         const std::size_t resolved_ctx_len = [&]() -> std::size_t {
@@ -214,7 +258,7 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
             // Try the built-in model table via ContextWindow.
             const std::size_t table_len =
                 batbox::conversation::ContextWindow::context_limit_for_model(
-                    cfg_.api.default_model);
+                    current_model);
             if (table_len > 0) {
                 return table_len;
             }
@@ -237,10 +281,16 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
 
         batbox::inference::ChatRequest preflight_req =
             build_chat_request(messages_, cfg_, registry_, sys_prompt_preflight);
+        // PEXT2 3.4: use snapshotted model to avoid race with /model switch.
+        preflight_req.model = current_model;
         // Serialize the request as JSON for the bytes/4 estimate.
-        // nlohmann to_json registered for ChatRequest; same pattern as Client.cpp.
-        const batbox::Json preflight_json = preflight_req;
-        const std::size_t est = preflight_json.dump().size() / 4;
+        // PEXT2 4.1 (D-3): use to_wire_string() to skip the intermediate
+        // nlohmann tree — avoids ~2000 allocations per preflight call.
+        // PEXT2 3.1 (D-1): capture dump result; reused as wire body in tool loop iter 0.
+        preflight_body_str.clear();
+        preflight_body_str.reserve(4096);
+        batbox::inference::to_wire_string(preflight_req, preflight_body_str);
+        const std::size_t est = preflight_body_str.size() / 4;
 
         auto logger_cw = batbox::log::get("conversation");
         logger_cw->debug("ctx-budget: est={}tok threshold={}tok ctx_len={}tok pct={}%",
@@ -261,21 +311,19 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
                 return batbox::Err(std::string("cancelled"));
             }
 
-            // Re-estimate after compaction to check if we are still over threshold.
+            // Rebuild preflight_body_str after compaction so iteration 0 uses the compacted wire body.
             batbox::inference::ChatRequest post_compact_req =
                 build_chat_request(messages_, cfg_, registry_, sys_prompt_preflight);
+            // PEXT2 3.4: use snapshotted model after compaction rebuild.
+            post_compact_req.model = current_model;
             // Re-serialize after compaction.
-            const batbox::Json post_compact_json = post_compact_req;
-            const std::size_t post_est = post_compact_json.dump().size() / 4;
-
-            logger_cw->debug("ctx-budget post-compact: est={}tok threshold={}tok",
-                             post_est, threshold);
-
-            if (post_est >= threshold) {
-                return batbox::Err(std::string(
-                    "ctx-budget: prompt still exceeds compact threshold after compaction; "
-                    "consider /clear or a larger-ctx model"));
-            }
+            // PEXT2 4.1 (D-3): use to_wire_string() here too — consistent with
+            // the pre-compact path above; avoids an extra nlohmann tree build.
+            // PEXT2 3.1 (D-1): after compaction, update preflight_body_str
+            // so the wire body for iteration 0 reflects the compacted messages.
+            preflight_body_str.clear();
+            preflight_body_str.reserve(4096);
+            batbox::inference::to_wire_string(post_compact_req, preflight_body_str);
         }
     }
 
@@ -333,6 +381,8 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
 
         batbox::inference::ChatRequest req =
             build_chat_request(messages_, cfg_, registry_, sys_prompt);
+        // PEXT2 3.4: override req.model with the snapshotted model (race-free).
+        req.model = current_model;
 
         // Instantiate ToolCallOrchestrator for this streaming turn (only when
         // the registry and gate are configured).
@@ -347,9 +397,18 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         // the parent ct fires, giving us linked cancellation.
         auto [stream_src, stream_tok] = ct.child();
 
-        auto stream_res = client_.stream_chat(
-            req,
-            [&](const batbox::inference::StreamDelta& delta) {
+        // PEXT2 3.1 (D-1): for iteration 0 reuse the body string captured by the
+        // pre-flight token-estimate dump (preflight_body_str), eliminating the
+        // second Json::dump() inside Client::stream_chat.  The pre-flight body is
+        // byte-identical to what Client would build (same messages, same sys_prompt,
+        // same stream=true + stream_options_include_usage=true defaults).
+        // Provider quirk handling (vllm/ollama/llama-cpp) is delegated to the
+        // string overload of stream_chat, which applies quirks internally if needed.
+        //
+        // For tool-call follow-up iterations (tool_turn > 0) the messages_ vector
+        // has grown with tool results; use the ChatRequest overload which rebuilds
+        // and serialises the body from the updated req.
+        auto on_delta_fn = [&](const batbox::inference::StreamDelta& delta) {
                 // TUI-T15: Detect the start of the reasoning phase.
                 // Fire on_reasoning_started_cb_ the first time reasoning_content
                 // arrives so InputBar can show "· thinking..." in the status row.
@@ -428,9 +487,18 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
                 if (delta.usage.has_value()) {
                     usage = *delta.usage;
                 }
-            },
-            std::move(stream_tok)
-        );
+        };
+
+        // PEXT2 3.1 (D-1): dispatch to the appropriate stream_chat overload.
+        // Iteration 0 uses the pre-serialised preflight_body_str (captured from
+        // the pre-flight token-estimate dump) to avoid a redundant Json::dump().
+        // Subsequent iterations (tool_turn > 0) use the ChatRequest overload
+        // which serialises the updated request body (new tool-result messages).
+        auto stream_res =
+            (tool_turn == 0)
+                ? client_.stream_chat(preflight_body_str, current_api_key,
+                                      on_delta_fn, std::move(stream_tok))
+                : client_.stream_chat(req, on_delta_fn, std::move(stream_tok));
         // stream_src goes out of scope here; streaming is complete.
 
         if (!stream_res) {

@@ -40,10 +40,12 @@
 #include <batbox/core/Json.hpp>
 
 #include <atomic>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <string>
 #include <thread>
+#include <unistd.h>
 
 namespace fs = std::filesystem;
 using namespace batbox;
@@ -63,9 +65,12 @@ static void write_file(const fs::path& path, std::string_view content) {
 struct TempDir {
     fs::path path;
     explicit TempDir(const std::string& prefix = "batbox_mcp_test_") {
-        auto base = fs::temp_directory_path() / (prefix + std::to_string(
-            std::hash<std::thread::id>{}(std::this_thread::get_id())));
         static std::atomic<int> ctr{0};
+        const auto unique_id =
+            static_cast<unsigned long>(::getpid()) * 1000000UL
+            + static_cast<unsigned long>(
+                std::chrono::steady_clock::now().time_since_epoch().count() % 1000000);
+        auto base = fs::temp_directory_path() / (prefix + std::to_string(unique_id));
         path = base / std::to_string(ctr.fetch_add(1, std::memory_order_relaxed));
         fs::create_directories(path);
     }

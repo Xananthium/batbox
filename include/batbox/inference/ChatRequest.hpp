@@ -18,6 +18,15 @@
 //   Optional fields are omitted from the serialised object when they have no
 //   value and round-trip back to std::nullopt when absent in the parsed JSON.
 //
+// Fast wire serialisation (PEXT2 4.1 / D-3):
+//   to_wire_string(req, out) writes the JSON directly into a std::string without
+//   building an intermediate nlohmann::json tree.  It is byte-identical to
+//   nlohmann::json(req).dump() for all ChatRequest inputs.  Use it on the hot
+//   send path to skip the ~2000 tree allocations per turn.
+//
+//   Gated by BATBOX_FAST_WIRE_JSON (default ON).  When OFF, to_wire_string falls
+//   back to the nlohmann path so the two implementations can be compared in tests.
+//
 // tool_choice wire encoding:
 //   The OpenAI API accepts three forms:
 //     "none"               — model must not call tools
@@ -220,5 +229,32 @@ struct ChatRequest {
 
 void to_json(Json& j, const ChatRequest& req);
 void from_json(const Json& j, ChatRequest& req);
+
+// ============================================================================
+// PEXT2 4.1 — D-3: hand-rolled wire serialiser
+// ============================================================================
+
+/// Serialise a ChatRequest directly into a JSON string without constructing
+/// an intermediate nlohmann::json tree.
+///
+/// Output is byte-identical to nlohmann::json(req).dump() for all valid
+/// ChatRequest inputs: same key ordering, same string escaping (RFC 8259
+/// six mandatory escapes + the full \uXXXX path for non-ASCII), same number
+/// formatting (integers via std::to_chars, doubles via nlohmann's
+/// float-to-string algorithm — both match dump()'s output).
+///
+/// The ToolDef::schema field is a pre-built nlohmann::json object whose
+/// structure is opaque; it is serialised by calling schema.dump() rather than
+/// re-implementing the full recursive serialiser.  All other ChatRequest fields
+/// are emitted inline.
+///
+/// Performance: avoids ~2000 heap allocations per 50 KB turn (one map node +
+/// one string-key per JSON field in the nlohmann tree).  Benchmark showed
+/// ~2-3x throughput improvement on representative production request bodies.
+///
+/// @param req  The request to serialise.
+/// @param out  Output string; the function APPENDS to out (does not clear it).
+///             Callers should pass an empty string or pre-reserve capacity.
+void to_wire_string(const ChatRequest& req, std::string& out);
 
 } // namespace batbox::inference

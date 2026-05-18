@@ -121,8 +121,33 @@ public:
         std::function<void(const StreamDelta&)>      on_delta,
         CancelToken                                  ct);
 
+    /// Pre-serialised body overload (PEXT2 3.1 — D-1).
+    ///
+    /// Called by Conversation::run_turn with the request body already serialised
+    /// from the preflight token-estimate dump and the mutex-snapshotted api_key.
+    /// Eliminates the per-attempt Json::dump() inside the retry loop.
+    ///
+    /// For quirk-requiring providers (vllm/ollama/llama-cpp) the body is parsed,
+    /// mutated, and re-dumped once before the retry loop.  For all other providers
+    /// the body string is used verbatim — zero additional dumps.
+    [[nodiscard]] Result<UsageDelta> stream_chat(
+        std::string                                  body_str,
+        std::string_view                             api_key,
+        std::function<void(const StreamDelta&)>      on_delta,
+        CancelToken                                  ct);
+
 private:
     const batbox::config::Config& cfg_;
+
+    // Core SSE streaming implementation — shared by both stream_chat overloads.
+    // Both overloads converge here after serialising and applying provider quirks.
+    [[nodiscard]] Result<UsageDelta> stream_chat_impl(
+        const std::string&                           body_str,
+        std::string_view                             api_key,
+        const std::string&                           url,
+        std::int32_t                                 timeout_ms,
+        std::function<void(const StreamDelta&)>      on_delta,
+        CancelToken                                  ct);
 
     // Build the completions endpoint URL from cfg_.api.base_url.
     [[nodiscard]] std::string completions_url() const;

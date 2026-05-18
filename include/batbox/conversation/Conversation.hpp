@@ -98,6 +98,7 @@
 
 #include <chrono>
 #include <filesystem>
+#include <mutex>
 #include <functional>
 #include <optional>
 #include <string>
@@ -139,7 +140,8 @@ public:
                  std::function<void(std::string_view)>     on_delta_cb  = nullptr,
                  batbox::tools::ToolRegistry*              registry     = nullptr,
                  batbox::permissions::PermissionGate*      gate         = nullptr,
-                 batbox::conversation::PlanMode*           plan_mode    = nullptr);
+                 batbox::conversation::PlanMode*           plan_mode    = nullptr,
+                 std::mutex*                               cfg_mutex    = nullptr);
 
     // Non-copyable, non-movable (holds references).
     Conversation(const Conversation&)            = delete;
@@ -440,6 +442,12 @@ private:
     batbox::inference::Client&            client_;
     batbox::session::SessionStore&        store_;
     const batbox::config::Config&         cfg_;
+
+    // Optional mutex guarding cfg writes (PEXT2 3.4 -- D-8).
+    // Non-null in TUI mode where /model can mutate cfg.api.default_model
+    // on the FTXUI thread while run_turn() reads on the worker thread.
+    // Nullptr in headless mode and tests (no concurrent mutation).
+    std::mutex*                           cfg_mutex_;  ///< Non-owning; may be null.
 
     // Optional tool infrastructure (nullptr = no-tools mode).
     batbox::tools::ToolRegistry*          registry_;   ///< Non-owning; may be null.

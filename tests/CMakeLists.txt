@@ -676,11 +676,8 @@ target_link_libraries(test_markdown_render PRIVATE
     ftxui::component  ftxui::dom  ftxui::screen
     simdjson::simdjson)
 
-# CPP 1.4 — SyntaxHighlight: tree-sitter wrapper + manual lexer fallback
-# Compiled with BATBOX_SYNTAX=0 so tests always use the manual-lexer path —
-# the tree-sitter path requires vendored git submodules not present in a
-# bare checkout.  The manual-lexer .cpp files are compiled directly into the
-# test executable.
+# CPP 1.4 — SyntaxHighlight: manual lexer (tree-sitter removed in PEXT2 1.4a)
+# The manual-lexer .cpp files are compiled directly into the test executable.
 # Link ftxui::dom + ftxui::screen for Element construction and rendering.
 batbox_add_unit_test(test_syntax_highlight
     unit/test_syntax_highlight.cpp  batbox_core)
@@ -690,12 +687,74 @@ target_sources(test_syntax_highlight PRIVATE
     ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/cpp_lexer.cpp
     ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/python_lexer.cpp
     ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/js_lexer.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/ts_lexer.cpp
     ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/rust_lexer.cpp
-    ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/go_lexer.cpp)
+    ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/go_lexer.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/html_lexer.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/css_lexer.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/json_lexer.cpp)
 target_include_directories(test_syntax_highlight PRIVATE
     ${PROJECT_SOURCE_DIR}/src/tui)
-target_compile_definitions(test_syntax_highlight PRIVATE BATBOX_SYNTAX=0)
 target_link_libraries(test_syntax_highlight PRIVATE
+    ftxui::component  ftxui::dom  ftxui::screen)
+
+# PEXT2 1.4c — HTML manual lexer: tags, attrs, comments, DOCTYPE, entities
+# The lexer .cpp is compiled directly so no FTXUI / batbox_tui dependency needed.
+batbox_add_unit_test(test_html_lexer
+    unit/test_html_lexer.cpp  batbox_core)
+target_sources(test_html_lexer PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/html_lexer.cpp)
+target_include_directories(test_html_lexer PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/tui)
+
+# PEXT2 1.4d — CSS / SCSS manual lexer: selectors, property:value, hex colors,
+# units, at-rules, block comments, SCSS extensions ($var @mixin //).
+# Compiled directly — no FTXUI / batbox_tui dependency needed.
+batbox_add_unit_test(test_css_lexer
+    unit/test_css_lexer.cpp  batbox_core)
+target_sources(test_css_lexer PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/css_lexer.cpp)
+target_include_directories(test_css_lexer PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/tui)
+
+# PEXT2 1.4e — JSON / JSON5 manual lexer: strings, numbers, keywords, structural punctuation.
+# Compiled directly — no FTXUI / batbox_tui dependency needed.
+batbox_add_unit_test(test_json_lexer
+    unit/test_json_lexer.cpp  batbox_core)
+target_sources(test_json_lexer PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/json_lexer.cpp)
+target_include_directories(test_json_lexer PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/tui)
+
+# PEXT2 1.4b — TypeScript / TSX manual lexer: TS keywords, type annotations,
+# generics, template literals with expression re-lex, TSX tags.
+# Compiled directly — no FTXUI / batbox_tui dependency needed.
+batbox_add_unit_test(test_ts_lexer
+    unit/test_ts_lexer.cpp  batbox_core)
+target_sources(test_ts_lexer PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/ts_lexer.cpp)
+target_include_directories(test_ts_lexer PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/tui)
+
+# PEXT2 1.4f — Wire new lexers (TS/HTML/CSS/JSON) into SyntaxHighlight dispatch +
+# normalise_language.  All lexers compiled directly; ftxui linked for Element rendering.
+batbox_add_unit_test(test_syntax_highlight_new_langs
+    unit/test_syntax_highlight_new_langs.cpp  batbox_core)
+target_sources(test_syntax_highlight_new_langs PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/tui/SyntaxHighlight.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/ThemeApply.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/cpp_lexer.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/python_lexer.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/js_lexer.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/ts_lexer.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/rust_lexer.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/go_lexer.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/html_lexer.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/css_lexer.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/json_lexer.cpp)
+target_include_directories(test_syntax_highlight_new_langs PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/tui)
+target_link_libraries(test_syntax_highlight_new_langs PRIVATE
     ftxui::component  ftxui::dom  ftxui::screen)
 
 # CPP 5.16 — TaskStore + TaskCreate/TaskList/TaskGet/TaskUpdate tools
@@ -897,6 +956,36 @@ batbox_add_unit_test(test_chat_wire_model
 target_sources(test_chat_wire_model PRIVATE
     ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp)
 target_link_libraries(test_chat_wire_model PRIVATE simdjson::simdjson)
+
+# ---------------------------------------------------------------------------
+# PEXT2 3.1 — D-1: collapse per-turn JSON dumps to one
+# Tests that the preflight body string captured in Conversation::run_turn is
+# byte-identical to what Client::stream_chat would build internally, validating
+# the single-dump caching strategy.
+# Compile ChatRequest.cpp + SystemPrompt.cpp directly; no Client.cpp needed
+# (the tests verify the body-string contract without live HTTP calls).
+# ---------------------------------------------------------------------------
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_run_turn_single_dump.cpp)
+    batbox_add_unit_test(test_run_turn_single_dump
+        unit/test_run_turn_single_dump.cpp  batbox_core)
+    target_sources(test_run_turn_single_dump PRIVATE
+        ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/SystemPrompt.cpp)
+    target_link_libraries(test_run_turn_single_dump PRIVATE simdjson::simdjson)
+endif()
+
+# ---------------------------------------------------------------------------
+# PEXT2 4.1 — D-3: hand-rolled wire serialiser property tests + benchmark
+# Tests byte-identity of to_wire_string() vs nlohmann::json(req).dump() and
+# throughput improvement.  Compile ChatRequest.cpp directly; link simdjson.
+# ---------------------------------------------------------------------------
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_wire_serialiser.cpp)
+    batbox_add_unit_test(test_wire_serialiser
+        unit/test_wire_serialiser.cpp  batbox_core)
+    target_sources(test_wire_serialiser PRIVATE
+        ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp)
+    target_link_libraries(test_wire_serialiser PRIVATE simdjson::simdjson)
+endif()
 
 # ---------------------------------------------------------------------------
 # CPP 10.2 — EnvLoader: load_env_file + ${env:NAME} expansion
@@ -1484,3 +1573,109 @@ batbox_add_unit_test(test_mcp_status_poller
 target_sources(test_mcp_status_poller PRIVATE
     ${PROJECT_SOURCE_DIR}/src/app/McpStatusPoller.cpp)
 target_link_libraries(test_mcp_status_poller PRIVATE simdjson::simdjson)
+
+# PEXT2 3.3 — D-7: cache ToolCardEntry rendered Element
+# Same source set as test_chatview_streaming_cache (PEXT 6.1) — shares all
+# ChatView.cpp dependencies.  Validates that render_tool_card() produces
+# stable (identical) rendered output across 30 consecutive frames when no
+# ToolCardEntry state has changed, and that dirty_ = true is set on every
+# mutating path (ToolRunning batch update, ToolDone transition, ctrl+o).
+batbox_add_unit_test(test_chatview_toolcard_cache
+    unit/test_chatview_toolcard_cache.cpp  batbox_core)
+target_sources(test_chatview_toolcard_cache PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/tui/ChatView.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/Events.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/MarkdownRender.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/ThemeApply.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/QuestionCard.cpp
+    ${PROJECT_SOURCE_DIR}/src/tui/InputBar.cpp
+    ${PROJECT_SOURCE_DIR}/src/theme/Theme.cpp
+    ${PROJECT_SOURCE_DIR}/src/theme/themes.cpp
+    ${PROJECT_SOURCE_DIR}/src/conversation/Message.cpp
+    ${PROJECT_SOURCE_DIR}/src/perf/PerfSnapshot.cpp
+    ${PROJECT_SOURCE_DIR}/src/repl/History.cpp
+    ${PROJECT_SOURCE_DIR}/src/repl/Keybindings.cpp
+    ${PROJECT_SOURCE_DIR}/src/repl/VimMode.cpp
+    ${PROJECT_SOURCE_DIR}/src/repl/Autocomplete.cpp
+    ${PROJECT_SOURCE_DIR}/src/commands/SlashCommandRegistry.cpp
+    ${PROJECT_SOURCE_DIR}/src/plugins/PluginRegistry.cpp
+    ${PROJECT_SOURCE_DIR}/src/plugins/MarketplaceJson.cpp
+    ${PROJECT_SOURCE_DIR}/src/plugins/FrontmatterParser.cpp)
+target_link_libraries(test_chatview_toolcard_cache PRIVATE
+    batbox_config
+    batbox_perf
+    batbox_permissions
+    ftxui::component  ftxui::dom  ftxui::screen
+    simdjson::simdjson
+    spdlog::spdlog)
+
+# PEXT2 1.4a — Meta-test: verify tree-sitter is fully removed from the codebase.
+# Scans src/, include/, tests/ (excluding itself), and root cmake/ for:
+#   forbidden TS API symbols, removed compile-time switch, removed CMake target,
+#   and removed vendor subdirectory hook.
+# This guards against accidental re-introduction.
+# Standalone: only needs doctest and C++17 filesystem (no batbox_* libs).
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_no_tree_sitter.cpp)
+    add_executable(test_no_tree_sitter
+        ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_no_tree_sitter.cpp)
+    set_target_properties(test_no_tree_sitter PROPERTIES
+        CXX_STANDARD          20
+        CXX_STANDARD_REQUIRED ON
+        CXX_EXTENSIONS        OFF)
+    target_link_libraries(test_no_tree_sitter PRIVATE doctest::doctest)
+    doctest_discover_tests(test_no_tree_sitter)
+endif()
+
+# PEXT2 2.2 — Meta-test: verify all Karla Section B predicted-lag targets
+# have compiled binaries present in the build tree.
+#
+# Asserts the existence and non-zero size of each binary for:
+#   - All 16 targets from karla-postmortem-postext.md Section B
+#   - Integration targets in build/tests/integration/
+#   - Unit targets in build/tests/
+#
+# Standalone: only needs doctest and C++17 filesystem (no batbox_* libs).
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_pext2_2_2_targets_built.cpp)
+    add_executable(test_pext2_2_2_targets_built
+        ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_pext2_2_2_targets_built.cpp)
+    set_target_properties(test_pext2_2_2_targets_built PROPERTIES
+        CXX_STANDARD          20
+        CXX_STANDARD_REQUIRED ON
+        CXX_EXTENSIONS        OFF)
+    target_link_libraries(test_pext2_2_2_targets_built PRIVATE doctest::doctest)
+    doctest_discover_tests(test_pext2_2_2_targets_built)
+endif()
+
+# PEXT2 1.3 — Meta-test: verify std::hash<std::thread::id> anti-pattern is
+# absent from tests/ and src/.  The banned pattern used thread-id as a temp-dir
+# uniquifier, which collides across forked ctest worker processes on macOS.
+# Guards against accidental re-introduction.
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_no_thread_id_uniquifier.cpp)
+    add_executable(test_no_thread_id_uniquifier
+        ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_no_thread_id_uniquifier.cpp)
+    set_target_properties(test_no_thread_id_uniquifier PROPERTIES
+        CXX_STANDARD          20
+        CXX_STANDARD_REQUIRED ON
+        CXX_EXTENSIONS        OFF)
+    target_compile_definitions(test_no_thread_id_uniquifier PRIVATE
+        BATBOX_SOURCE_DIR=\"${PROJECT_SOURCE_DIR}\")
+    target_link_libraries(test_no_thread_id_uniquifier PRIVATE doctest::doctest)
+    doctest_discover_tests(test_no_thread_id_uniquifier)
+endif()
+
+# PEXT2 4.2 — Meta-test: repo-wide audit for ALL thread-id-as-uniquifier
+# patterns that are unsafe across process boundaries:
+#   std::this_thread::get_id(), pthread_self(), GetCurrentThreadId(), gettid()
+# Lines annotated with // PEXT2-4.2-safe are exempt from the scan.
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_no_thread_id_across_process.cpp)
+    add_executable(test_no_thread_id_across_process
+        ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_no_thread_id_across_process.cpp)
+    set_target_properties(test_no_thread_id_across_process PROPERTIES
+        CXX_STANDARD          20
+        CXX_STANDARD_REQUIRED ON
+        CXX_EXTENSIONS        OFF)
+    target_compile_definitions(test_no_thread_id_across_process PRIVATE
+        BATBOX_SOURCE_DIR=\"${PROJECT_SOURCE_DIR}\")
+    target_link_libraries(test_no_thread_id_across_process PRIVATE doctest::doctest)
+    doctest_discover_tests(test_no_thread_id_across_process)
+endif()

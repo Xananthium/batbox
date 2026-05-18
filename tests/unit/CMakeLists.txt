@@ -865,3 +865,70 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_input_queue.cpp)
             batbox_repl batbox_theme batbox_perf batbox_core)
     endif()
 endif()
+
+# PEXT2 1.4c — HTML manual lexer: tags, attrs, comments, DOCTYPE, entities
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_html_lexer.cpp)
+    if(TARGET batbox_tui)
+        batbox_add_unit_test(test_html_lexer
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_html_lexer.cpp
+            batbox_tui batbox_core)
+    else()
+        batbox_add_unit_test(test_html_lexer
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_html_lexer.cpp
+            batbox_core)
+    endif()
+endif()
+
+# PEXT2 1.4e — JSON manual lexer: strings, numbers, keywords, structural punctuation, JSON5
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_json_lexer.cpp)
+    if(TARGET batbox_tui)
+        batbox_add_unit_test(test_json_lexer
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_json_lexer.cpp
+            batbox_tui batbox_core)
+    else()
+        batbox_add_unit_test(test_json_lexer
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_json_lexer.cpp
+            batbox_core)
+    endif()
+endif()
+
+# PEXT2 1.4b — TypeScript manual lexer: keywords, type annotations, generics, TSX tags
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_ts_lexer.cpp)
+    if(TARGET batbox_tui)
+        batbox_add_unit_test(test_ts_lexer
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_ts_lexer.cpp
+            batbox_tui batbox_core)
+    else()
+        # batbox_tui not yet built — compile ts_lexer.cpp directly into the test
+        add_executable(test_ts_lexer
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_ts_lexer.cpp
+            ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/ts_lexer.cpp)
+        set_target_properties(test_ts_lexer PROPERTIES
+            CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+        target_include_directories(test_ts_lexer
+            PRIVATE ${PROJECT_SOURCE_DIR}/include
+                    ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers)
+        target_link_libraries(test_ts_lexer
+            PRIVATE doctest::doctest)
+        doctest_discover_tests(test_ts_lexer)
+    endif()
+endif()
+
+# PEXT2 3.1 — D-1: per-turn JSON dump collapse (one dump per turn)
+# Tests that the preflight dump body string is byte-identical to the wire body
+# that Client::stream_chat would build, validating the PEXT2 3.1 caching strategy.
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_run_turn_single_dump.cpp)
+    if(TARGET batbox_inference AND TARGET batbox_conversation)
+        batbox_add_unit_test(test_run_turn_single_dump
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_run_turn_single_dump.cpp
+            batbox_inference batbox_conversation batbox_core)
+    elseif(TARGET batbox_inference)
+        batbox_add_unit_test(test_run_turn_single_dump
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_run_turn_single_dump.cpp
+            batbox_inference batbox_core)
+    else()
+        batbox_add_unit_test(test_run_turn_single_dump
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_run_turn_single_dump.cpp
+            batbox_core)
+    endif()
+endif()

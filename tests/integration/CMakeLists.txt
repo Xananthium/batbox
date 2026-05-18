@@ -971,6 +971,87 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_conversation_basic.cpp)
 endif()
 
 # ---------------------------------------------------------------------------
+# PEXT2 3.4 (D-8) -- Config snapshot race regression test
+#
+# Verifies that Conversation::run_turn() snapshots cfg.api.default_model and
+# cfg.api.api_key under cfg_mutex at turn start, eliminating the data race
+# that occurs when /model switches on the UI thread while the worker thread
+# reads those fields during inference.
+#
+# Under BATBOX_SANITIZERS=thread (Linux only): the test is designed to produce
+# zero TSan reports after the snapshot patch.  Enable with:
+#   cmake -B build -DBATBOX_SANITIZERS=thread
+#   cmake --build build --target test_cfg_snapshot_race
+#   TSAN_OPTIONS=halt_on_error=1 ctest -R test_cfg_snapshot_race -V
+#
+# On macOS/arm64 (Apple Clang TSan not reliably available): the test still
+# exercises the concurrent path and asserts correctness without instrumentation.
+# ---------------------------------------------------------------------------
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_cfg_snapshot_race.cpp)
+
+    add_executable(test_cfg_snapshot_race
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_cfg_snapshot_race.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/Conversation.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/ToolCallOrchestrator.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/Message.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/ToolRegistry.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/ContextWindow.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/Compactor.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp
+        ${PROJECT_SOURCE_DIR}/src/session/SessionStore.cpp
+        ${PROJECT_SOURCE_DIR}/src/session/SessionFile.cpp
+        ${PROJECT_SOURCE_DIR}/src/session/SessionIndex.cpp
+        ${PROJECT_SOURCE_DIR}/src/session/SessionRecovery.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/SystemPrompt.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ToolCallAccumulator.cpp
+        ${PROJECT_SOURCE_DIR}/src/perf/PerfSnapshot.cpp
+    )
+
+    set_target_properties(test_cfg_snapshot_race PROPERTIES
+        CXX_STANDARD          20
+        CXX_STANDARD_REQUIRED ON
+        CXX_EXTENSIONS        OFF
+    )
+
+    target_include_directories(test_cfg_snapshot_race
+        PRIVATE
+            ${PROJECT_SOURCE_DIR}/include
+    )
+
+    target_compile_definitions(test_cfg_snapshot_race
+        PRIVATE
+            BATBOX_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures"
+    )
+
+    target_link_libraries(test_cfg_snapshot_race
+        PRIVATE
+            doctest::doctest
+            batbox_config
+            batbox_core
+            batbox_permissions
+            batbox_perf
+            cpr::cpr
+            simdjson::simdjson
+            spdlog::spdlog
+            fmt::fmt
+            ZLIB::ZLIB
+    )
+
+    # Apply TSan instrumentation when BATBOX_SANITIZERS=thread.
+    # On macOS this call is a no-op (TSan skipped with a CMake warning).
+    if(COMMAND batbox_enable_sanitizers)
+        batbox_enable_sanitizers(test_cfg_snapshot_race)
+    endif()
+
+    include(doctest)
+    doctest_discover_tests(test_cfg_snapshot_race)
+
+endif()
+
+
+# ---------------------------------------------------------------------------
 # TUI-FIX-T5 — Conversation tool-call loop + follow-up turn test
 #
 # Verifies that run_turn() drives the full tool-call loop (User →
@@ -3037,15 +3118,17 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_tui_layout.cpp)
             $<$<TARGET_EXISTS:ftxui::screen>:ftxui::screen>
     )
 
-    target_compile_definitions(test_tui_layout PRIVATE BATBOX_SYNTAX=0)
-
-    # Manual lexers needed when BATBOX_SYNTAX=0
+    # Manual lexers compiled directly into test
     target_sources(test_tui_layout PRIVATE
         ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/cpp_lexer.cpp
         ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/python_lexer.cpp
         ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/js_lexer.cpp
+        ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/ts_lexer.cpp
         ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/rust_lexer.cpp
         ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/go_lexer.cpp
+        ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/html_lexer.cpp
+        ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/css_lexer.cpp
+        ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/json_lexer.cpp
     )
 
     # batbox_repl (OBJECT) depends on batbox_commands and batbox_plugins (also OBJECT);

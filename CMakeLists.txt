@@ -34,13 +34,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # ---------------------------------------------------------------------------
 # Build options
-# Defaults: SYNTAX and TESTS ON (active dev), SANITIZERS and STATIC OFF
+# Defaults: TESTS ON (active dev), SANITIZERS and STATIC OFF
 # (opt-in for CI / release builds respectively)
 # ---------------------------------------------------------------------------
-option(BATBOX_SYNTAX
-  "Enable tree-sitter syntax highlighting (requires vendor/ grammars)"
-  ON)
-
 option(BATBOX_TESTS
   "Build the test suite (requires tests/ subdirectory)"
   ON)
@@ -101,17 +97,9 @@ include(cmake/Theme.cmake)
 # ---------------------------------------------------------------------------
 message(STATUS "batbox ${PROJECT_VERSION} — configure summary")
 message(STATUS "  C++ standard  : ${CMAKE_CXX_STANDARD}")
-message(STATUS "  BATBOX_SYNTAX     : ${BATBOX_SYNTAX}")
 message(STATUS "  BATBOX_TESTS      : ${BATBOX_TESTS}")
 message(STATUS "  BATBOX_SANITIZERS : ${BATBOX_SANITIZERS}")
 message(STATUS "  BATBOX_STATIC     : ${BATBOX_STATIC}")
-
-# ---------------------------------------------------------------------------
-# vendor/ — tree-sitter grammar libraries (CPP B.2, BATBOX_SYNTAX=ON)
-# add_subdirectory(vendor) is added by CPP B.2; it must precede src/ because
-# batbox_tui optionally links tree-sitter targets.
-# ---------------------------------------------------------------------------
-# add_subdirectory(vendor)   # uncomment in CPP B.2
 
 # ---------------------------------------------------------------------------
 # src/ — all component libraries and their subdirectory wiring
