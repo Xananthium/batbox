@@ -1289,7 +1289,8 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_plan_approval_card.cpp)
         ${PROJECT_SOURCE_DIR}/src/tui/Events.cpp
         ${PROJECT_SOURCE_DIR}/src/tui/ThemeApply.cpp
         ${PROJECT_SOURCE_DIR}/src/theme/Theme.cpp
-        ${PROJECT_SOURCE_DIR}/src/theme/themes.cpp)
+        ${PROJECT_SOURCE_DIR}/src/theme/themes.cpp
+        ${PROJECT_SOURCE_DIR}/src/util/EditorLaunch.cpp)
     set_target_properties(test_plan_approval_card PROPERTIES
         CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
     target_include_directories(test_plan_approval_card PRIVATE
@@ -1320,7 +1321,8 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_question_card.cpp)
         ${PROJECT_SOURCE_DIR}/src/tui/Events.cpp
         ${PROJECT_SOURCE_DIR}/src/tui/ThemeApply.cpp
         ${PROJECT_SOURCE_DIR}/src/theme/Theme.cpp
-        ${PROJECT_SOURCE_DIR}/src/theme/themes.cpp)
+        ${PROJECT_SOURCE_DIR}/src/theme/themes.cpp
+        ${PROJECT_SOURCE_DIR}/src/util/EditorLaunch.cpp)
     target_link_libraries(test_question_card PRIVATE
         batbox_config
         ftxui::component  ftxui::dom  ftxui::screen

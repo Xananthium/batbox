@@ -3000,6 +3000,13 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_tui_layout.cpp)
         ${PROJECT_SOURCE_DIR}/src/permissions/PermissionRule.cpp
         ${PROJECT_SOURCE_DIR}/src/permissions/PermissionStore.cpp
         ${PROJECT_SOURCE_DIR}/src/permissions/PatternMatcher.cpp
+        # TUI-FIX: missing sources that WireTui.cpp pulls in
+        ${PROJECT_SOURCE_DIR}/src/app/McpStatusPoller.cpp
+        ${PROJECT_SOURCE_DIR}/src/tui/QuestionCard.cpp
+        ${PROJECT_SOURCE_DIR}/src/tui/Changelog.cpp
+        ${PROJECT_SOURCE_DIR}/src/tui/AccountLabel.cpp
+        ${PROJECT_SOURCE_DIR}/src/tui/PlanApprovalCard.cpp
+        ${PROJECT_SOURCE_DIR}/src/util/EditorLaunch.cpp
         # Theme.cpp and themes.cpp are omitted here: batbox_theme (OBJECT) in
         # target_link_libraries already provides them without duplication.
     )
