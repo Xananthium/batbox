@@ -25,6 +25,7 @@
 #include <doctest/doctest.h>
 
 #include <batbox/tui/DemonPanel.hpp>
+#include "fixtures/TestTheme.hpp"
 
 #include <ftxui/component/screen_interactive.hpp>
 #include <ftxui/dom/elements.hpp>
@@ -48,26 +49,7 @@ ftxui::ScreenInteractive make_test_screen() {
     return ftxui::ScreenInteractive::Fullscreen();
 }
 
-/// Build a minimal miss-kittin theme for construction (mostly ignored by panel).
-batbox::theme::Theme make_test_theme() {
-    using C = ftxui::Color;
-    return batbox::theme::Theme{
-        /* bg             */ C::RGB(10, 10, 10),
-        /* fg             */ C::RGB(240, 240, 240),
-        /* accent_magenta */ C::RGB(255, 0, 127),
-        /* accent_cyan    */ C::RGB(0, 217, 255),
-        /* muted          */ C::RGB(120, 120, 120),
-        /* success        */ C::RGB(0, 200, 100),
-        /* error          */ C::RGB(220, 50, 50),
-        /* diff_add_fg    */ C::RGB(0, 240, 0),
-        /* diff_add_bg    */ C::RGB(0, 40, 0),
-        /* diff_remove_fg */ C::RGB(240, 0, 0),
-        /* diff_remove_bg */ C::RGB(40, 0, 0),
-        /* prompt_prefix  */ C::RGB(255, 0, 127),
-        /* code_bg        */ C::RGB(30, 30, 30),
-        /* name           */ "miss-kittin",
-    };
-}
+using batbox::test_fixtures::make_test_theme;
 
 } // anonymous namespace
 

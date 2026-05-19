@@ -30,6 +30,7 @@
 #include <batbox/commands/ISlashCommand.hpp>
 #include <batbox/commands/SlashCommandRegistry.hpp>
 #include <batbox/core/Result.hpp>
+#include <batbox/commands/CommandHelpers.hpp>
 #include <batbox/repl/CommandContext.hpp>
 
 #include <array>
@@ -58,60 +59,6 @@ namespace batbox::commands {
 // ---------------------------------------------------------------------------
 
 namespace review_detail {
-
-/// Strip leading and trailing ASCII whitespace.
-[[nodiscard]] std::string_view trim(std::string_view s) noexcept {
-    const auto start = s.find_first_not_of(" \t\r\n");
-    if (start == std::string_view::npos) return {};
-    const auto end   = s.find_last_not_of(" \t\r\n");
-    return s.substr(start, end - start + 1);
-}
-
-/// Run a shell command via popen, capture combined stdout+stderr.
-/// Sets exit_code on return.  Returns Err on popen failure.
-[[nodiscard]] batbox::Result<std::string> run_command(
-        const std::string& cmd,
-        int&               exit_code)
-{
-    const std::string full_cmd = cmd + " 2>&1";
-    FILE* fp = ::popen(full_cmd.c_str(), "r");
-    if (!fp) {
-        return batbox::Err(std::string("popen failed: ") + std::strerror(errno));
-    }
-
-    std::string output;
-    output.reserve(4096);
-    std::array<char, 4096> buf{};
-    while (std::fgets(buf.data(), static_cast<int>(buf.size()), fp) != nullptr) {
-        output += buf.data();
-        if (output.size() >= 1024 * 1024) {
-            output += "\n[diff output truncated at 1 MiB]\n";
-            break;
-        }
-    }
-
-    const int status = ::pclose(fp);
-#ifdef _WIN32
-    exit_code = status;
-#else
-    exit_code = WIFEXITED(status) ? WEXITSTATUS(status) : -1; // NOLINT
-#endif
-    return output;
-}
-
-/// Detect a "not a git repository" error in captured output + exit code.
-[[nodiscard]] bool is_not_a_git_repo(const std::string& output, int exit_code) noexcept {
-    auto ci_find = [&](std::string_view needle) -> bool {
-        std::string lo = output, ln(needle);
-        for (char& c : lo) c = static_cast<char>(::tolower(static_cast<unsigned char>(c)));
-        for (char& c : ln) c = static_cast<char>(::tolower(static_cast<unsigned char>(c)));
-        return lo.find(ln) != std::string::npos;
-    };
-    if (ci_find("not a git repository")) return true;
-    if (ci_find("fatal:"))              return true;
-    if (exit_code == 128 || exit_code == 129) return true;
-    return false;
-}
 
 /// Shell-quote a token by wrapping in single quotes and escaping embedded
 /// single quotes as '\''.
@@ -182,7 +129,7 @@ struct DiffResult {
         source_desc = "working tree";
     }
 
-    auto res = run_command(cmd, exit_code);
+    auto res = run_git_command(cmd, exit_code);
     if (!res) {
         return batbox::Err(std::string("/review: failed to obtain diff — ") + res.error());
     }

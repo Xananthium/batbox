@@ -37,7 +37,7 @@
 
 #include <batbox/tui/PermissionCard.hpp>
 #include <batbox/tui/ThemeApply.hpp>
-#include <batbox/theme/Theme.hpp>
+#include "fixtures/TestTheme.hpp"
 #include <batbox/permissions/PermissionGate.hpp>
 #include <batbox/permissions/PermissionRule.hpp>
 #include <batbox/core/Json.hpp>
@@ -59,9 +59,7 @@ using namespace batbox::permissions;
 // Helpers
 // =============================================================================
 
-static Theme make_test_theme() {
-    return theme_from_name("miss-kittin");
-}
+using batbox::test_fixtures::make_test_theme;
 
 static batbox::Json make_bash_args(const std::string& cmd = "npm test") {
     return batbox::Json{{"command", cmd}};

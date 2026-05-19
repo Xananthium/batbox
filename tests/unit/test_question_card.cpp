@@ -36,7 +36,7 @@
 
 #include <batbox/tui/QuestionCard.hpp>
 #include <batbox/tui/Events.hpp>
-#include <batbox/theme/Theme.hpp>
+#include "fixtures/TestTheme.hpp"
 
 #include <ftxui/component/event.hpp>
 #include <ftxui/dom/elements.hpp>
@@ -55,9 +55,7 @@ using namespace batbox::theme;
 // Helpers
 // =============================================================================
 
-static Theme make_test_theme() {
-    return theme_from_name("miss-kittin");
-}
+using batbox::test_fixtures::make_test_theme;
 
 /// Render a QuestionCard to a string via ftxui::Screen.
 static std::string render_to_string(QuestionCard& card, int width = 80, int height = 30) {

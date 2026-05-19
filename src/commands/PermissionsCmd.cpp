@@ -27,6 +27,7 @@
 #include <batbox/core/Result.hpp>
 #include <batbox/permissions/PermissionRule.hpp>
 #include <batbox/permissions/PermissionStore.hpp>
+#include <batbox/commands/CommandHelpers.hpp>
 #include <batbox/repl/CommandContext.hpp>
 
 #include <algorithm>
@@ -41,14 +42,6 @@ namespace batbox::commands {
 // ---------------------------------------------------------------------------
 
 namespace {
-
-/// Strip leading and trailing ASCII whitespace from s.
-[[nodiscard]] std::string_view trim(std::string_view s) noexcept {
-    const auto start = s.find_first_not_of(" \t\r\n");
-    if (start == std::string_view::npos) return {};
-    const auto end = s.find_last_not_of(" \t\r\n");
-    return s.substr(start, end - start + 1);
-}
 
 /// Validate that `pattern` is a non-empty, non-whitespace-only string.
 [[nodiscard]] bool is_valid_pattern(std::string_view pattern) noexcept {

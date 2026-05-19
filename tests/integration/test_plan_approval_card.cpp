@@ -41,7 +41,7 @@
 
 #include <batbox/tui/PlanApprovalCard.hpp>
 #include <batbox/tui/ThemeApply.hpp>
-#include <batbox/theme/Theme.hpp>
+#include "fixtures/TestTheme.hpp"
 #include <batbox/core/Json.hpp>
 
 #include <ftxui/component/event.hpp>
@@ -61,9 +61,7 @@ using namespace batbox::theme;
 // Helpers
 // =============================================================================
 
-static Theme make_test_theme() {
-    return theme_from_name("miss-kittin");
-}
+using batbox::test_fixtures::make_test_theme;
 
 static const std::string kSamplePlan =
     "## Plan\n"

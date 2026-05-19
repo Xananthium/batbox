@@ -33,7 +33,7 @@
 
 #include <batbox/tui/StreamingMessageView.hpp>
 #include <batbox/tui/Events.hpp>
-#include <batbox/theme/Theme.hpp>
+#include "fixtures/TestTheme.hpp"
 
 #include <ftxui/component/event.hpp>
 #include <ftxui/dom/elements.hpp>
@@ -51,26 +51,7 @@
 // ---------------------------------------------------------------------------
 namespace {
 
-/// Build a minimal test theme (miss-kittin palette).
-batbox::theme::Theme make_test_theme() {
-    using C = ftxui::Color;
-    batbox::theme::Theme t;
-    t.name           = "miss-kittin";
-    t.bg             = C::RGB(10,  10,  10 );
-    t.fg             = C::RGB(232, 232, 232);
-    t.accent_magenta = C::RGB(255, 42,  140);
-    t.accent_cyan    = C::RGB(40,  221, 255);
-    t.muted          = C::RGB(102, 102, 102);
-    t.success        = C::RGB(57,  255, 112);
-    t.error          = C::RGB(255, 59,  59 );
-    t.diff_add_fg    = C::RGB(57,  255, 112);
-    t.diff_add_bg    = C::RGB(14,  30,  14 );
-    t.diff_remove_fg = C::RGB(255, 85,  85 );
-    t.diff_remove_bg = C::RGB(30,  14,  14 );
-    t.prompt_prefix  = C::RGB(255, 42,  140);
-    t.code_bg        = C::RGB(20,  20,  20 );
-    return t;
-}
+using batbox::test_fixtures::make_test_theme;
 
 /// Render an element to a small screen and return true if it didn't crash.
 bool render_ok(ftxui::Element el, int w = 80, int h = 24) {

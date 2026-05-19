@@ -159,3 +159,43 @@ _add_tui_smoke_test(tui_smoke_22_splash_changelog "${_CASES_DIR}/22_splash_chang
 # Requires tmux + BatBox binary built at build/src/batbox.
 # ---------------------------------------------------------------------------
 _add_tui_smoke_test(tui_smoke_23_plan_with_cards_e2e "${_CASES_DIR}/23_plan_with_cards_e2e.sh")
+
+# ---------------------------------------------------------------------------
+# Case 28 — PEXT3 1.2: /model lists models from BATBOX_MODELS env var
+#
+# Verifies that the /model command reads api.models from the live Config
+# (populated from BATBOX_MODELS) rather than calling getenv directly.
+# Injects BATBOX_MODELS=grok-beta,gpt-4o-mini,llama-3.3-70b via tui_session_up
+# and asserts all three model names appear in the model list output.
+# ---------------------------------------------------------------------------
+_add_tui_smoke_test(tui_smoke_28_model_lists_env "${_CASES_DIR}/28_model_lists_env.sh")
+
+# ---------------------------------------------------------------------------
+# Case 29 — PEXT3 1.3: /model N mutates live cfg.api.default_model under mutex
+#
+# Verifies that after /model 2 switches to the second model in BATBOX_MODELS,
+# the next inference request uses that model (recorded by mock_model_recorder.py).
+# This is the load-bearing gate for the PEXT3 1.3 bug fix: "/model N" must
+# change the active model for subsequent requests in the running session.
+# ---------------------------------------------------------------------------
+_add_tui_smoke_test(tui_smoke_29_model_n_persists "${_CASES_DIR}/29_model_n_persists.sh")
+
+# ---------------------------------------------------------------------------
+# Case 30 — PEXT3 1.5: --nuclear bypasses PlanApprovalCard modal
+#
+# Drives mock_nuclear_plan.py (port 8851) which emits ExitPlanMode on turn 1.
+# BatBox is launched with --nuclear; the PlanApprovalCard must NOT appear.
+# Asserts zero occurrences of "Approve", "Reject", "Plan Review", "Plan Approval"
+# in any screen capture across 5 snapshots.
+# ---------------------------------------------------------------------------
+_add_tui_smoke_test(tui_smoke_30_nuclear_no_plan_modal "${_CASES_DIR}/30_nuclear_no_plan_modal.sh")
+
+# ---------------------------------------------------------------------------
+# Case 31 — PEXT3 1.6: --nuclear bypasses QuestionCard modal
+#
+# Drives mock_nuclear_askq.py (port 8852) which emits AskUserQuestion on turn 1.
+# BatBox is launched with --nuclear; make_askq_prompt_fn must return {} immediately
+# (no modal posted). Asserts no QuestionCard UI elements appear and the
+# turn-2 acknowledgement "(no answer provided)" confirms the auto-decline fired.
+# ---------------------------------------------------------------------------
+_add_tui_smoke_test(tui_smoke_31_nuclear_no_question_modal "${_CASES_DIR}/31_nuclear_no_question_modal.sh")

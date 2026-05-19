@@ -66,7 +66,7 @@
 #include <batbox/tui/Splash.hpp>
 #include <batbox/agents/AgentEvent.hpp>
 #include <batbox/agents/AgentSupervisor.hpp>
-#include <batbox/theme/Theme.hpp>
+#include "fixtures/TestTheme.hpp"
 #include <batbox/repl/History.hpp>
 #include <batbox/repl/Keybindings.hpp>
 #include <batbox/commands/SlashCommandRegistry.hpp>
@@ -91,9 +91,7 @@
 namespace {
 
 /// Create the default miss-kittin theme for tests.
-batbox::theme::Theme make_test_theme() {
-    return batbox::theme::theme_from_name("miss-kittin");
-}
+using batbox::test_fixtures::make_test_theme;
 
 /// RAII wrapper: sets BATBOX_NO_SPLASH env var to "true" then restores.
 struct NoSplashGuard {

@@ -71,6 +71,7 @@ target_sources(batbox_tui
         Splash.cpp
         MarkdownRender.cpp  # CPP 1.3 — incremental markdown -> FTXUI Element
         Events.cpp
+        AskqPromptFactory.cpp  # PEXT3 1.6 — make_askq_prompt_fn factory
         PermissionBanner.cpp  # CPP 1.16 — permission mode top banner + Nuclear confirmation
         AccountLabel.cpp     # TUI-FIX-T8 — resolve_account_label: $USER@hostname fallback
         ${PROJECT_SOURCE_DIR}/src/util/EditorLaunch.cpp  # TUI-FIX-T7 — resolve_editor + edit_string_in_editor

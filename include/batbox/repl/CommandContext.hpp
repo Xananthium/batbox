@@ -71,6 +71,7 @@
 #include <ostream>
 #include <string>
 #include <string_view>
+#include <mutex>
 #include <vector>
 
 // Forward-declare the REPL types so this header stays dependency-free.
@@ -90,6 +91,8 @@ namespace batbox::inference {
     struct UsageDelta;
 }
 namespace batbox::agents { class AgentSupervisor; }
+
+namespace batbox::config { struct Config; }
 
 namespace batbox::commands {
 
@@ -248,6 +251,19 @@ struct CommandContext {
 
     /// Agent supervisor for sub-agent spawn count.  /stats reads snapshot().
     batbox::agents::AgentSupervisor* agent_supervisor = nullptr;
+
+
+    // --- Live Config (PEXT3 1.1) ----------------------------------------------
+    // Both pointers are nullable: null in headless/test mode; set by the REPL
+    // main loop when the App-owned Config has been constructed.  Commands must
+    // use these instead of std::getenv to access runtime configuration.
+
+    /// App-owned Config instance.  Null in headless / test mode.
+    /// ModelCmd (PEXT3 1.2) reads api.models and api.default_model from here.
+    const batbox::config::Config* cfg       = nullptr;
+
+    /// Mutex guarding cfg mutations (hot-reload).  Nullable like cfg.
+    std::mutex*                   cfg_mutex = nullptr;
 
     /// Human-readable permission mode string (e.g. "default", "nuclear").
     /// Owned by the REPL loop.  /status displays this; null → "(n/a)".

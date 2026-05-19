@@ -38,6 +38,7 @@
 #include <batbox/commands/SlashCommandRegistry.hpp>
 #include <batbox/config/EnvLoader.hpp>
 #include <batbox/core/Result.hpp>
+#include <batbox/commands/CommandHelpers.hpp>
 #include <batbox/repl/CommandContext.hpp>
 
 #include <algorithm>
@@ -47,7 +48,6 @@
 #include <filesystem>
 #include <fstream>
 #include <regex>
-#include <sstream>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -61,14 +61,6 @@ namespace batbox::commands {
 // ---------------------------------------------------------------------------
 
 namespace {
-
-/// Strip leading/trailing ASCII whitespace.
-[[nodiscard]] std::string_view trim(std::string_view s) noexcept {
-    const auto start = s.find_first_not_of(" \t\r\n");
-    if (start == std::string_view::npos) return {};
-    const auto end   = s.find_last_not_of(" \t\r\n");
-    return s.substr(start, end - start + 1);
-}
 
 /// Split s on the first whitespace run; returns {head, rest}.
 [[nodiscard]] std::pair<std::string_view, std::string_view>
@@ -174,14 +166,6 @@ static const std::pair<std::string_view, std::string_view> kKnownKeys[] = {
     batbox::config::merge_with_process_env(env, /*process_env_wins=*/true);
 
     return env;
-}
-
-/// Read settings.json as raw text.  Returns empty string on failure.
-[[nodiscard]] std::string read_settings_raw(const fs::path& config_dir) {
-    std::ifstream f(config_dir / "settings.json");
-    if (!f) return {};
-    return std::string((std::istreambuf_iterator<char>(f)),
-                        std::istreambuf_iterator<char>());
 }
 
 /// Print the effective config values for all known keys to `out`.

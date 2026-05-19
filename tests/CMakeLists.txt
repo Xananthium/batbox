@@ -654,6 +654,7 @@ target_sources(test_diff_card PRIVATE
     ${PROJECT_SOURCE_DIR}/src/tui/ThemeApply.cpp
     ${PROJECT_SOURCE_DIR}/src/theme/Theme.cpp
     ${PROJECT_SOURCE_DIR}/src/theme/themes.cpp)
+target_include_directories(test_diff_card PRIVATE ${PROJECT_SOURCE_DIR}/tests)
 target_link_libraries(test_diff_card PRIVATE
     batbox_config
     ftxui::component  ftxui::dom  ftxui::screen
@@ -671,6 +672,7 @@ target_sources(test_markdown_render PRIVATE
     ${PROJECT_SOURCE_DIR}/src/tui/ThemeApply.cpp
     ${PROJECT_SOURCE_DIR}/src/theme/Theme.cpp
     ${PROJECT_SOURCE_DIR}/src/theme/themes.cpp)
+target_include_directories(test_markdown_render PRIVATE ${PROJECT_SOURCE_DIR}/tests)
 target_link_libraries(test_markdown_render PRIVATE
     batbox_config
     ftxui::component  ftxui::dom  ftxui::screen
@@ -684,6 +686,8 @@ batbox_add_unit_test(test_syntax_highlight
 target_sources(test_syntax_highlight PRIVATE
     ${PROJECT_SOURCE_DIR}/src/tui/SyntaxHighlight.cpp
     ${PROJECT_SOURCE_DIR}/src/tui/ThemeApply.cpp
+    ${PROJECT_SOURCE_DIR}/src/theme/Theme.cpp
+    ${PROJECT_SOURCE_DIR}/src/theme/themes.cpp
     ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/cpp_lexer.cpp
     ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/python_lexer.cpp
     ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/js_lexer.cpp
@@ -694,9 +698,12 @@ target_sources(test_syntax_highlight PRIVATE
     ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/css_lexer.cpp
     ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/json_lexer.cpp)
 target_include_directories(test_syntax_highlight PRIVATE
-    ${PROJECT_SOURCE_DIR}/src/tui)
+    ${PROJECT_SOURCE_DIR}/src/tui
+    ${PROJECT_SOURCE_DIR}/tests)
 target_link_libraries(test_syntax_highlight PRIVATE
-    ftxui::component  ftxui::dom  ftxui::screen)
+    batbox_config
+    ftxui::component  ftxui::dom  ftxui::screen
+    simdjson::simdjson)
 
 # PEXT2 1.4c — HTML manual lexer: tags, attrs, comments, DOCTYPE, entities
 # The lexer .cpp is compiled directly so no FTXUI / batbox_tui dependency needed.
@@ -743,6 +750,8 @@ batbox_add_unit_test(test_syntax_highlight_new_langs
 target_sources(test_syntax_highlight_new_langs PRIVATE
     ${PROJECT_SOURCE_DIR}/src/tui/SyntaxHighlight.cpp
     ${PROJECT_SOURCE_DIR}/src/tui/ThemeApply.cpp
+    ${PROJECT_SOURCE_DIR}/src/theme/Theme.cpp
+    ${PROJECT_SOURCE_DIR}/src/theme/themes.cpp
     ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/cpp_lexer.cpp
     ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/python_lexer.cpp
     ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/js_lexer.cpp
@@ -753,9 +762,12 @@ target_sources(test_syntax_highlight_new_langs PRIVATE
     ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/css_lexer.cpp
     ${PROJECT_SOURCE_DIR}/src/tui/manual_lexers/json_lexer.cpp)
 target_include_directories(test_syntax_highlight_new_langs PRIVATE
-    ${PROJECT_SOURCE_DIR}/src/tui)
+    ${PROJECT_SOURCE_DIR}/src/tui
+    ${PROJECT_SOURCE_DIR}/tests)
 target_link_libraries(test_syntax_highlight_new_langs PRIVATE
-    ftxui::component  ftxui::dom  ftxui::screen)
+    batbox_config
+    ftxui::component  ftxui::dom  ftxui::screen
+    simdjson::simdjson)
 
 # CPP 5.16 — TaskStore + TaskCreate/TaskList/TaskGet/TaskUpdate tools
 # Compile TaskStore.cpp and all four tool .cpp files directly so this test
@@ -825,6 +837,7 @@ target_sources(test_demon_panel PRIVATE
     ${PROJECT_SOURCE_DIR}/src/tui/ThemeApply.cpp
     ${PROJECT_SOURCE_DIR}/src/theme/Theme.cpp
     ${PROJECT_SOURCE_DIR}/src/theme/themes.cpp)
+target_include_directories(test_demon_panel PRIVATE ${PROJECT_SOURCE_DIR}/tests)
 target_link_libraries(test_demon_panel PRIVATE
     batbox_config
     ftxui::component  ftxui::dom  ftxui::screen
@@ -1266,6 +1279,7 @@ target_sources(test_streaming_message_view PRIVATE
     ${PROJECT_SOURCE_DIR}/src/tui/ThemeApply.cpp
     ${PROJECT_SOURCE_DIR}/src/theme/Theme.cpp
     ${PROJECT_SOURCE_DIR}/src/theme/themes.cpp)
+target_include_directories(test_streaming_message_view PRIVATE ${PROJECT_SOURCE_DIR}/tests)
 target_link_libraries(test_streaming_message_view PRIVATE
     batbox_config
     ftxui::component  ftxui::dom  ftxui::screen
@@ -1350,7 +1364,8 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_permission_card.cpp)
     set_target_properties(test_permission_card PROPERTIES
         CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
     target_include_directories(test_permission_card PRIVATE
-        ${PROJECT_SOURCE_DIR}/include)
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/tests)
     target_link_libraries(test_permission_card PRIVATE
         doctest::doctest
         batbox_core
@@ -1383,7 +1398,8 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_plan_approval_card.cpp)
     set_target_properties(test_plan_approval_card PROPERTIES
         CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
     target_include_directories(test_plan_approval_card PRIVATE
-        ${PROJECT_SOURCE_DIR}/include)
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/tests)
     target_link_libraries(test_plan_approval_card PRIVATE
         doctest::doctest
         batbox_core
@@ -1412,6 +1428,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_question_card.cpp)
         ${PROJECT_SOURCE_DIR}/src/theme/Theme.cpp
         ${PROJECT_SOURCE_DIR}/src/theme/themes.cpp
         ${PROJECT_SOURCE_DIR}/src/util/EditorLaunch.cpp)
+    target_include_directories(test_question_card PRIVATE ${PROJECT_SOURCE_DIR}/tests)
     target_link_libraries(test_question_card PRIVATE
         batbox_config
         ftxui::component  ftxui::dom  ftxui::screen
@@ -1679,3 +1696,27 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_no_thread_id_across_process.cpp)
     target_link_libraries(test_no_thread_id_across_process PRIVATE doctest::doctest)
     doctest_discover_tests(test_no_thread_id_across_process)
 endif()
+
+# ---------------------------------------------------------------------------
+# PEXT3 1.7 — Meta-test: lockdown fake-mirror closure helpers
+#
+# Scans tests/ for forbidden symbol names that are banned because they are
+# hand-mirror copies of production factory logic (see feedback memory:
+# verify-user-visible-fixes).  If any banned symbol reappears in a .cpp,
+# .hpp, or .h file under tests/, the test fails loudly with file:line and
+# the rule.
+#
+# To add a new forbidden symbol: edit tests/meta/lockdown_fake_mirrors.sh,
+# DENYLIST array — one entry, one line.
+#
+# Implementation: pure shell + grep (no compiled binary needed).
+# ---------------------------------------------------------------------------
+add_test(
+    NAME    lockdown_fake_mirrors
+    COMMAND bash
+            ${CMAKE_CURRENT_SOURCE_DIR}/meta/lockdown_fake_mirrors.sh
+            ${CMAKE_CURRENT_SOURCE_DIR})
+
+set_tests_properties(lockdown_fake_mirrors PROPERTIES
+    LABELS   "meta;lockdown;static-analysis"
+    TIMEOUT  30)

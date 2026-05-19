@@ -43,29 +43,11 @@
 // ---------------------------------------------------------------------------
 // Minimal stub theme for tests.
 // ---------------------------------------------------------------------------
-#include <batbox/theme/Theme.hpp>
+#include "fixtures/TestTheme.hpp"
 
 namespace {
 
-batbox::theme::Theme make_test_theme() {
-    using ftxui::Color;
-    batbox::theme::Theme t;
-    t.name             = "test";
-    t.bg               = Color::Black;
-    t.fg               = Color::White;
-    t.accent_magenta   = Color::Magenta;
-    t.accent_cyan      = Color::Cyan;
-    t.muted            = Color::GrayDark;
-    t.success          = Color::Green;
-    t.error            = Color::Red;
-    t.diff_add_fg      = Color::Green;
-    t.diff_add_bg      = Color::Black;
-    t.diff_remove_fg   = Color::Red;
-    t.diff_remove_bg   = Color::Black;
-    t.prompt_prefix    = Color::Cyan;
-    t.code_bg          = Color::Black;
-    return t;
-}
+using batbox::test_fixtures::make_test_theme;
 
 } // namespace
 

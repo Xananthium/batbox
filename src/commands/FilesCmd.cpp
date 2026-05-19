@@ -24,6 +24,7 @@
 #include <batbox/commands/ISlashCommand.hpp>
 #include <batbox/commands/SlashCommandRegistry.hpp>
 #include <batbox/core/Result.hpp>
+#include <batbox/commands/CommandHelpers.hpp>
 #include <batbox/repl/CommandContext.hpp>
 
 #include <algorithm>
@@ -50,13 +51,6 @@ std::vector<fs::path> get_extra_dirs();
 namespace {
 
 /// Strip leading and trailing ASCII whitespace.
-[[nodiscard]] std::string_view trim(std::string_view s) noexcept {
-    const auto start = s.find_first_not_of(" \t\r\n");
-    if (start == std::string_view::npos) return {};
-    const auto end = s.find_last_not_of(" \t\r\n");
-    return s.substr(start, end - start + 1);
-}
-
 /// Format a file size in human-readable form.
 [[nodiscard]] std::string format_size(std::uintmax_t bytes) {
     if (bytes < 1024) {

@@ -27,6 +27,7 @@
 #include <batbox/commands/SlashCommandRegistry.hpp>
 #include <batbox/core/Result.hpp>
 #include <batbox/repl/CommandContext.hpp>
+#include <batbox/commands/CommandHelpers.hpp>
 #include <batbox/tools/TaskStore.hpp>
 
 #include <algorithm>
@@ -41,14 +42,6 @@ namespace batbox::commands {
 // ---------------------------------------------------------------------------
 
 namespace {
-
-/// Strip leading and trailing ASCII whitespace.
-[[nodiscard]] std::string_view trim(std::string_view s) noexcept {
-    const auto start = s.find_first_not_of(" \t\r\n");
-    if (start == std::string_view::npos) return {};
-    const auto end = s.find_last_not_of(" \t\r\n");
-    return s.substr(start, end - start + 1);
-}
 
 /// Map a status string to a short display label with padding.
 [[nodiscard]] std::string status_label(const std::string& status) {

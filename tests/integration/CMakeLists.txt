@@ -1605,6 +1605,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_subagent_panel.cpp)
     target_include_directories(test_subagent_panel
         PRIVATE
             ${PROJECT_SOURCE_DIR}/include
+            ${PROJECT_SOURCE_DIR}/tests
     )
 
     find_package(ftxui CONFIG QUIET)
@@ -3101,6 +3102,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_tui_layout.cpp)
     target_include_directories(test_tui_layout
         PRIVATE
             ${PROJECT_SOURCE_DIR}/include
+            ${PROJECT_SOURCE_DIR}/tests
     )
 
     find_package(ftxui CONFIG QUIET)
@@ -3177,6 +3179,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_nuclear_mode.cpp)
     target_include_directories(test_nuclear_mode
         PRIVATE
             ${PROJECT_SOURCE_DIR}/include
+            ${PROJECT_SOURCE_DIR}/tests
     )
 
     find_package(ftxui CONFIG QUIET)
@@ -3555,5 +3558,60 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_resume_mode.cpp)
 
     include(doctest)
     doctest_discover_tests(test_resume_mode)
+
+# ---------------------------------------------------------------------------
+# PEXT3 1.6 — make_askq_prompt_fn nuclear branch integration test
+#
+# Tests that make_askq_prompt_fn(nuclear=true) returns a closure that
+# immediately returns {} without posting modal events.
+# Calls the REAL batbox::tui::make_askq_prompt_fn factory directly.
+# ---------------------------------------------------------------------------
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_nuclear_no_modals.cpp)
+
+    add_executable(test_nuclear_no_modals
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_nuclear_no_modals.cpp
+    )
+
+    set_target_properties(test_nuclear_no_modals PROPERTIES
+        CXX_STANDARD          20
+        CXX_STANDARD_REQUIRED ON
+        CXX_EXTENSIONS        OFF
+    )
+
+    target_include_directories(test_nuclear_no_modals
+        PRIVATE
+            ${PROJECT_SOURCE_DIR}/include
+    )
+
+    find_package(simdjson CONFIG QUIET)
+
+    target_link_libraries(test_nuclear_no_modals
+        PRIVATE
+            doctest::doctest
+            batbox::deps
+            batbox_core
+            batbox_config
+            batbox_permissions
+            batbox_plugins
+            batbox_skills
+            batbox_sidecar
+            batbox_mcp
+            batbox_agents
+            batbox_tools
+            batbox_tools_bash
+            batbox_commands
+            batbox_conversation
+            batbox_session
+            batbox_inference
+            batbox_theme
+            batbox_repl
+            batbox_tui
+            $<$<TARGET_EXISTS:simdjson::simdjson>:simdjson::simdjson>
+    )
+
+    include(doctest)
+    doctest_discover_tests(test_nuclear_no_modals)
+
+endif()
 
 endif()

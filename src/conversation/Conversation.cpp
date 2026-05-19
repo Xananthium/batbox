@@ -553,7 +553,12 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
 
             batbox::tools::ToolContext ctx;
             ctx.cwd          = working_dir_;
-            ctx.mode         = batbox::permissions::PermissionMode::Default;
+            // PEXT3 1.6: read live permission mode from gate_ so nuclear mode
+            // is correctly reflected in ctx.mode.  PermissionGate::ask() uses
+            // ctx.mode as authoritative (overrides mode_ at line 119 of ask()).
+            ctx.mode         = (gate_ != nullptr)
+                                   ? gate_->current_mode()
+                                   : batbox::permissions::PermissionMode::Default;
             ctx.session_id   = session_id_;
             ctx.cancel_token = std::move(ctx_tok);
 

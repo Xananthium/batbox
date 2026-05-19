@@ -114,6 +114,7 @@
 #include <batbox/agents/Team.hpp>
 #include <batbox/plugins/SkillLoader.hpp>
 #include <batbox/conversation/PlanMode.hpp>
+#include <batbox/tui/AskqPromptFactory.hpp>  // PEXT3 1.6
 
 #include <atomic>
 #include <mutex>
@@ -1054,86 +1055,15 @@ int App::run(const AppArgs& args) {
 
     // TUI-ASKQ-T5 (step 12c): Populate the deferred AskUserQuestion PromptFn.
     //
-    // Now that question_card and screen_mgr are both live, we can build the real
-    // PromptFn and install it into the storage captured by the deferred wrapper
-    // registered in wire_tools() above.
-    //
-    // PromptFn contract (AskUserQuestionTool::PromptFn):
-    //   Input:  QuestionSpec — parsed question with header, question text, labels,
-    //           descriptions, multi_select flag.
-    //   Output: vector<string> — chosen label(s); empty = cancelled / no answer.
-    //
-    // Implementation:
-    //   1. Convert QuestionSpec → QuestionShowPayload (field-by-field mapping).
-    //   2. Load the payload into question_card via set_spec() (any thread safe).
-    //   3. Post Events::QuestionShow to wake the FTXUI render loop so ChatView
-    //      sets show_question_card_ = true and the overlay appears immediately.
-    //   4. Block this worker thread on question_card->await_user_answer() until
-    //      the user resolves (Enter) or cancels (Esc) — the card's internal
-    //      condition_variable handles the cross-thread handoff.
-    //   5. Post make_question_resolved_event(resolved) so ChatView clears
-    //      show_question_card_ and hides the overlay on the next render.
-    //   6. Map QuestionResolvedPayload back to vector<string>:
-    //        cancelled or no choices → empty vector (tool formats as "(no answer provided)")
-    //        multi_select            → chosen_labels as-is
-    //        single-select           → first chosen label (or empty if none)
-    //
-    // Lifetime: question_card (shared_ptr) and screen_mgr (stack ref) both
-    // outlive screen_mgr.run(), so the lambda is safe for the event-loop duration.
-    *askq_prompt_fn_storage =
-        [question_card_weak = std::weak_ptr<batbox::tui::QuestionCard>(question_card),
-         &screen_mgr](const batbox::tools::QuestionSpec& spec)
-            -> std::vector<std::string> {
-            auto qcard = question_card_weak.lock();
-            if (!qcard) {
-                // Question card has been destroyed — return empty (no answer).
-                return {};
-            }
-
-            // Build QuestionShowPayload from QuestionSpec.
-            batbox::tui::QuestionShowPayload payload;
-            payload.header        = spec.header;
-            payload.question      = spec.question;
-            payload.multi_select  = spec.multi_select;
-            payload.labels        = spec.labels;
-            payload.descriptions  = spec.descriptions;
-            payload.allow_freeform     = false;
-            payload.allow_escape_hatch = false;
-            // callback is unused in the await_user_answer() cross-thread path.
-            payload.callback = nullptr;
-
-            // Pre-load the spec into the card directly so it is ready for the
-            // first render frame even before the event loop processes the event.
-            qcard->set_spec(payload);
-
-            // Post make_question_show_event (carries payload) — this event has
-            // the form "batbox.question-show:TOKEN" which differs from the plain
-            // Events::QuestionShow sentinel ("batbox.question-show"), so it is
-            // NOT consumed by the WireTui CatchEvent's == check.  It falls
-            // through to ChatView::OnEvent via effective_root->OnEvent, where
-            // extract_question_show() extracts the payload, calls set_spec()
-            // again (idempotent), and sets show_question_card_ = true.
-            screen_mgr.post_event(
-                batbox::tui::make_question_show_event(payload));
-
-            // Block this worker thread until the user resolves or cancels.
-            // QuestionCard::await_user_answer() uses an internal condition_variable
-            // that OnEvent() notifies on Enter/Esc — no polling required.
-            batbox::tui::QuestionResolvedPayload resolved = qcard->await_user_answer();
-
-            // Post QuestionResolved so ChatView clears show_question_card_ and
-            // the overlay disappears on the next render frame.
-            screen_mgr.post_event(
-                batbox::tui::make_question_resolved_event(resolved));
-
-            // Map resolved payload → vector<string> for AskUserQuestionTool::run().
-            // Cancelled or empty selection → empty vector (tool formats as
-            // "(no answer provided)").
-            if (resolved.cancelled) {
-                return {};
-            }
-            return resolved.chosen_labels;
-        };
+    // PEXT3 1.6: factored into make_askq_prompt_fn().
+    // When args.nuclear == true the factory returns a zero-capture closure that
+    // returns {} immediately without posting any modal events.
+    // When false the factory returns the normal interactive closure (same logic
+    // as the inline lambda that previously lived here).
+    *askq_prompt_fn_storage = batbox::tui::make_askq_prompt_fn(
+        args.nuclear,
+        std::weak_ptr<batbox::tui::QuestionCard>(question_card),
+        screen_mgr);
 
     // on_delta_cb: forward each streaming token to the ScreenManager so the
     // ChatView's streaming tail is updated in real time.
@@ -1450,7 +1380,8 @@ int App::run(const AppArgs& args) {
         [tui_conversation, tui_client, tui_gate,
          &screen_mgr, &command_registry, &tui_conv_adapter,
          tui_cancel_mtx, tui_cancel_src,
-         tui_turn_in_flight](std::string text) mutable {
+         tui_turn_in_flight,
+         &config, &cfg_mutex](std::string text) mutable {
             if (text.empty()) return;
 
             // UI-D6: branch on leading '/' before posting user message event
@@ -1506,6 +1437,8 @@ int App::run(const AppArgs& args) {
                     .conversation = tui_conv_adapter,
                     .registry     = command_registry,
                     .cwd          = std::filesystem::current_path(),
+                    .cfg          = &config,    // PEXT3 1.2: live Config pointer
+                    .cfg_mutex    = &cfg_mutex, // PEXT3 1.2: guards cfg mutations
                 };
 
                 const auto exec_result = cmd->execute(cmd_args, ctx);

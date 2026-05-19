@@ -32,7 +32,7 @@
 
 #include <batbox/tui/PermissionBanner.hpp>
 #include <batbox/permissions/PermissionMode.hpp>
-#include <batbox/theme/Theme.hpp>
+#include "fixtures/TestTheme.hpp"
 
 #include <ftxui/component/component.hpp>
 #include <ftxui/component/event.hpp>
@@ -54,9 +54,7 @@ ftxui::Event shift_tab() {
     return ftxui::Event::Special("\x1b[Z");
 }
 
-batbox::theme::Theme make_test_theme() {
-    return batbox::theme::theme_from_name("miss-kittin");
-}
+using batbox::test_fixtures::make_test_theme;
 
 } // namespace
 

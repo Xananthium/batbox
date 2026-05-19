@@ -33,7 +33,7 @@
 #include <doctest/doctest.h>
 
 #include <batbox/tui/SyntaxHighlight.hpp>
-#include <batbox/theme/Theme.hpp>
+#include "fixtures/TestTheme.hpp"
 #include <batbox/tui/ThemeApply.hpp>
 
 // We only exercise the manual-lexer internals indirectly through the public
@@ -51,28 +51,7 @@ using namespace batbox::tui::detail;
 
 namespace {
 
-// Build the miss-kittin theme inline (mirrors what themes.cpp does).
-// Using known colour values avoids a dependency on the full theme library
-// in the test executable — we only need ftxui::Color + the Theme struct.
-Theme make_test_theme() {
-    using C = ftxui::Color;
-    Theme t{};
-    t.name           = "miss-kittin";
-    t.bg             = C::RGB(16,  16,  24);
-    t.fg             = C::RGB(220, 220, 228);
-    t.accent_magenta = C::RGB(255,  80, 200);
-    t.accent_cyan    = C::RGB( 80, 220, 230);
-    t.muted          = C::RGB(120, 120, 140);
-    t.success        = C::RGB( 80, 220, 120);
-    t.error          = C::RGB(255,  80,  80);
-    t.diff_add_fg    = C::RGB( 80, 220, 120);
-    t.diff_add_bg    = C::RGB( 20,  50,  20);
-    t.diff_remove_fg = C::RGB(255,  80,  80);
-    t.diff_remove_bg = C::RGB( 50,  20,  20);
-    t.prompt_prefix  = C::RGB(255,  80, 200);
-    t.code_bg        = C::RGB( 22,  22,  32);
-    return t;
-}
+using batbox::test_fixtures::make_test_theme;
 
 // Helper: check that a token vector contains at least one token of the
 // expected kind whose text contains the given substring.

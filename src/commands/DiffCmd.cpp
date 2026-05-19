@@ -23,6 +23,7 @@
 #include <batbox/commands/ISlashCommand.hpp>
 #include <batbox/commands/SlashCommandRegistry.hpp>
 #include <batbox/core/Result.hpp>
+#include <batbox/commands/CommandHelpers.hpp>
 #include <batbox/repl/CommandContext.hpp>
 
 #include <array>
@@ -45,75 +46,6 @@ namespace batbox::commands {
 // ---------------------------------------------------------------------------
 
 namespace {
-
-/// Strip leading and trailing ASCII whitespace.
-[[nodiscard]] std::string_view trim(std::string_view s) noexcept {
-    const auto start = s.find_first_not_of(" \t\r\n");
-    if (start == std::string_view::npos) return {};
-    const auto end = s.find_last_not_of(" \t\r\n");
-    return s.substr(start, end - start + 1);
-}
-
-/// Run a shell command via popen and capture its stdout + stderr combined.
-/// Returns the captured output.  Sets `exit_code` to the process exit status.
-/// Returns Err on popen failure.
-[[nodiscard]] batbox::Result<std::string> run_command(
-        const std::string& cmd,
-        int&               exit_code)
-{
-    // Redirect stderr to stdout so we capture error messages from git.
-    const std::string full_cmd = cmd + " 2>&1";
-
-    FILE* fp = ::popen(full_cmd.c_str(), "r");
-    if (!fp) {
-        return batbox::Err(
-            std::string("popen failed: ") + std::strerror(errno)
-        );
-    }
-
-    std::string output;
-    output.reserve(4096);
-    std::array<char, 4096> buf{};
-    while (std::fgets(buf.data(), static_cast<int>(buf.size()), fp) != nullptr) {
-        output += buf.data();
-        // Cap captured output at 1 MiB to avoid overwhelming the terminal.
-        if (output.size() >= 1024 * 1024) {
-            output += "\n[diff output truncated at 1 MiB]\n";
-            break;
-        }
-    }
-
-    const int status = ::pclose(fp);
-    exit_code = WIFEXITED(status) ? WEXITSTATUS(status) : -1; // NOLINT
-    return output;
-}
-
-/// Detect whether popen captured a "not a git repository" message.
-///
-/// git diff in a non-repo directory emits either:
-///   "fatal: not a git repository (or any of the parent directories): .git"
-///   "warning: Not a git repository. Use --no-index to compare two paths..."
-/// We match case-insensitively and also check the exit-code path (exit 128/129).
-[[nodiscard]] bool is_not_a_git_repo(const std::string& output, int exit_code) noexcept {
-    // Case-insensitive search for the key phrase.
-    auto ci_find = [&](std::string_view needle) -> bool {
-        // Convert both to lowercase for comparison.
-        std::string lower_out = output;
-        std::string lower_needle(needle);
-        for (char& c : lower_out)   c = static_cast<char>(::tolower(static_cast<unsigned char>(c)));
-        for (char& c : lower_needle) c = static_cast<char>(::tolower(static_cast<unsigned char>(c)));
-        return lower_out.find(lower_needle) != std::string::npos;
-    };
-
-    if (ci_find("not a git repository")) return true;
-    if (ci_find("fatal:"))               return true;
-
-    // git exits 128 for "not a git repository" (fatal error) and 129 for
-    // the usage/warning path where it falls back to --no-index hint.
-    if (exit_code == 128 || exit_code == 129) return true;
-
-    return false;
-}
 
 /// Render a raw unified diff string to `out` with minimal decoration.
 ///
@@ -241,7 +173,7 @@ batbox::Result<void> DiffCmd::execute(
     }
 
     int exit_code = 0;
-    auto result = run_command(cmd, exit_code);
+    auto result = run_git_command(cmd, exit_code);
 
     if (!result) {
         return batbox::Err(

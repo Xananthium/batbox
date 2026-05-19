@@ -34,6 +34,7 @@
 #include <batbox/commands/ISlashCommand.hpp>
 #include <batbox/commands/SlashCommandRegistry.hpp>
 #include <batbox/core/Result.hpp>
+#include <batbox/commands/CommandHelpers.hpp>
 #include <batbox/repl/CommandContext.hpp>
 
 #include <cerrno>
@@ -55,14 +56,6 @@ namespace batbox::commands {
 // ---------------------------------------------------------------------------
 
 namespace {
-
-/// Strip leading/trailing ASCII whitespace.
-[[nodiscard]] std::string_view trim(std::string_view s) noexcept {
-    const auto start = s.find_first_not_of(" \t\r\n");
-    if (start == std::string_view::npos) return {};
-    const auto end   = s.find_last_not_of(" \t\r\n");
-    return s.substr(start, end - start + 1);
-}
 
 /// Valid effort levels (canonical lowercase).
 static constexpr std::string_view kEffortLevels[] = {"low", "medium", "high"};

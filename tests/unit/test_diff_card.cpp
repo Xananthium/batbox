@@ -29,7 +29,7 @@
 
 #include <batbox/tui/DiffCard.hpp>
 #include <batbox/tui/ThemeApply.hpp>
-#include <batbox/theme/Theme.hpp>
+#include "fixtures/TestTheme.hpp"
 #include <batbox/core/Json.hpp>
 
 #include <ftxui/component/component.hpp>
@@ -49,10 +49,7 @@ using DCard = batbox::tui::DiffCard;
 // Helpers
 // =============================================================================
 
-/// A minimal stub theme with diff colours set so coloring logic runs.
-static Theme make_test_theme() {
-    return theme_from_name("miss-kittin");
-}
+using batbox::test_fixtures::make_test_theme;
 
 /// A minimal unified diff string for testing.
 static const std::string kSampleDiff = R"(--- a/src/foo.cpp

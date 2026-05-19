@@ -34,6 +34,7 @@
 
 #include <batbox/commands/ISlashCommand.hpp>
 #include <batbox/commands/SlashCommandRegistry.hpp>
+#include <batbox/config/Config.hpp>
 #include <batbox/repl/CommandContext.hpp>
 
 #include <filesystem>
@@ -91,16 +92,26 @@ struct MockConversation : public ConversationHandle {
 
 /// Build a CommandContext wired to string streams and a temp config dir.
 struct TestCtx {
-    MockConversation       conv;
-    SlashCommandRegistry   registry;
-    std::ostringstream     out;
-    std::istringstream     in;
-    CommandContext         ctx;
+    MockConversation             conv;
+    SlashCommandRegistry         registry;
+    std::ostringstream           out;
+    std::istringstream           in;
+    batbox::config::Config       fake_cfg;   ///< PEXT3 1.2: real Config with populated api fields
+    CommandContext               ctx;
 
     explicit TestCtx(const fs::path& config_dir, const std::string& input = "")
         : in(input)
-        , ctx{out, in, false, conv, registry, config_dir, nullptr, nullptr, config_dir, false}
+        , ctx{.output     = out,
+              .input      = in,
+              .conversation = conv,
+              .registry   = registry,
+              .cwd        = config_dir,
+              .config_dir = config_dir,
+              .cfg        = &fake_cfg}
     {
+        // Default fake config: two models, one default.
+        fake_cfg.api.models        = {"gpt-4o", "gpt-4o-mini"};
+        fake_cfg.api.default_model = "gpt-4o";
         register_model_cmd(registry);
         register_config_cmd(registry);
         register_effort_cmd(registry);

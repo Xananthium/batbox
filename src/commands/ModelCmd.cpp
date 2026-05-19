@@ -3,21 +3,38 @@
 // batbox::commands::ModelCmd — implements the /model slash command.
 //
 // Behaviour:
-//   /model             — list available models (from BATBOX_MODELS env var,
-//                        falling back to settings.json "default_model"), then
-//                        prompt the user to select by number or name.
+//   /model             — list available models (from ctx.cfg->api.models),
+//                        then prompt the user to select by number or name.
 //   /model <name>      — switch directly to the named model.
 //
-// Model resolution order (highest to lowest priority):
-//   1. BATBOX_MODELS env var (comma-separated list)
-//   2. settings.json "models" array
-//   3. Built-in defaults: {"gpt-4o", "gpt-4o-mini"}
+// Model source (PEXT3 1.2):
+//   ctx.cfg->api.models        — live Config populated from BATBOX_MODELS env var
+//   ctx.cfg->api.default_model — live Config populated from BATBOX_DEFAULT_MODEL
 //
 // Persistence
 // -----------
 // The selected model is written to ctx.config_dir / "settings.json" under
 // the "default_model" key using the same minimal upsert approach used by
 // VimCmd — read the file, patch the key, write back atomically.
+//
+// Live mutation (PEXT3 1.3)
+// -------------------------
+// After persisting to disk, commit_model_switch() also mutates
+// ctx.cfg->api.default_model in-process under *ctx.cfg_mutex.
+//
+// const_cast rationale:
+//   ctx.cfg is typed as `const Config*` to prevent casual writes outside the
+//   designated mutation path.  The App owns the Config and has declared that
+//   writes are legal when holding cfg_mutex; here we are in that legal path.
+//   The cast is the single, documented site for runtime model mutation.
+//   Reads on the inference thread snapshot cfg under the same mutex
+//   (see Conversation::snapshot_config or the App's PEXT2 snapshot path);
+//   the lock_guard below covers the assignment only — string parsing and
+//   persist_model() run without the lock held.
+//
+// If ctx.cfg_mutex is nullptr (headless/test mode), the live-cfg mutation is
+// skipped silently; the settings.json write still proceeds so the new model
+// takes effect on the next process start.
 //
 // No aliases.
 //
@@ -26,18 +43,18 @@
 
 #include <batbox/commands/ISlashCommand.hpp>
 #include <batbox/commands/SlashCommandRegistry.hpp>
+#include <batbox/config/Config.hpp>
 #include <batbox/core/Result.hpp>
 #include <batbox/repl/CommandContext.hpp>
 
 #include <algorithm>
 #include <cerrno>
 #include <charconv>
-#include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <mutex>
 #include <regex>
-#include <sstream>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -58,32 +75,6 @@ namespace {
     if (start == std::string_view::npos) return {};
     const auto end   = s.find_last_not_of(" \t\r\n");
     return s.substr(start, end - start + 1);
-}
-
-/// Split a string by a single-char delimiter, skipping empty tokens.
-[[nodiscard]] std::vector<std::string> split(const std::string& s, char delim) {
-    std::vector<std::string> tokens;
-    std::string tok;
-    std::istringstream stream(s);
-    while (std::getline(stream, tok, delim)) {
-        // Trim whitespace from each token.
-        const std::string_view tv = trim(tok);
-        if (!tv.empty()) {
-            tokens.emplace_back(tv);
-        }
-    }
-    return tokens;
-}
-
-/// Return the list of models in priority order:
-///   1. BATBOX_MODELS env var (comma-separated)
-///   2. Built-in defaults
-[[nodiscard]] std::vector<std::string> resolve_model_list() {
-    if (const char* env_models = std::getenv("BATBOX_MODELS")) {
-        auto list = split(std::string(env_models), ',');
-        if (!list.empty()) return list;
-    }
-    return {"gpt-4o", "gpt-4o-mini"};
 }
 
 /// Upsert the "default_model" key in settings.json using the same atomic
@@ -178,23 +169,47 @@ void print_model_list(
     out << '\n';
 }
 
-/// Read the current default_model from settings.json.
-/// Returns an empty string if the file/key is not found.
-[[nodiscard]] std::string read_current_model(const fs::path& config_dir) {
-    const fs::path settings_path = config_dir / "settings.json";
-    std::ifstream f(settings_path);
-    if (!f) return {};
-
-    std::string content((std::istreambuf_iterator<char>(f)),
-                          std::istreambuf_iterator<char>());
-
-    // Simple regex extraction: "default_model": "value"
-    const std::regex model_re(R"X("default_model"\s*:\s*"([^"]*)")X");
-    std::smatch match;
-    if (std::regex_search(content, match, model_re) && match.size() >= 2) {
-        return match[1].str();
+/// Persist `chosen` to settings.json, mutate ctx.cfg->api.default_model under
+/// cfg_mutex, and print the "Switched to model" confirmation.
+///
+/// This is the single canonical site for model mutation in the command layer.
+/// All three switch paths (direct, interactive-numeric, interactive-name) call
+/// this function.  `out_of_list` adds the "not in configured BATBOX_MODELS list"
+/// qualifier when the name was not found in ctx.cfg->api.models.
+///
+/// Precondition: ctx.cfg != nullptr  (callers must guard with the nullptr check
+/// at the top of execute()).
+void commit_model_switch(
+    std::ostream&      out,
+    const fs::path&    config_dir,
+    const CommandContext& ctx,
+    const std::string& chosen,
+    bool               out_of_list = false)
+{
+    // Persist to disk (outside the mutex — file I/O does not need the lock).
+    const std::string persist_err = persist_model(config_dir, chosen);
+    if (!persist_err.empty()) {
+        out << "  Warning: could not persist setting — " << persist_err << "\n";
     }
-    return {};
+
+    // Mutate the live Config under cfg_mutex.
+    //
+    // const_cast rationale (see file-level comment):
+    //   ctx.cfg is `const Config*` to prevent accidental writes.  This is the
+    //   one authorised write site, executed only when cfg_mutex is available.
+    //   The lock_guard covers only the assignment; parsing happens before we
+    //   get here.
+    if (ctx.cfg_mutex != nullptr) {
+        std::lock_guard<std::mutex> lk(*ctx.cfg_mutex);
+        const_cast<batbox::config::Config*>(ctx.cfg)->api.default_model = chosen;
+    }
+
+    // Confirmation output.
+    out << "  Switched to model '" << chosen << "'";
+    if (out_of_list) {
+        out << " (not in configured BATBOX_MODELS list — verify spelling)";
+    }
+    out << ".\n";
 }
 
 }  // anonymous namespace
@@ -240,22 +255,24 @@ batbox::Result<void> ModelCmd::execute(
     std::string_view args,
     CommandContext&  ctx)
 {
-    const std::string_view arg = trim(args);
-    const std::vector<std::string> models = resolve_model_list();
-
-    // Read the current model from settings.json (empty if not set).
-    std::string current_model = read_current_model(ctx.config_dir);
-    if (current_model.empty() && !models.empty()) {
-        // Fall back to the first model in the list as the implicit current.
-        current_model = models[0];
-        // Also check BATBOX_DEFAULT_MODEL env var.
-        if (const char* env_default = std::getenv("BATBOX_DEFAULT_MODEL")) {
-            current_model = env_default;
-        }
+    // Guard: live Config must be wired in (PEXT3 1.2).
+    // commit_model_switch() may only be called when ctx.cfg != nullptr.
+    if (ctx.cfg == nullptr) {
+        return batbox::Err(std::string("/model: no live config available"));
     }
 
+    const std::vector<std::string>& models = ctx.cfg->api.models;
+    if (models.empty()) {
+        return batbox::Err(
+            std::string("/model: no models configured; set BATBOX_MODELS or BATBOX_DEFAULT_MODEL")
+        );
+    }
+
+    const std::string& current_model = ctx.cfg->api.default_model;
+    const std::string_view arg = trim(args);
+
     if (arg.empty()) {
-        // ModalPicker path: list models and prompt the user to pick.
+        // Interactive picker: list models and prompt the user to pick.
         print_model_list(ctx.output, models, current_model);
         ctx.output << "  Enter a number or model name (or press Enter to keep '"
                    << current_model << "'): ";
@@ -285,12 +302,7 @@ batbox::Result<void> ModelCmd::execute(
                     " is out of range (1–" + std::to_string(models.size()) + ")."
                 );
             }
-            const std::string& chosen = models[idx - 1];
-            const std::string persist_err = persist_model(ctx.config_dir, chosen);
-            if (!persist_err.empty()) {
-                ctx.output << "  Warning: could not persist setting — " << persist_err << "\n";
-            }
-            ctx.output << "  Switched to model '" << chosen << "'.\n";
+            commit_model_switch(ctx.output, ctx.config_dir, ctx, models[idx - 1]);
             return {};
         }
 
@@ -311,39 +323,21 @@ batbox::Result<void> ModelCmd::execute(
                 "'. Run /model to see the full list."
             );
         }
-        const std::string& chosen = *it;
-        const std::string persist_err = persist_model(ctx.config_dir, chosen);
-        if (!persist_err.empty()) {
-            ctx.output << "  Warning: could not persist setting — " << persist_err << "\n";
-        }
-        ctx.output << "  Switched to model '" << chosen << "'.\n";
+        commit_model_switch(ctx.output, ctx.config_dir, ctx, *it);
         return {};
     }
 
     // Direct switch path: /model <name>
     const std::string model_name(arg);
 
-    // Validate: must be in the configured model list (case-insensitive search
-    // but we store the canonical-cased version from the list).
+    // Validate against the configured model list; accept unknown names with a warning.
     auto it = std::find(models.begin(), models.end(), model_name);
     if (it == models.end()) {
-        // Accept the name even if it is not in the list — the user may be
-        // specifying a model they have added manually.  Persist it and warn.
-        const std::string persist_err = persist_model(ctx.config_dir, model_name);
-        if (!persist_err.empty()) {
-            ctx.output << "  Warning: could not persist setting — " << persist_err << "\n";
-        }
-        ctx.output << "  Switched to model '" << model_name << "'";
-        ctx.output << " (not in configured BATBOX_MODELS list — verify spelling).\n";
+        commit_model_switch(ctx.output, ctx.config_dir, ctx, model_name, /*out_of_list=*/true);
         return {};
     }
 
-    const std::string& chosen = *it;
-    const std::string persist_err = persist_model(ctx.config_dir, chosen);
-    if (!persist_err.empty()) {
-        ctx.output << "  Warning: could not persist setting — " << persist_err << "\n";
-    }
-    ctx.output << "  Switched to model '" << chosen << "'.\n";
+    commit_model_switch(ctx.output, ctx.config_dir, ctx, *it);
     return {};
 }
 

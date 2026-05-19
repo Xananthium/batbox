@@ -28,6 +28,7 @@
 #include <batbox/mcp/IMcpTransport.hpp>
 #include <batbox/mcp/McpClient.hpp>
 #include <batbox/mcp/McpServerRegistry.hpp>
+#include <batbox/commands/CommandHelpers.hpp>
 #include <batbox/repl/CommandContext.hpp>
 
 #include <algorithm>
@@ -43,29 +44,9 @@ namespace batbox::commands {
 
 namespace {
 
-/// Strip leading and trailing ASCII whitespace from a string_view.
-[[nodiscard]] std::string_view trim(std::string_view s) noexcept {
-    const auto start = s.find_first_not_of(" \t\r\n");
-    if (start == std::string_view::npos) return {};
-    const auto end = s.find_last_not_of(" \t\r\n");
-    return s.substr(start, end - start + 1);
-}
-
 /// Split `s` at the first whitespace boundary.
 /// Returns {first_word, remainder_after_whitespace}.
 /// When no whitespace is present, remainder is empty.
-[[nodiscard]] std::pair<std::string_view, std::string_view>
-split_first(std::string_view s) noexcept {
-    const auto space = s.find_first_of(" \t");
-    if (space == std::string_view::npos) {
-        return {s, {}};
-    }
-    const auto rest_start = s.find_first_not_of(" \t", space);
-    const std::string_view rest =
-        (rest_start == std::string_view::npos) ? std::string_view{} : s.substr(rest_start);
-    return {s.substr(0, space), rest};
-}
-
 /// Unicode checkmark / cross mark for health indicators.
 constexpr std::string_view kOk  = "\xe2\x9c\x93";  // ✓ U+2713
 constexpr std::string_view kErr = "\xe2\x9c\x97";  // ✗ U+2717

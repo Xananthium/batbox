@@ -42,6 +42,7 @@
 #include <batbox/core/CancelToken.hpp>
 #include <batbox/core/Result.hpp>
 #include <batbox/repl/CommandContext.hpp>
+#include <batbox/commands/CommandHelpers.hpp>
 
 // DemonPanel forward declaration — full header not required unless we call methods.
 // Include it here; it is already compiled into the project (CPP 1.14 completed).
@@ -62,14 +63,6 @@ namespace batbox::commands {
 // ---------------------------------------------------------------------------
 
 namespace {
-
-/// Strip leading and trailing ASCII whitespace.
-[[nodiscard]] std::string_view trim(std::string_view s) noexcept {
-    const auto start = s.find_first_not_of(" \t\r\n");
-    if (start == std::string_view::npos) return {};
-    const auto end   = s.find_last_not_of(" \t\r\n");
-    return s.substr(start, end - start + 1);
-}
 
 /// Print the current demon status block to `out`.
 void print_demon_status(std::ostream& out,
