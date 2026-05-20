@@ -57,6 +57,7 @@
 #include <batbox/tui/PermissionCard.hpp>
 #include <batbox/tui/PlanApprovalCard.hpp>
 #include <batbox/tui/QuestionCard.hpp>
+#include <batbox/tui/ModalPickerHost.hpp>
 #include <batbox/tui/SubAgentPanel.hpp>
 #include <batbox/tui/Screen.hpp>
 #include <batbox/agents/AgentSupervisor.hpp>
@@ -138,6 +139,13 @@ namespace batbox::app {
 ///                              PermissionCard > PlanApprovalCard > QuestionCard.
 ///                            When null, no question overlay is mounted.
 ///                            (TUI-ASKQ-T4)
+/// @param modal_picker        When non-null, a ModalPicker modal overlay is
+///                            composed as the outermost layer (Z-order highest).
+///                            Shown whenever modal_picker->pending() returns true.
+///                            All keyboard events are routed to the picker while
+///                            it is pending; the base layout does not receive input.
+///                            When null (default), no picker overlay is mounted.
+///                            (UX-A)
 void wire_tui(
     batbox::tui::ScreenManager&                 screen_mgr,
     batbox::agents::AgentSupervisor*            supervisor,
@@ -153,6 +161,7 @@ void wire_tui(
     batbox::tui::QuestionCard*                  question_card       = nullptr,
     batbox::mcp::McpServerRegistry*             mcp_registry        = nullptr,
     batbox::permissions::PermissionGate*        permission_gate     = nullptr,
-    batbox::tui::InputBar::InterruptCallback    on_interrupt_cb     = nullptr);
+    batbox::tui::InputBar::InterruptCallback    on_interrupt_cb     = nullptr,
+    batbox::tui::ModalPickerHost*               modal_picker        = nullptr);
 
 } // namespace batbox::app

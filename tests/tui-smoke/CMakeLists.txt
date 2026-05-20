@@ -199,3 +199,27 @@ _add_tui_smoke_test(tui_smoke_30_nuclear_no_plan_modal "${_CASES_DIR}/30_nuclear
 # turn-2 acknowledgement "(no answer provided)" confirms the auto-decline fired.
 # ---------------------------------------------------------------------------
 _add_tui_smoke_test(tui_smoke_31_nuclear_no_question_modal "${_CASES_DIR}/31_nuclear_no_question_modal.sh")
+
+# ---------------------------------------------------------------------------
+# Case 32 — UX-A: /model opens ModalPicker; arrow-down x2 + Enter picks model
+#
+# Verifies that in TUI mode the /model command (no args) opens ModalPicker
+# instead of the text-list + getline path.  The user navigates with arrow
+# keys (Down, Down) and presses Enter to select gamma-model (index 2).
+# Asserts "Switched to model 'gamma-model'" appears in the TUI output, and
+# that the subsequent inference request uses gamma-model (model-recorder check).
+# This is the load-bearing gate for UX-A: keystrokes must NOT leak to the LLM.
+# ---------------------------------------------------------------------------
+_add_tui_smoke_test(tui_smoke_32_model_picker_ux "${_CASES_DIR}/32_model_picker_ux.sh")
+
+# ---------------------------------------------------------------------------
+# Case 33 — UX-B: input bar text wrapping
+#
+# Verifies that typing a 200+ char prompt into the TUI input bar causes the
+# text to wrap to multiple visual lines at the terminal boundary, rather than
+# scrolling horizontally off the right edge (hflow fix in render_prompt_row).
+# Launches BatBox in a 60-column pane to guarantee wrapping occurs.
+# Asserts both the head and tail of the long string are visible.
+# Requires tmux + BatBox binary built at build/src/batbox.
+# ---------------------------------------------------------------------------
+_add_tui_smoke_test(tui_smoke_33_input_wrap "${_CASES_DIR}/33_input_wrap.sh")

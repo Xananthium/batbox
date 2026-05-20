@@ -89,6 +89,7 @@ struct Events {
     static const ftxui::Event PlanApprovalShow;  ///< Show the PlanApprovalCard modal (render-wake trigger for ExitPlanMode)
     static const ftxui::Event QuestionShow;      ///< Post from worker thread: request an AskUserQuestion card (render-wake trigger)
     static const ftxui::Event QuestionResolved;  ///< Post from UI thread: user resolved an AskUserQuestion card
+    static const ftxui::Event PickerShow;        ///< Post from worker thread: show ModalPicker for /model (UX-A)
 };
 
 // =============================================================================

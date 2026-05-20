@@ -60,6 +60,14 @@
 // advisor_mode added to support /advisor toggling the built-in coaching agent.
 // When true, AdvisorCmd has been activated and the REPL loop should inject
 // advisor suggestions after each assistant turn.  Defaults to false.
+//
+// UX-A addition
+// -------------
+// pick_from_list_fn is a nullable pointer to a std::function that shows a
+// scrollable picker modal and returns the user-selected index, or nullopt on
+// cancel.  Set by the TUI App on the CommandContext at slash-dispatch time so
+// /model can display ModalPicker instead of the text-list + getline path.
+// Null in CLI/headless mode; /model falls through to the existing text path.
 
 #pragma once
 
@@ -73,6 +81,9 @@
 #include <string_view>
 #include <mutex>
 #include <vector>
+#include <functional>
+#include <optional>
+#include <span>
 
 // Forward-declare the REPL types so this header stays dependency-free.
 namespace batbox::repl {
@@ -268,6 +279,29 @@ struct CommandContext {
     /// Human-readable permission mode string (e.g. "default", "nuclear").
     /// Owned by the REPL loop.  /status displays this; null → "(n/a)".
     const char* permission_mode_str = nullptr;
+
+    // --- Interactive picker (UX-A) --------------------------------------------
+    // Nullable: null in CLI/headless mode; set by the TUI App at slash-dispatch
+    // time.  Commands must never store this pointer beyond execute().
+
+    /// Show a scrollable modal picker and block until the user selects or cancels.
+    ///
+    /// @param title        Header text shown in the modal title bar.
+    /// @param items        The list of strings to display (viewed, not copied).
+    /// @param current_idx  Index of the currently-active item (highlighted on open).
+    /// @returns            The 0-based index of the chosen item, or std::nullopt
+    ///                     if the user cancelled (Escape).
+    ///
+    /// Thread contract: called from a worker thread (same thread as execute()).
+    /// The implementation blocks on a condition_variable until the UI thread
+    /// resolves the picker.  Calling from the UI thread would deadlock.
+    ///
+    /// When nullptr: command must fall through to the text-list + getline path
+    /// (CLI compatibility).
+    std::function<std::optional<std::size_t>(
+        std::string_view           title,
+        std::span<const std::string> items,
+        std::size_t                current_idx)>* pick_from_list_fn = nullptr;
 };
 
 } // namespace batbox::commands

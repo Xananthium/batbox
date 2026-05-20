@@ -57,6 +57,8 @@
 #include <regex>
 #include <string>
 #include <string_view>
+#include <span>
+#include <optional>
 #include <vector>
 
 namespace fs = std::filesystem;
@@ -272,7 +274,46 @@ batbox::Result<void> ModelCmd::execute(
     const std::string_view arg = trim(args);
 
     if (arg.empty()) {
-        // Interactive picker: list models and prompt the user to pick.
+        // Find the current model index for the picker cursor hint.
+        std::size_t current_idx = 0;
+        for (std::size_t i = 0; i < models.size(); ++i) {
+            if (models[i] == current_model) { current_idx = i; break; }
+        }
+
+        // UX-A: If a TUI picker is wired in, use it instead of text + getline.
+        if (ctx.pick_from_list_fn != nullptr) {
+            // Build display names: mark the current model so the user can see it.
+            std::vector<std::string> labels;
+            labels.reserve(models.size());
+            for (std::size_t i = 0; i < models.size(); ++i) {
+                labels.push_back(
+                    (models[i] == current_model)
+                        ? models[i] + "  (current)"
+                        : models[i]);
+            }
+
+            auto picked = (*ctx.pick_from_list_fn)(
+                "Select model",
+                std::span<const std::string>(labels),
+                current_idx);
+
+            if (!picked.has_value()) {
+                // User cancelled.
+                ctx.output << "  Model unchanged (cancelled).\n";
+                return {};
+            }
+
+            const std::size_t chosen_idx = picked.value();
+            if (chosen_idx >= models.size()) {
+                return batbox::Err(
+                    std::string("/model: picker returned out-of-range index ") +
+                    std::to_string(chosen_idx));
+            }
+            commit_model_switch(ctx.output, ctx.config_dir, ctx, models[chosen_idx]);
+            return {};
+        }
+
+        // CLI/headless path: list models and prompt the user to pick by number.
         print_model_list(ctx.output, models, current_model);
         ctx.output << "  Enter a number or model name (or press Enter to keep '"
                    << current_model << "'): ";
@@ -299,7 +340,7 @@ batbox::Result<void> ModelCmd::execute(
             if (idx < 1 || idx > models.size()) {
                 return batbox::Err(
                     std::string("/model: index ") + std::string(choice) +
-                    " is out of range (1–" + std::to_string(models.size()) + ")."
+                    " is out of range (1â" + std::to_string(models.size()) + ")."
                 );
             }
             commit_model_switch(ctx.output, ctx.config_dir, ctx, models[idx - 1]);

@@ -79,6 +79,7 @@
 #include <batbox/tui/PermissionCard.hpp>
 #include <batbox/tui/PlanApprovalCard.hpp>
 #include <batbox/tui/QuestionCard.hpp>
+#include <batbox/tui/ModalPickerHost.hpp>
 #include <batbox/config/Config.hpp>
 #include <batbox/sidecar/SidecarManager.hpp>
 #include <batbox/inference/Client.hpp>
@@ -117,7 +118,10 @@
 #include <batbox/tui/AskqPromptFactory.hpp>  // PEXT3 1.6
 
 #include <atomic>
+#include <functional>
 #include <mutex>
+#include <optional>
+#include <span>
 
 #include <cstdlib>    // std::getenv
 #include <filesystem>
@@ -1065,6 +1069,28 @@ int App::run(const AppArgs& args) {
         std::weak_ptr<batbox::tui::QuestionCard>(question_card),
         screen_mgr);
 
+    // UX-A: Create ModalPickerHost for /model interactive picker.
+    // The host wraps ModalPicker with a blocking await pattern (worker thread
+    // calls await_selection; UI thread resolves via on_select/on_cancel).
+    auto model_picker_host = std::make_shared<batbox::tui::ModalPickerHost>(tui_theme);
+
+    // The pick_from_list_fn stored here is heap-allocated so the pointer stored
+    // in CommandContext remains valid for the lifetime of the TUI session.
+    using PickFn = std::function<std::optional<std::size_t>(
+        std::string_view,
+        std::span<const std::string>,
+        std::size_t)>;
+    auto model_pick_fn = std::make_shared<PickFn>(
+        [model_picker_host, &screen_mgr](
+            std::string_view             title,
+            std::span<const std::string> items,
+            std::size_t                  current_idx) -> std::optional<std::size_t> {
+            screen_mgr.post_event(batbox::tui::Events::PickerShow);
+            auto result = model_picker_host->await_selection(title, items, current_idx);
+            screen_mgr.post_event(batbox::tui::Events::ModalHide);
+            return result;
+        });
+
     // on_delta_cb: forward each streaming token to the ScreenManager so the
     // ChatView's streaming tail is updated in real time.
     // --no-tools: when set, pass nullptr as registry so the model does not
@@ -1381,6 +1407,7 @@ int App::run(const AppArgs& args) {
          &screen_mgr, &command_registry, &tui_conv_adapter,
          tui_cancel_mtx, tui_cancel_src,
          tui_turn_in_flight,
+         model_pick_fn,
          &config, &cfg_mutex](std::string text) mutable {
             if (text.empty()) return;
 
@@ -1423,47 +1450,55 @@ int App::run(const AppArgs& args) {
                     return;
                 }
 
-                // Build a minimal CommandContext backed by TuiConvAdapter.
-                // output / input are connected to null streams: the TUI
-                // commands that write to ctx.output use the token/event
-                // pipeline (via reset_messages above) or are no-ops for
-                // fields not yet wired.  Using a null-sink stream here
-                // avoids polluting stderr.
-                std::ostringstream cmd_out;
-                std::istringstream cmd_in;
-                batbox::commands::CommandContext ctx{
-                    .output       = cmd_out,
-                    .input        = cmd_in,
-                    .conversation = tui_conv_adapter,
-                    .registry     = command_registry,
-                    .cwd          = std::filesystem::current_path(),
-                    .cfg          = &config,    // PEXT3 1.2: live Config pointer
-                    .cfg_mutex    = &cfg_mutex, // PEXT3 1.2: guards cfg mutations
-                };
+                // UX-A: slash commands may block on the UI thread (e.g. /model with
+                // ModalPicker blocks on a condition_variable until picker resolution).
+                // Dispatch all slash commands on a worker thread so tui_on_submit
+                // (called on the UI thread) returns immediately and the FTXUI event
+                // loop stays live to deliver key events to the picker modal.
+                //
+                // All captured refs point to App-owned objects that outlive the
+                // TUI session (screen_mgr, command_registry, tui_conv_adapter,
+                // config, cfg_mutex).  model_pick_fn is shared_ptr — safe by value.
+                auto slash_worker = std::thread(
+                    [cmd, cmd_args = std::string(cmd_args),
+                     &screen_mgr, &command_registry, &tui_conv_adapter,
+                     &config, &cfg_mutex,
+                     model_pick_fn]() mutable {
+                        std::ostringstream cmd_out;
+                        std::istringstream cmd_in;
+                        batbox::commands::CommandContext ctx{
+                            .output       = cmd_out,
+                            .input        = cmd_in,
+                            .conversation = tui_conv_adapter,
+                            .registry     = command_registry,
+                            .cwd          = std::filesystem::current_path(),
+                            .cfg          = &config,
+                            .cfg_mutex    = &cfg_mutex,
+                        };
+                        // UX-A: wire the interactive model picker so /model shows
+                        // ModalPicker instead of the text-list + getline path.
+                        ctx.pick_from_list_fn = model_pick_fn.get();
 
-                const auto exec_result = cmd->execute(cmd_args, ctx);
-                if (!exec_result.has_value()) {
-                    const std::string err_msg = "Error: " + exec_result.error();
-                    screen_mgr.post_token(err_msg);
-                    screen_mgr.post_event(
-                        batbox::tui::make_stream_done_event(/*had_error=*/true));
-                }
+                        const auto exec_result = cmd->execute(cmd_args, ctx);
+                        if (!exec_result.has_value()) {
+                            const std::string err_msg = "Error: " + exec_result.error();
+                            screen_mgr.post_token(err_msg);
+                            screen_mgr.post_event(
+                                batbox::tui::make_stream_done_event(/*had_error=*/true));
+                        }
 
-                // If the command wrote output text (e.g. /help, /session) via
-                // ctx.output, post it as an assistant token so it appears in
-                // the ChatView.
-                const std::string out_str = cmd_out.str();
-                if (!out_str.empty()) {
-                    screen_mgr.post_token(out_str);
-                    screen_mgr.post_event(
-                        batbox::tui::make_stream_done_event(/*had_error=*/false));
-                }
+                        const std::string out_str = cmd_out.str();
+                        if (!out_str.empty()) {
+                            screen_mgr.post_token(out_str);
+                            screen_mgr.post_event(
+                                batbox::tui::make_stream_done_event(/*had_error=*/false));
+                        }
 
-                // /exit: request TUI shutdown (screen_mgr.stop() triggers
-                // the FTXUI event-loop to return from run()).
-                if (ctx.exit_requested) {
-                    screen_mgr.stop();
-                }
+                        if (ctx.exit_requested) {
+                            screen_mgr.stop();
+                        }
+                    });
+                slash_worker.detach();
                 return;
             }
 
@@ -1551,7 +1586,8 @@ int App::run(const AppArgs& args) {
         question_card.get(),        // question_card â TUI-ASKQ-T4
         &mcp_registry,              // mcp_registry â TUI-FLOW-T11 McpStatusPoller
         tui_gate.get(),             // permission_gate â TUI-PERM-T1 Shift+Tab cycle
-        std::move(tui_interrupt_cb));  // on_interrupt_cb â TUI-FIX-T3 Esc cancels stream
+        std::move(tui_interrupt_cb),   // on_interrupt_cb â TUI-FIX-T3 Esc cancels stream
+        model_picker_host.get());      // modal_picker â UX-A /model ModalPicker
 
     BATBOX_LOG_INFO("TUI wired — entering event loop");
 

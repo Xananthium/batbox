@@ -40,6 +40,7 @@ static constexpr const char* kNameSpinnerTick        = "batbox.spinner-tick";
 static constexpr const char* kNamePlanApprovalShow    = "batbox.plan-approval-show";
 static constexpr const char* kNameQuestionShow       = "batbox.question-show";
 static constexpr const char* kNameQuestionResolved   = "batbox.question-resolved";
+static constexpr const char* kNamePickerShow         = "batbox.picker-show";
 
 const ftxui::Event Events::Token        = ftxui::Event::Special(kNameToken);
 const ftxui::Event Events::AgentsDirty  = ftxui::Event::Special(kNameAgentsDirty);
@@ -58,6 +59,7 @@ const ftxui::Event Events::SpinnerTick      = ftxui::Event::Special(kNameSpinner
 const ftxui::Event Events::PlanApprovalShow = ftxui::Event::Special(kNamePlanApprovalShow);
 const ftxui::Event Events::QuestionShow    = ftxui::Event::Special(kNameQuestionShow);
 const ftxui::Event Events::QuestionResolved = ftxui::Event::Special(kNameQuestionResolved);
+const ftxui::Event Events::PickerShow      = ftxui::Event::Special(kNamePickerShow);
 
 // =============================================================================
 // Payload registry

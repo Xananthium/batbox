@@ -67,6 +67,7 @@ target_sources(batbox_tui
         SubAgentPanel.cpp  # CPP 1.13 — right-side agent panel, change-driven 10Hz
         DemonPanel.cpp  # CPP 1.14 — 5Hz magenta easter-egg panel
         ModalPicker.cpp
+        ModalPickerHost.cpp  # UX-A — blocking wrapper around ModalPicker for worker-thread use
         Changelog.cpp  # TUI-FLOW-T10 — changelog parser + disk loader
         Splash.cpp
         MarkdownRender.cpp  # CPP 1.3 — incremental markdown -> FTXUI Element

@@ -58,6 +58,7 @@
 #include <batbox/tui/PermissionCard.hpp>
 #include <batbox/tui/PlanApprovalCard.hpp>
 #include <batbox/tui/QuestionCard.hpp>
+#include <batbox/tui/ModalPickerHost.hpp>
 #include <batbox/tui/Screen.hpp>
 #include <batbox/tui/Splash.hpp>
 #include <batbox/tui/SubAgentPanel.hpp>
@@ -329,7 +330,8 @@ void wire_tui(
     batbox::tui::QuestionCard*                  question_card,
     batbox::mcp::McpServerRegistry*             mcp_registry,
     batbox::permissions::PermissionGate*        permission_gate,
-    batbox::tui::InputBar::InterruptCallback    on_interrupt_cb)
+    batbox::tui::InputBar::InterruptCallback    on_interrupt_cb,
+    batbox::tui::ModalPickerHost*               modal_picker)
 {
     BATBOX_LOG_DEBUG("wire_tui: constructing TUI components");
 
@@ -672,6 +674,47 @@ void wire_tui(
             });
 
         BATBOX_LOG_DEBUG("wire_tui: QuestionCard modal overlay wired (TUI-ASKQ-T4)");
+    }
+
+    // -------------------------------------------------------------------------
+    // 14b. ModalPicker modal overlay (UX-A).
+    //
+    // Z-order: ModalPicker (outermost) > PermissionCard > PlanApprovalCard > QuestionCard.
+    //
+    // Visibility is driven by modal_picker->pending(): the worker thread sets
+    // the pending flag before blocking, and clears it after the condvar is woken.
+    // PickerShow is posted before the worker blocks so the FTXUI loop re-renders
+    // immediately and displays the picker on the very next frame.
+    // -------------------------------------------------------------------------
+    if (modal_picker != nullptr) {
+        auto* picker_ptr = modal_picker;
+
+        auto picker_modal_renderer = ftxui::Renderer(effective_root,
+            [effective_root, picker_ptr]() -> ftxui::Element {
+                using namespace ftxui;
+                if (picker_ptr->pending()) {
+                    return dbox({
+                        effective_root->Render(),
+                        picker_ptr->picker_component()->Render() | clear_under | center,
+                    });
+                }
+                return effective_root->Render();
+            });
+
+        effective_root = ftxui::CatchEvent(picker_modal_renderer,
+            [effective_root, picker_ptr](ftxui::Event ev) -> bool {
+                // Consume the wake-trigger event silently.
+                if (ev == batbox::tui::Events::PickerShow) {
+                    return true;
+                }
+                // Route all keyboard events to the picker while it is pending.
+                if (picker_ptr->pending()) {
+                    return picker_ptr->picker_component()->OnEvent(ev);
+                }
+                return effective_root->OnEvent(ev);
+            });
+
+        BATBOX_LOG_DEBUG("wire_tui: ModalPicker modal overlay wired (UX-A)");
     }
 
     // -------------------------------------------------------------------------

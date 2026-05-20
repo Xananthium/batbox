@@ -709,106 +709,62 @@ ftxui::Element InputBar::render_prompt_row() const {
         });
     }
 
-    // Normal rendering: build prompt as a sequence of text spans and paste chips.
+    // UX-B: Build a flat display string with an inline cursor marker so
+    // paragraph() can wrap the entire content at the terminal width.
+    // Cursor is shown as "|" (U+007C, plain ASCII pipe) at the insertion
+    // point — visible at any wrap position without additional styled spans.
+    // Paste segments are inlined as their chip labels (readable plain text).
+    // The "> " prefix stays on the first row; paragraph() handles wrapping
+    // of the content area that follows it.
     const std::size_t flat_cur = flat_cursor_offset();
-
-    Elements prompt_parts;
     std::size_t flat_pos = 0;
+    std::string display;
 
-    for (std::size_t si = 0; si < segments_.size(); ++si) {
-        const auto& seg = segments_[si];
-
+    for (const auto& seg : segments_) {
         if (is_text(seg)) {
             const std::string& body = seg.body;
-
             if (flat_cur >= flat_pos && flat_cur <= flat_pos + body.size()) {
-                // Cursor is within this text segment
+                // Cursor lands inside this text segment
                 std::size_t local_cur = flat_cur - flat_pos;
-                std::string before = body.substr(0, local_cur);
-                std::string at_cur;
-                std::string after;
-
-                if (local_cur < body.size()) {
-                    unsigned char c = static_cast<unsigned char>(body[local_cur]);
-                    std::size_t char_len = 1;
-                    if (c >= 0xF0)      char_len = 4;
-                    else if (c >= 0xE0) char_len = 3;
-                    else if (c >= 0xC0) char_len = 2;
-                    char_len = std::min(char_len, body.size() - local_cur);
-                    at_cur = body.substr(local_cur, char_len);
-                    after  = body.substr(local_cur + char_len);
-                } else {
-                    at_cur = " ";
-                }
-
-                if (!before.empty()) {
-                    prompt_parts.push_back(text(before) | ftxui::color(fg_color));
-                }
-                prompt_parts.push_back(
-                    text(at_cur)
-                    | ftxui::color(color_for(theme_, ThemeRole::Bg))
-                    | bgcolor(fg_color));
-                if (!after.empty()) {
-                    prompt_parts.push_back(text(after) | ftxui::color(fg_color));
-                }
+                display += body.substr(0, local_cur);
+                display += '|';   // inline cursor marker
+                display += body.substr(local_cur);
             } else {
-                if (!body.empty()) {
-                    prompt_parts.push_back(text(body) | ftxui::color(fg_color));
-                }
+                display += body;
             }
             flat_pos += body.size();
-
         } else {
-            // Paste segment — render as chip
-            std::string chip = paste_chip_label(seg);
-            bool cursor_before = (flat_cur == flat_pos);
-
-            if (cursor_before) {
-                prompt_parts.push_back(
-                    text(" ")
-                    | ftxui::color(color_for(theme_, ThemeRole::Bg))
-                    | bgcolor(fg_color));
+            // Paste segment: cursor before chip?
+            if (flat_cur == flat_pos) {
+                display += '|';
             }
-
-            prompt_parts.push_back(
-                text(chip)
-                | ftxui::color(color_for(theme_, ThemeRole::Bg))
-                | bgcolor(muted_color));
-
+            display += paste_chip_label(seg);
             flat_pos += seg.body.size();
         }
     }
 
-    // If cursor is at the very end (after all segments)
-    if (flat_cur == flat_pos) {
-        bool needs_end_cursor = true;
-        if (!segments_.empty()) {
-            if (is_text(segments_.back())) {
-                // Already handled in the loop above (at_cur = " " at segment end)
-                needs_end_cursor = false;
-            }
-        }
-        if (needs_end_cursor || segments_.empty()) {
-            prompt_parts.push_back(
-                text(" ")
-                | ftxui::color(color_for(theme_, ThemeRole::Bg))
-                | bgcolor(fg_color));
-        }
+    // Cursor at the very end (after all segments)
+    if (flat_cur == flat_pos && !display.empty() && display.back() != '|') {
+        display += '|';
+    } else if (display.empty()) {
+        display = '|';
     }
 
     std::string vim_indicator;
     if (vim_mode_.is_enabled()) {
         vim_indicator = "  " + vim_mode_.mode_indicator();
     }
-
-    Elements row_parts;
-    row_parts.push_back(text("> ") | ftxui::color(prefix_color) | bold);
-    for (auto& e : prompt_parts) {
-        row_parts.push_back(std::move(e));
+    if (!vim_indicator.empty()) {
+        display += vim_indicator;
     }
-    row_parts.push_back(text(vim_indicator) | ftxui::color(muted_color));
 
-    return hbox(std::move(row_parts));
+    // paragraph() wraps the content at the available column width and correctly
+    // propagates multi-row height back to the parent vbox via Check().
+    // The "> " prefix stays on the first visual row as the first hbox child.
+    return hbox({
+        text("> ") | ftxui::color(prefix_color) | bold,
+        paragraph(display) | ftxui::color(fg_color),
+    });
 }
 
 ftxui::Element InputBar::render_status_row() const {

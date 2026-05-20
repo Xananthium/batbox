@@ -3089,6 +3089,9 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_tui_layout.cpp)
         ${PROJECT_SOURCE_DIR}/src/tui/AccountLabel.cpp
         ${PROJECT_SOURCE_DIR}/src/tui/PlanApprovalCard.cpp
         ${PROJECT_SOURCE_DIR}/src/util/EditorLaunch.cpp
+        # UX-A: ModalPicker + ModalPickerHost (wire_tui depends on both)
+        ${PROJECT_SOURCE_DIR}/src/tui/ModalPicker.cpp
+        ${PROJECT_SOURCE_DIR}/src/tui/ModalPickerHost.cpp
         # Theme.cpp and themes.cpp are omitted here: batbox_theme (OBJECT) in
         # target_link_libraries already provides them without duplication.
     )
