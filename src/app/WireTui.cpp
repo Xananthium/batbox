@@ -43,6 +43,7 @@
 // =============================================================================
 
 #include <batbox/app/McpStatusPoller.hpp>
+#include <batbox/config/Config.hpp>
 #include <batbox/app/WireTui.hpp>
 #include <batbox/commands/SlashCommandRegistry.hpp>
 #include <batbox/config/StateStore.hpp>
@@ -86,6 +87,7 @@
 #include <functional>
 #include <memory>
 #include <random>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -331,7 +333,9 @@ void wire_tui(
     batbox::mcp::McpServerRegistry*             mcp_registry,
     batbox::permissions::PermissionGate*        permission_gate,
     batbox::tui::InputBar::InterruptCallback    on_interrupt_cb,
-    batbox::tui::ModalPickerHost*               modal_picker)
+    batbox::tui::ModalPickerHost*               modal_picker,
+    const batbox::config::Config*               live_cfg,
+    std::mutex*                                 live_cfg_mtx)
 {
     BATBOX_LOG_DEBUG("wire_tui: constructing TUI components");
 
@@ -473,6 +477,13 @@ void wire_tui(
     if (input_bar_raw && !model_name.empty()) {
         input_bar_raw->set_model(model_name);
         BATBOX_LOG_DEBUG("wire_tui: InputBar model set to '{}'", model_name);
+    }
+
+    // UX-C: wire live Config source so /model picker switches reflect in the
+    // pill on the next render frame (snapshot under cfg_mutex per frame).
+    if (input_bar_raw && live_cfg != nullptr && live_cfg_mtx != nullptr) {
+        input_bar_raw->set_config_source(live_cfg, live_cfg_mtx);
+        BATBOX_LOG_DEBUG("wire_tui: InputBar live Config source wired (UX-C)");
     }
 
     if (input_bar_raw && !skip_splash) {

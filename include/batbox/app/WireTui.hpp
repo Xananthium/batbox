@@ -71,11 +71,14 @@
 #include <ftxui/component/screen_interactive.hpp>
 
 #include <functional>
+#include <mutex>
 #include <string>
 
 // Forward declaration — callers pass a raw non-owning pointer; the full header
 // is included in WireTui.cpp where set_permission_gate() is called.
 namespace batbox::permissions { class PermissionGate; }
+// Forward declaration for UX-C: pill snapshots default_model live under cfg_mutex.
+namespace batbox::config { struct Config; }
 
 namespace batbox::app {
 
@@ -146,6 +149,17 @@ namespace batbox::app {
 ///                            it is pending; the base layout does not receive input.
 ///                            When null (default), no picker overlay is mounted.
 ///                            (UX-A)
+/// @param live_cfg       When non-null (paired with @p live_cfg_mtx), passed to
+///                       InputBar::set_config_source() so the status pill snapshots
+///                       cfg->api.default_model under the lock each render frame.
+///                       This makes /model picker switches reflect on the next
+///                       render without any event plumbing.  When null, the pill
+///                       falls back to the static set_model() name.  (UX-C)
+/// @param live_cfg_mtx   Mutex guarding @p live_cfg writes.  Must be the SAME mutex
+///                       that ModelCmd::commit_model_switch acquires
+///                       (CommandContext::cfg_mutex) and that Conversation uses
+///                       (Conversation::cfg_mutex_).  Required when @p live_cfg is
+///                       non-null; pass nullptr when @p live_cfg is null.  (UX-C)
 void wire_tui(
     batbox::tui::ScreenManager&                 screen_mgr,
     batbox::agents::AgentSupervisor*            supervisor,
@@ -162,6 +176,8 @@ void wire_tui(
     batbox::mcp::McpServerRegistry*             mcp_registry        = nullptr,
     batbox::permissions::PermissionGate*        permission_gate     = nullptr,
     batbox::tui::InputBar::InterruptCallback    on_interrupt_cb     = nullptr,
-    batbox::tui::ModalPickerHost*               modal_picker        = nullptr);
+    batbox::tui::ModalPickerHost*               modal_picker        = nullptr,
+    const batbox::config::Config*               live_cfg            = nullptr,
+    std::mutex*                                 live_cfg_mtx        = nullptr);
 
 } // namespace batbox::app

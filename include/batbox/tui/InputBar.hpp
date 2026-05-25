@@ -98,6 +98,7 @@
 #include <string_view>
 #include <vector>
 #include <cstddef>
+#include <mutex>
 
 #include <ftxui/component/component_base.hpp>
 #include <ftxui/component/event.hpp>
@@ -107,6 +108,9 @@
 // to avoid pulling the full header into every TUI consumer.  The full header
 // is included in InputBar.cpp where the actual call sites live.
 namespace batbox::permissions { class PermissionGate; }
+// Forward declaration for UX-C: pill snapshots default_model under cfg_mutex
+// each frame so /model picker switches are reflected without event plumbing.
+namespace batbox::config { struct Config; }
 
 namespace batbox::tui {
 
@@ -352,6 +356,22 @@ public:
     /// The caller (WireTui) must ensure the gate outlives the InputBar component.
     /// Must be called from the UI thread before the event loop starts.
     void set_permission_gate(batbox::permissions::PermissionGate* gate);
+
+    // ---- Live config source (UX-C) -----------------------------------------
+    //
+    // Wire a non-owning Config* + mutex* so render_status_row() snapshots
+    // cfg->api.default_model under the lock each frame.  After a /model picker
+    // switch, ModelCmd::commit_model_switch mutates the same Config under the
+    // same mutex, so the very next render frame reflects the new name.
+    //
+    // When @p cfg or @p mtx is nullptr, the pill falls back to the static
+    // status_.model_name (set via set_model()).  In headless/test contexts that
+    // pass nullptr, behaviour is identical to the pre-UX-C code path.
+    //
+    // The caller (WireTui) must ensure both pointers outlive the InputBar.
+    // Must be called from the UI thread, before the event loop starts.
+    void set_config_source(const batbox::config::Config* cfg,
+                           std::mutex*                   mtx) noexcept;
 
     // ---- Buffer access (read-only, from UI thread) --------------------------
 
@@ -614,6 +634,11 @@ private:
 
     // --- TUI-PERM-T1: permission gate for Shift+Tab mode cycle ---
     batbox::permissions::PermissionGate* perm_gate_{nullptr};
+
+    // --- UX-C: live config source for pill model-name snapshot ---
+    // Both null in headless / tests; both non-null in TUI mode wired by WireTui.
+    const batbox::config::Config* config_src_{nullptr};
+    std::mutex*                   config_mtx_{nullptr};
 };
 
 // =============================================================================

@@ -1587,7 +1587,9 @@ int App::run(const AppArgs& args) {
         &mcp_registry,              // mcp_registry â TUI-FLOW-T11 McpStatusPoller
         tui_gate.get(),             // permission_gate â TUI-PERM-T1 Shift+Tab cycle
         std::move(tui_interrupt_cb),   // on_interrupt_cb â TUI-FIX-T3 Esc cancels stream
-        model_picker_host.get());      // modal_picker â UX-A /model ModalPicker
+        model_picker_host.get(),      // modal_picker (UX-A /model ModalPicker)
+        &config,                       // live_cfg (UX-C pill reads model name live)
+        &cfg_mutex);                   // live_cfg_mtx (same mutex as ModelCmd + Conversation)
 
     BATBOX_LOG_INFO("TUI wired — entering event loop");
 

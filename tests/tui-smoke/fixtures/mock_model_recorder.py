@@ -50,6 +50,36 @@ def _make_chunk(content: str, model: str = "mock-recorder") -> str:
     return f"data: {json.dumps(payload)}\n\n"
 
 
+def _make_finish_chunk(model: str = "mock-recorder",
+                       prompt_tokens: int = 5,
+                       completion_tokens: int = 2) -> str:
+    """Terminal chunk with finish_reason='stop' + usage block.
+
+    Required so Conversation::run_turn fires on_usage_delta_cb_ with a
+    non-zero token total (otherwise the cb is gated on usage > 0 in
+    Conversation.cpp).
+    """
+    payload = {
+        "id": "chatcmpl-rec",
+        "object": "chat.completion.chunk",
+        "created": int(time.time()),
+        "model": model,
+        "choices": [
+            {
+                "index": 0,
+                "delta": {},
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": prompt_tokens + completion_tokens,
+        },
+    }
+    return f"data: {json.dumps(payload)}\n\n"
+
+
 def _make_done_chunk() -> str:
     return "data: [DONE]\n\n"
 
@@ -102,7 +132,8 @@ class RecorderHandler(http.server.BaseHTTPRequestHandler):
             pass  # non-fatal — test will time out naturally
 
         # Stream a trivial "Hi!" response so BatBox considers the turn complete.
-        chunks = [_make_chunk("Hi"), _make_chunk("!"), _make_done_chunk()]
+        chunks = [_make_chunk("Hi"), _make_chunk("!"),
+                  _make_finish_chunk(), _make_done_chunk()]
 
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream")

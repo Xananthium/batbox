@@ -223,3 +223,15 @@ _add_tui_smoke_test(tui_smoke_32_model_picker_ux "${_CASES_DIR}/32_model_picker_
 # Requires tmux + BatBox binary built at build/src/batbox.
 # ---------------------------------------------------------------------------
 _add_tui_smoke_test(tui_smoke_33_input_wrap "${_CASES_DIR}/33_input_wrap.sh")
+
+# ---------------------------------------------------------------------------
+# Case 34 — UX-C: status pill reads live state (model + tokens)
+#
+# After a /model picker switch from alpha-model to gamma-model, asserts:
+#   (1) the bottom status pill shows '◉ gamma-model' live (no stale snapshot).
+#   (2) after a streaming turn, the pill shows non-zero token count (NNtk).
+#
+# Drives mock_model_recorder.py (port 8854) which now emits a usage block in
+# the terminal chunk so on_usage_delta_cb_ fires.
+# ---------------------------------------------------------------------------
+_add_tui_smoke_test(tui_smoke_34_pill_live_state "${_CASES_DIR}/34_pill_live_state.sh")

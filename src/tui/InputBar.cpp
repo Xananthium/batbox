@@ -13,6 +13,7 @@
 //   - Queue rendering inside OnRender (NOT a new FTXUI Component).
 // ---------------------------------------------------------------------------
 
+#include <batbox/config/Config.hpp>
 #include <batbox/tui/InputBar.hpp>
 #include <batbox/perf/PerfSnapshot.hpp>
 #include <batbox/tui/Events.hpp>
@@ -276,6 +277,12 @@ void InputBar::set_model(std::string name) {
 void InputBar::set_usage(uint32_t tokens, double cost_usd) {
     status_.token_count = tokens;
     status_.cost_usd    = cost_usd;
+    // UX-C: honour the contract documented in render_status_row at the
+    // status_strs_dirty_ cache comment.  Without this flag the cached
+    // "0tk" string from the very first render is never replaced, so the
+    // pill stays stuck at 0tk even after on_usage_delta_cb_ posts a
+    // make_status_update_event_with_usage on every streamed turn.
+    status_strs_dirty_ = true;
 }
 
 void InputBar::set_mode(std::string label) {
@@ -332,6 +339,16 @@ void InputBar::set_permission_gate(batbox::permissions::PermissionGate* gate) {
     if (perm_gate_) {
         status_.mode_label = mode_chip_label(perm_gate_->current_mode());
     }
+}
+
+// =============================================================================
+// Public API — live config source (UX-C)
+// =============================================================================
+
+void InputBar::set_config_source(const batbox::config::Config* cfg,
+                                 std::mutex*                   mtx) noexcept {
+    config_src_ = cfg;
+    config_mtx_ = mtx;
 }
 
 // =============================================================================
@@ -771,7 +788,22 @@ ftxui::Element InputBar::render_status_row() const {
     auto muted_color   = color_for(theme_, ThemeRole::Muted);
     auto accent_color  = color_for(theme_, ThemeRole::AccentCyan);
     auto magenta_color = color_for(theme_, ThemeRole::AccentMagenta);
-    std::string model  = status_.model_name.empty() ? "no model" : status_.model_name;
+
+    // UX-C: pick the live model name from Config under cfg_mutex when wired.
+    // ModelCmd::commit_model_switch writes cfg->api.default_model under the
+    // same mutex; this snapshot reflects /model picker switches on the very
+    // next frame, without needing any event plumbing.  Falls back to the
+    // static status_.model_name (set via set_model()) when no source is wired.
+    std::string model;
+    if (config_src_ != nullptr && config_mtx_ != nullptr) {
+        std::lock_guard<std::mutex> lk(*config_mtx_);
+        model = config_src_->api.default_model;
+    } else {
+        model = status_.model_name;
+    }
+    if (model.empty()) {
+        model = "no model";
+    }
 
     // A3: dirty-string cache — rebuild formatted strings only when usage changed.
     // set_usage() sets status_strs_dirty_ = true; we clear it after rebuild.
