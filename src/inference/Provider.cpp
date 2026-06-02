@@ -126,6 +126,12 @@ ProviderMetadata OpenAiCompatibleProvider::metadata() const {
     return md;
 }
 
+ReasoningTags OpenAiCompatibleProvider::reasoning_tags() const {
+    // The reasoning-tag convention is a property of the provider identity.
+    // reasoning_tags_for_provider lives in the ReasoningTagProfile leaf TU.
+    return reasoning_tags_for_provider(provider_key_for_config(cfg_));
+}
+
 // ---------------------------------------------------------------------------
 // ProviderRegistry
 // ---------------------------------------------------------------------------
@@ -156,6 +162,15 @@ bool should_use_responses_api(std::string_view /*provider_name*/,
     // wired, so every (provider, model) pair routes to Chat Completions.
     // When a Responses-API transport lands, branch here on provider_name/model.
     return false;
+}
+
+// ---------------------------------------------------------------------------
+// reasoning_tags_for_config — Config → provider identity → tag convention.
+// reasoning_tags_for_provider itself is defined in ReasoningTagProfile.cpp.
+// ---------------------------------------------------------------------------
+
+ReasoningTags reasoning_tags_for_config(const batbox::config::Config& cfg) {
+    return reasoning_tags_for_provider(provider_key_for_config(cfg));
 }
 
 } // namespace batbox::inference

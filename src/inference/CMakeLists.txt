@@ -44,6 +44,9 @@ target_sources(batbox_inference
         Client.cpp
         Provider.cpp
         CanonicalModel.cpp
+        ReasoningTagProfile.cpp
+        ThinkSplitter.cpp
+        ReasoningAccumulator.cpp
         SseParser.cpp
         ToolCallAccumulator.cpp
         UsageTracker.cpp

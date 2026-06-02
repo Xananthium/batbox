@@ -1,6 +1,6 @@
 # include/batbox/inference
 
-OpenAI-compatible inference client headers: request/response types, streaming SSE parser, tool call accumulator, usage tracking, and the provider abstraction (S8/S9) that wraps the client behind a polymorphic interface.
+OpenAI-compatible inference client headers: request/response types, streaming SSE parser, tool call accumulator, usage tracking, the provider abstraction (S8/S9) that wraps the client behind a polymorphic interface, and the S10 reasoning-isolation organs (think/visible splitter + unified reasoning channel).
 
 ## Files
 
@@ -43,6 +43,25 @@ S8/S9 provider abstraction — a polymorphic seam *around* the existing `Client`
 - `ProviderRegistry::create(cfg, manages_own_context=false) -> unique_ptr<Provider>` — factory; resolves the provider from `Config` (today always an `OpenAiCompatibleProvider`); the single seam where a future non-compatible provider branches in
 - `map_to_canonical_model(raw) -> std::string` — deterministic, idempotent model-id normaliser (trim → keep last `/`-segment → strip trailing `:tag` → lowercase); used for pricing lookup / display / capability gating
 - `should_use_responses_api(provider_name, model) -> bool` — Chat-Completions vs Responses-API routing seam; always `false` today (batbox speaks only Chat Completions)
+- `OpenAiCompatibleProvider::reasoning_tags() -> ReasoningTags` — S10; the inline reasoning-tag convention this provider declares (`reasoning_tags_for_provider(name())`)
+- `reasoning_tags_for_config(cfg) -> ReasoningTags` — S10; resolve the provider identity for `cfg` and return its reasoning-tag convention; the seam the streaming delta path uses to build a `ReasoningAccumulator` from live `Config`
+
+### ThinkSplitter.hpp
+S10 — standalone, stateful streaming filter that separates streamed `content` into **visible** vs. **reasoning** text by detecting an inline tag pair (default `<think>`/`</think>`). Cross-chunk-boundary correct: markers split across SSE chunks (`<thi` | `nk>`) are reassembled, and a partial marker is never emitted as visible. Dependency-light (std lib only) so it unit-tests in isolation, like `SseParser`/`ToolCallAccumulator`.
+
+- `ReasoningTags{open, close}` — the tag convention; `enabled()` true only when both markers non-empty; `none()` → "no inline tags" (splitter is pass-through)
+- `ThinkSplit{visible, reasoning}` — the text produced by one `push()`/`finish()` call
+- `ThinkSplitter::push(fragment) -> ThinkSplit` — consume one content fragment; returns the visible + reasoning text that became unambiguous (partial-marker bytes are buffered, not leaked)
+- `ThinkSplitter::finish() -> ThinkSplit` — flush at stream end; unclosed block → reasoning, trailing look-alike text → visible
+- `ThinkSplitter::in_reasoning() / enabled()` — state accessors
+- `reasoning_tags_for_provider(provider_name) -> ReasoningTags` — S10 provider profile; pure function of the canonical provider name; default `<think>`/`</think>`, `anthropic` → `<thinking>`, structured-field providers (openai/groq/mistral/together) → `none()`
+
+### ReasoningAccumulator.hpp
+S10 — the unified isolated reasoning channel; sibling to `ToolCallAccumulator`. Merges the model's reasoning into one retrievable stream regardless of wire form: the structured `delta.reasoning_content` field and inline `<think>` text extracted from `delta.content`. Visible output is guaranteed reasoning-free; sources are disjoint by construction (no double-count).
+
+- `ReasoningAccumulator::accumulate(delta) -> std::string` — process one StreamDelta; isolates reasoning from both sources; returns only the reasoning-free visible text
+- `ReasoningAccumulator::finish() -> std::string` — flush the splitter tail at stream end; returns final visible text
+- `ReasoningAccumulator::reasoning() / visible() / has_reasoning() / in_reasoning_block()` — accessors for the isolated reasoning, clean visible text, and splitter state
 
 ### SseParser.hpp
 Streaming SSE (Server-Sent Events) line parser.
