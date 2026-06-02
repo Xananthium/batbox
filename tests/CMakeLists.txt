@@ -295,6 +295,19 @@ target_link_libraries(test_session_index PRIVATE
     simdjson::simdjson
     spdlog::spdlog)
 
+# S8 + S9 — Provider abstraction core (Provider interface, OpenAiCompatibleProvider,
+# ProviderRegistry, map_to_canonical_model, should_use_responses_api, manages_own_context).
+# Links batbox_inference (Provider.cpp wraps Client.cpp), batbox_config + batbox_core for
+# Config/Result, cpr for the Client's HTTP backend, and simdjson for Json.hpp (pulled in
+# transitively via the wire types).  Hermetic — no live network in the test body.
+batbox_add_unit_test(test_provider_core
+    unit/test_provider_core.cpp  batbox_inference)
+target_link_libraries(test_provider_core PRIVATE
+    batbox_core
+    batbox_config
+    cpr::cpr
+    simdjson::simdjson)
+
 # ---------------------------------------------------------------------------
 # Integration tests (CPP A.2 and later)
 # ---------------------------------------------------------------------------

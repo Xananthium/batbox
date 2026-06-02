@@ -33,12 +33,16 @@ target_link_libraries(batbox_inference
 #   ToolCallAccumulator.cpp  (CPP 4.3) — delta-stream tool_call delta reassembly
 #   UsageTracker.cpp         (CPP 4.4) — per-request + session usage accumulation
 #   ModelPricing.cpp         (CPP 4.5) — token cost table, cost_usd computation
+#   Provider.cpp             (S8/S9)   — Provider interface, OpenAiCompatibleProvider,
+#                                        ProviderRegistry, map_to_canonical_model,
+#                                        should_use_responses_api
 # ---------------------------------------------------------------------------
 target_sources(batbox_inference
     PRIVATE
         .placeholder.cpp
         ChatRequest.cpp
         Client.cpp
+        Provider.cpp
         SseParser.cpp
         ToolCallAccumulator.cpp
         UsageTracker.cpp

@@ -22,5 +22,8 @@ Loads data/models.json at first call; builds name→pricing table; `cost()` look
 ### UsageTracker.cpp
 `add()`, `session_total()`, `turn_total()`, `reset_turn()`, `reset_all()` implementations; wraps two UsageDelta structs guarded by a mutex.
 
+### Provider.cpp
+S8/S9 provider abstraction. `Provider` pure-virtual interface (chat / stream_chat + name/metadata + `manages_own_context`); `OpenAiCompatibleProvider` (final) wraps and delegates to `Client` for every OpenAI-compatible endpoint, with a constructor flag for the S9 context-ownership opt-out; `ProviderRegistry::create()` factory builds the right provider from a `Config`; `map_to_canonical_model()` deterministic/idempotent model-id normaliser; `should_use_responses_api()` Chat-vs-Responses routing seam (currently always false — batbox speaks only Chat Completions).
+
 ### CMakeLists.txt
 Build rules for the inference static library.
