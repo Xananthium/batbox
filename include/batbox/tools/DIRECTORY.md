@@ -22,7 +22,17 @@ Central name-to-ITool dispatch table.
 - `ToolRegistry::size() -> size_t` — count of registered tools
 - `ToolRegistry::empty() -> bool` — true when no tools registered
 - `ToolRegistry::available_tool_schemas(filter) -> vector<Json>` — returns OpenAI tools array; filter=nullopt includes all; filter=vector limits to named tools
-- `ToolRegistry::dispatch(name, args, ctx) -> Result<ToolResult, string>` — looks up tool by name; calls run(); wraps thrown exceptions as ToolResult::error; returns Err when tool not found or not allowed
+- `ToolRegistry::dispatch(name, args, ctx) -> Result<ToolResult, string>` — looks up tool by name; calls run(); wraps thrown exceptions as ToolResult::error; returns Err when tool not found or not allowed; **(S7)** routes every invoked run() result through `envelope()` — the universal subagent-dispatch seam — before returning
+- `ToolRegistry::envelope() -> ToolSubagentEnvelope&` — **(S7)** the single seam every dispatched result flows through; install decision/distiller hooks here (default = pass-through)
+
+### ToolSubagentEnvelope.hpp
+The universal subagent-dispatch seam (S7, DIS-979). Interposes at `ToolRegistry::dispatch` so every tool result — native and MCP — flows through one unbypassable boundary; default hooks are pure pass-through (byte-identical to pre-S7). S1 fills the decision hook, S4 the distiller hook, without re-touching the seam.
+
+- `IEngulfDecider::should_engulf(tool_name, args, result, ctx) -> bool` — decision hook: "engulf this result into a subagent?"; S7 default `PassThroughDecider` returns false
+- `IResultDistiller::distill(tool_name, args, result, ctx) -> ToolResult` — distiller hook: "engulf + distill to the golden line"; S7 default `IdentityDistiller` returns result unchanged
+- `ToolSubagentEnvelope::process(tool_name, args, result, ctx) -> ToolResult` — if decider engulfs → run distiller, else pass through
+- `ToolSubagentEnvelope::set_decider(hook)` / `set_distiller(hook)` — swap hooks at runtime; null is ignored (never-null invariant)
+- `ToolSubagentEnvelope::decider()` / `distiller()` — non-owning const view of the installed hooks
 
 ### ToolContext.hpp
 Per-dispatch context injected into every ITool::run() call.

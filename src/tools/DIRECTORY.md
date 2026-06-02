@@ -5,7 +5,10 @@ Tool implementations: all 39 ITool subclasses, the ToolRegistry, TaskStore, and 
 ## Files
 
 ### ToolRegistry.cpp
-`register_tool()` implementation: inserts into tools_ map and tracks insertion_order_; throws on null or duplicate. `find_by_name()`: unordered_map lookup. `available_tool_schemas()`: filters by allowed names; wraps each schema_json() in {"type":"function","function":...}. `dispatch()`: finds tool, checks plan-mode and allowed_tools constraints, calls run(), catches exceptions.
+`register_tool()` implementation: inserts into tools_ map and tracks insertion_order_; throws on null or duplicate. `find_by_name()`: unordered_map lookup. `available_tool_schemas()`: filters by allowed names; wraps each schema_json() in {"type":"function","function":...}. `dispatch()`: finds tool, checks plan-mode and allowed_tools constraints, calls run(), catches exceptions; **(S7)** routes the invoked run() result (normal or exception-wrapped) through `envelope_.process()` — the universal subagent-dispatch seam — before returning. Pre-run rejections (unknown/not-allowed/plan-mode) short-circuit before the seam.
+
+### ToolSubagentEnvelope.cpp
+S7 (DIS-979) implementation of the universal subagent-dispatch seam. `process()`: applies the decision hook; if it engulfs, runs the distiller hook, else returns the result unchanged. Default-constructs to `PassThroughDecider` + `IdentityDistiller` (pure pass-through). `set_decider`/`set_distiller` swap hooks, ignoring null to keep the never-null invariant. This is the one place batbox guarantees every tool result becomes a subagent result; S1 fills the decision hook, S4 the distiller hook.
 
 ### TaskStore.cpp
 `create_task()`: generates UUIDv4; sets timestamps; calls save(). `list_tasks()` and `get_task()`: call load() and filter. `update_task()`: loads, finds by id, applies optional fields, saves. `save()`: serialises vector<Task> as JSON array; writes to .tmp; renames atomically.

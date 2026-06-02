@@ -93,11 +93,13 @@ target_link_libraries(batbox_tools
 #   ListPeersTool.cpp         (CPP 5.38) — ListPeers tool
 #   WorkflowTool.cpp          (CPP 5.39) — Workflow tool
 #   SnipTool.cpp              (CPP 5.40) — Snip tool
+#   ToolSubagentEnvelope.cpp  (S7, DIS-979) — universal subagent-dispatch seam
 # ---------------------------------------------------------------------------
 target_sources(batbox_tools
     PRIVATE
         .placeholder.cpp
         ToolRegistry.cpp
+        ToolSubagentEnvelope.cpp
         ReadTool.cpp
         WriteTool.cpp
         EditTool.cpp

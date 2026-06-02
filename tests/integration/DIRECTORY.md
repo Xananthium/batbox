@@ -47,6 +47,8 @@ Helper implementation for integration tests that need a controllable agent witho
 ### cli_smoke_helpers.hpp
 Shared helpers for CLI smoke tests: process spawn, stdout capture, fake server port allocation.
 
+### test_envelope_no_bypass.cpp — S7 (DIS-979) universal subagent-dispatch seam, end-to-end via the orchestrator: no un-wrapped path (native + MCP-shaped tools both traverse the envelope; sentinel distiller rewrites both); spy observes exactly one pass per dispatched call and zero for pre-run rejections; default envelope byte-identical; hooks swappable through `registry.envelope()`; static_assert pins the live McpTool to the same dispatch path.
+
 ### perf_probes.hpp
 Helper macros for measuring wall-clock time in performance budget tests (test_perf_budget.cpp).
 
