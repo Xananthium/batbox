@@ -412,6 +412,25 @@ public:
                                                    double   /*cost_usd*/)> cb);
 
     // -------------------------------------------------------------------------
+    // last_reasoning()  (S10 — DIS-975)
+    //
+    // The isolated reasoning text from the most recent streaming turn, merged
+    // from BOTH wire forms by the unified reasoning channel:
+    //   - the structured delta.reasoning_content field, and
+    //   - inline <think>…</think> text extracted out of delta.content.
+    //
+    // Visible output (accumulated into the assistant message and forwarded via
+    // on_delta_cb_) is guaranteed reasoning-free regardless of which form the
+    // model used; this accessor exposes the isolated reasoning so downstream
+    // consumers (the notepad, future cache-preserving distillation) can read it.
+    // Empty when the turn produced no reasoning.  Last writer (final tool-turn
+    // of run_turn) wins.
+    // -------------------------------------------------------------------------
+    [[nodiscard]] const std::string& last_reasoning() const noexcept {
+        return last_reasoning_;
+    }
+
+    // -------------------------------------------------------------------------
     // compose_system_prompt()
     //
     // Composes the final system prompt for one inference turn by merging:
@@ -508,6 +527,11 @@ private:
     // Reset only when a new Conversation object is created (not on /clear).
     uint32_t session_tokens_{0};
     double   session_cost_usd_{0.0};
+
+    // S10 (DIS-975): isolated reasoning text from the most recent streaming turn
+    // (structured reasoning_content + inline <think> text, merged).  Exposed via
+    // last_reasoning().  Overwritten each turn (last writer wins).
+    std::string last_reasoning_;
 
     // -------------------------------------------------------------------------
     // Private helpers

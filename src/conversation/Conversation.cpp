@@ -22,6 +22,8 @@
 #include <batbox/core/Result.hpp>
 #include <batbox/inference/ChatRequest.hpp>
 #include <batbox/inference/ChatResponse.hpp>
+#include <batbox/inference/Provider.hpp>             // reasoning_tags_for_config (S10)
+#include <batbox/inference/ReasoningAccumulator.hpp>  // unified reasoning channel (S10)
 #include <batbox/permissions/PermissionGate.hpp>
 #include <batbox/permissions/PermissionMode.hpp>
 #include <batbox/tools/ToolContext.hpp>
@@ -218,6 +220,20 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         return cfg_.api.api_key;
     }();
 
+    // ---- S10 (DIS-975): resolve the provider's inline reasoning-tag convention ----
+    // Sourced from the S8 provider profile (reasoning_tags_for_config → the same
+    // provider identity OpenAiCompatibleProvider::name() resolves).  The provider
+    // identity does not change mid-turn, so resolve once.  Read under cfg_mutex_
+    // for the same data-race reason as the model/api_key snapshots above.
+    const batbox::inference::ReasoningTags reasoning_tags = [&]()
+            -> batbox::inference::ReasoningTags {
+        if (cfg_mutex_ != nullptr) {
+            std::lock_guard<std::mutex> lk(*cfg_mutex_);
+            return batbox::inference::reasoning_tags_for_config(cfg_);
+        }
+        return batbox::inference::reasoning_tags_for_config(cfg_);
+    }();
+
 
     // ---- 1. Auto-compact pre-flight check (bytes/4 estimator, G9) ----
     //
@@ -369,6 +385,13 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         bool reasoning_phase_active = false;
         bool reasoning_stopped_fired = false;
 
+        // S10 (DIS-975): per-iteration unified reasoning channel.  Separates the
+        // visible (reasoning-free) text from the reasoning stream, merging the
+        // structured reasoning_content field with inline <think>…</think> text
+        // pulled out of content.  Constructed fresh each iteration because the
+        // ThinkSplitter it owns is stateful and not reusable across streams.
+        batbox::inference::ReasoningAccumulator reasoning_acc(reasoning_tags);
+
         // ---- 2. Build ChatRequest ----
         // Compose the system prompt for this turn.  The plan-mode prefix is
         // included only when the PlanMode state machine is in Planning state.
@@ -409,19 +432,31 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         // has grown with tool results; use the ChatRequest overload which rebuilds
         // and serialises the body from the updated req.
         auto on_delta_fn = [&](const batbox::inference::StreamDelta& delta) {
-                // TUI-T15: Detect the start of the reasoning phase.
-                // Fire on_reasoning_started_cb_ the first time reasoning_content
-                // arrives so InputBar can show "· thinking..." in the status row.
-                if (delta.reasoning_content.has_value() && !reasoning_phase_active) {
+                // S10 (DIS-975): route the delta through the unified reasoning
+                // channel.  This isolates reasoning whether the model emitted it
+                // as the structured reasoning_content field OR inline
+                // <think>…</think> inside content, and returns ONLY the
+                // reasoning-free visible text.  The wire layer (Client/SSE/retry)
+                // is untouched — this is a transform over the delta stream.
+                const std::size_t reasoning_before = reasoning_acc.reasoning().size();
+                const std::string visible = reasoning_acc.accumulate(delta);
+                const bool reasoning_grew =
+                    reasoning_acc.reasoning().size() > reasoning_before;
+
+                // TUI-T15: Detect the start of the reasoning phase.  Reasoning now
+                // starts on the first reasoning text from EITHER source (structured
+                // field or an inline think block) so the "· thinking..." indicator
+                // fires for inline-tag models too.
+                if (reasoning_grew && !reasoning_phase_active) {
                     reasoning_phase_active = true;
                     if (on_reasoning_started_cb_) {
                         on_reasoning_started_cb_();
                     }
                 }
 
-                // Accumulate content tokens.
-                if (delta.content.has_value() && !delta.content->empty()) {
-                    // TUI-T15: First content chunk ends the reasoning phase.
+                // Emit the visible (reasoning-free) text.
+                if (!visible.empty()) {
+                    // TUI-T15: First VISIBLE content ends the reasoning phase.
                     // Fire on_reasoning_stopped_cb_ exactly once per iteration.
                     if (reasoning_phase_active && !reasoning_stopped_fired) {
                         reasoning_stopped_fired = true;
@@ -430,7 +465,7 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
                         }
                     }
                     // TUI-FLOW-T3: record first-token latency on the very first
-                    // content delta of each streaming turn.
+                    // visible chunk of each streaming turn.
                     if (accumulated_content.empty() && !first_token_recorded_) {
                         first_token_recorded_ = true;
                         auto now = std::chrono::steady_clock::now();
@@ -440,9 +475,9 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
                         batbox::perf::g_perf.set_first_token_ms(ms);
                         logger->info("[perf] first_token={}ms", ms);
                     }
-                    accumulated_content += *delta.content;
+                    accumulated_content += visible;
                     if (on_delta_cb_) {
-                        on_delta_cb_(*delta.content);
+                        on_delta_cb_(visible);
                     }
                 }
                 // Feed tool_call deltas to the orchestrator.
@@ -503,6 +538,31 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
 
         if (!stream_res) {
             return batbox::Err(stream_res.error());
+        }
+
+        // S10 (DIS-975): flush the reasoning channel at end of stream.  Any
+        // buffered partial-tag tail is drained — an UNCLOSED inline <think> block
+        // becomes reasoning; trailing look-alike text becomes visible.  Emit any
+        // final visible text the splitter was holding back, then expose the
+        // turn's isolated reasoning for downstream consumers (notepad / future
+        // distillation).  Last writer (final tool-turn) wins.
+        {
+            const std::string tail_visible = reasoning_acc.finish();
+            if (!tail_visible.empty()) {
+                if (reasoning_phase_active && !reasoning_stopped_fired) {
+                    reasoning_stopped_fired = true;
+                    if (on_reasoning_stopped_cb_) {
+                        on_reasoning_stopped_cb_();
+                    }
+                }
+                accumulated_content += tail_visible;
+                if (on_delta_cb_) {
+                    on_delta_cb_(tail_visible);
+                }
+            }
+            if (reasoning_acc.has_reasoning()) {
+                last_reasoning_ = reasoning_acc.reasoning();
+            }
         }
 
         // Prefer usage from the streaming return value.

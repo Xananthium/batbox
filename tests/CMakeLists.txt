@@ -273,6 +273,27 @@ target_sources(test_tool_call_accumulator PRIVATE
     ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp)
 target_link_libraries(test_tool_call_accumulator PRIVATE simdjson::simdjson)
 
+# S10 (DIS-975) — ThinkSplitter: inline <think>…</think> visible/reasoning split
+# + the provider-profile tag convention.  ThinkSplitter and ReasoningTagProfile
+# are leaf TUs that depend only on ThinkSplitter.hpp + the standard library
+# (no cpr / simdjson), so this test links neither.
+batbox_add_unit_test(test_think_splitter
+    unit/test_think_splitter.cpp  batbox_core)
+target_sources(test_think_splitter PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/inference/ThinkSplitter.cpp
+    ${PROJECT_SOURCE_DIR}/src/inference/ReasoningTagProfile.cpp)
+
+# S10 (DIS-975) — ReasoningAccumulator: the unified isolated reasoning channel.
+# Compiles ReasoningAccumulator.cpp + ThinkSplitter.cpp directly (same pattern as
+# test_tool_call_accumulator).  Links simdjson because ChatResponse.hpp / Json.hpp
+# pull nlohmann in on this path.
+batbox_add_unit_test(test_reasoning_accumulator
+    unit/test_reasoning_accumulator.cpp  batbox_core)
+target_sources(test_reasoning_accumulator PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/inference/ReasoningAccumulator.cpp
+    ${PROJECT_SOURCE_DIR}/src/inference/ThinkSplitter.cpp)
+target_link_libraries(test_reasoning_accumulator PRIVATE simdjson::simdjson)
+
 
 # CPP 9.1 — SessionFile: per-session JSON shape, gzip, crash recovery
 # batbox_session is an OBJECT library; link batbox_core explicitly for Uuid,

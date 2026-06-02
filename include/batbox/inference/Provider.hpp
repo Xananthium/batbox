@@ -41,6 +41,7 @@
 #include <batbox/inference/ChatRequest.hpp>
 #include <batbox/inference/ChatResponse.hpp>
 #include <batbox/inference/Client.hpp>
+#include <batbox/inference/ThinkSplitter.hpp>   // ReasoningTags (S10 provider profile)
 
 #include <functional>
 #include <memory>
@@ -151,6 +152,12 @@ public:
         return manages_own_context_;
     }
 
+    /// S10: the inline reasoning-tag convention this provider declares (the
+    /// open/close markers ThinkSplitter should scan `content` for, or "none"
+    /// when the provider uses the structured delta.reasoning_content field).
+    /// Sourced from reasoning_tags_for_provider(name()).
+    [[nodiscard]] ReasoningTags     reasoning_tags() const;
+
 private:
     const batbox::config::Config& cfg_;
     Client                        client_;
@@ -227,5 +234,20 @@ public:
 /// "always Chat Completions".
 [[nodiscard]] bool should_use_responses_api(std::string_view provider_name,
                                             std::string_view model) noexcept;
+
+// ============================================================================
+// reasoning_tags_for_config — S10 profile (Config convenience)
+// ============================================================================
+//
+// reasoning_tags_for_provider(std::string_view) is declared in ThinkSplitter.hpp
+// (the dependency-light header) and defined in ReasoningTagProfile.cpp.  The
+// Config-level convenience below resolves the provider identity first, so the
+// streaming delta path can build a ReasoningAccumulator straight from Config.
+
+/// Convenience: resolve the provider identity for @p cfg (same rule as
+/// OpenAiCompatibleProvider::name()) and return its reasoning-tag convention.
+/// This is the seam the streaming delta path (Conversation) uses to construct a
+/// correctly-configured ReasoningAccumulator from the live Config.
+[[nodiscard]] ReasoningTags reasoning_tags_for_config(const batbox::config::Config& cfg);
 
 } // namespace batbox::inference
