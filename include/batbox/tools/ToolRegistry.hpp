@@ -25,6 +25,7 @@
 #include <batbox/tools/ITool.hpp>
 #include <batbox/tools/ToolContext.hpp>
 #include <batbox/tools/ToolResult.hpp>
+#include <batbox/tools/ToolSubagentEnvelope.hpp>
 
 #include <memory>
 #include <optional>
@@ -133,16 +134,41 @@ public:
     /// Errors thrown by ITool::run() are caught and converted to
     /// ToolResult::error so the model can self-correct; they do NOT propagate
     /// as C++ exceptions.
+    ///
+    /// Subagent-dispatch seam (S7): once a tool's run() is invoked, the
+    /// resulting ToolResult — whether returned normally or synthesized from a
+    /// thrown exception — is routed through this registry's ToolSubagentEnvelope
+    /// before being returned.  This is the single, unbypassable boundary at
+    /// which every tool result becomes a subagent result.  The pre-run gates
+    /// above (unknown tool, allowed_tools, plan-mode) short-circuit before any
+    /// result exists and therefore do not traverse the envelope.  With the S7
+    /// default (pass-through) hooks the envelope is a no-op and dispatch behaves
+    /// byte-identically to pre-S7.
     [[nodiscard]] Result<ToolResult, std::string> dispatch(
         std::string_view name,
         const Json&      args,
         ToolContext&     ctx);
+
+    // -------------------------------------------------------------------------
+    // Subagent-dispatch envelope (S7)
+    // -------------------------------------------------------------------------
+
+    /// Mutable access to the envelope every dispatched result flows through.
+    /// Hooks are installed here (e.g. by App::init or by tests) before
+    /// concurrent dispatch begins; see ToolSubagentEnvelope::set_decider /
+    /// set_distiller.  S1 fills the decision hook, S4 fills the distiller hook,
+    /// without touching dispatch() itself.
+    [[nodiscard]] ToolSubagentEnvelope&       envelope()       noexcept { return envelope_; }
+    [[nodiscard]] const ToolSubagentEnvelope& envelope() const noexcept { return envelope_; }
 
 private:
     // Insertion-order list for schema export (preserves registration order).
     std::vector<std::string>                              insertion_order_;
     // Name → owned tool.
     std::unordered_map<std::string, std::unique_ptr<ITool>> tools_;
+    // The universal subagent-dispatch seam.  Default-constructed to pure
+    // pass-through (PassThroughDecider + IdentityDistiller) so S7 is a no-op.
+    ToolSubagentEnvelope                                  envelope_;
 };
 
 } // namespace batbox::tools

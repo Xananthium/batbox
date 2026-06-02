@@ -35,6 +35,7 @@ All test files follow the naming convention `test_<component>.cpp`. Tests are re
 ### test_input_bar_segments.cpp — InputBar segment vector flatten/reconstruct
 ### test_input_bar.cpp — InputBar autocomplete popup and VimMode integration
 ### test_input_queue.cpp — InputQueue depth/empty/flatten_entry
+### test_tool_subagent_envelope.cpp — ToolSubagentEnvelope (S7): default pass-through; decision hook gates the distiller; swappable hooks; null-hook fallback / never-null invariant
 
 ### CMakeLists.txt
 Links unit test binary against all batbox static libraries; registers with CTest.

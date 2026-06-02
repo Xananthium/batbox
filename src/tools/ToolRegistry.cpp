@@ -121,19 +121,28 @@ Result<ToolResult, std::string> ToolRegistry::dispatch(
     }
 
     // 4. Call run(); catch all exceptions and convert to ToolResult::error so
-    //    the model can self-correct rather than crashing the session.
+    //    the model can self-correct rather than crashing the session.  The
+    //    exception-to-error wrapping below is byte-identical to pre-S7.
+    ToolResult tr;
     try {
-        ToolResult tr = tool->run(args, ctx);
-        return tr;
+        tr = tool->run(args, ctx);
     } catch (const std::exception& ex) {
-        return ToolResult::error(
+        tr = ToolResult::error(
             std::string{"ToolRegistry::dispatch: tool \""} + std::string{name}
             + "\" threw an exception: " + ex.what());
     } catch (...) {
-        return ToolResult::error(
+        tr = ToolResult::error(
             std::string{"ToolRegistry::dispatch: tool \""} + std::string{name}
             + "\" threw an unknown exception");
     }
+
+    // 5. Subagent-dispatch seam (S7): route the result of the invoked run()
+    //    through the envelope.  This is the single, unbypassable boundary where
+    //    every tool result — native or MCP, success or error — becomes a
+    //    subagent result.  With the S7 default pass-through hooks this returns
+    //    `tr` unchanged (byte-identical to pre-S7); S1+S4 fill the hooks later
+    //    without re-touching this function.
+    return envelope_.process(name, args, std::move(tr), ctx);
 }
 
 } // namespace batbox::tools
