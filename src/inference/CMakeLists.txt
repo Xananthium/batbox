@@ -43,6 +43,7 @@ target_sources(batbox_inference
         ChatRequest.cpp
         Client.cpp
         Provider.cpp
+        CanonicalModel.cpp
         SseParser.cpp
         ToolCallAccumulator.cpp
         UsageTracker.cpp

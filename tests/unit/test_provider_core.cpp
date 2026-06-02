@@ -12,6 +12,9 @@
 //      and is idempotent: f(f(x)) == f(x).
 //   5. should_use_responses_api returns the documented value (always false —
 //      batbox speaks only Chat Completions today).
+//   6. map_to_canonical_model is wired into ModelPricing::cost as a fallback:
+//      prefixed/tagged/mixed-case ids resolve to the priced entry, raw hits
+//      and genuine unknowns are unchanged (scope-#4).
 //
 // Hermetic: NO network calls.  Only construction / metadata / pure-function
 // normalisation are exercised — never a live chat()/stream_chat().
@@ -21,6 +24,7 @@
 #include <doctest/doctest.h>
 
 #include <batbox/inference/Provider.hpp>
+#include <batbox/inference/ModelPricing.hpp>
 #include <batbox/config/Config.hpp>
 
 #include <memory>
@@ -191,3 +195,49 @@ TEST_SUITE("should_use_responses_api") {
     }
 
 } // TEST_SUITE should_use_responses_api
+
+// ===========================================================================
+// TEST SUITE: canonical-name wiring into ModelPricing (scope-#4)
+// ---------------------------------------------------------------------------
+// map_to_canonical_model is wired into ModelPricing::cost as a fallback: the
+// raw model id is looked up first (existing behaviour, no regression), and on
+// a miss the canonicalised id is tried.  These cases prove the seam is
+// load-bearing — provider-prefixed / tag-suffixed / mixed-case ids now resolve
+// to the same priced entry, while raw hits and genuine unknowns are unchanged.
+// ===========================================================================
+
+TEST_SUITE("ModelPricing canonical wiring") {
+
+    using batbox::inference::ModelPricing;
+
+    // gpt-4o: 2.50 / 10.00 per million → 1000 prompt + 500 completion
+    //   = (1000*2.50 + 500*10.00)/1e6 = (2500 + 5000)/1e6 = 0.0075
+    static constexpr double kGpt4oCost = 0.0075;
+
+    TEST_CASE("raw id still resolves unchanged (AC6 no-regression)") {
+        ModelPricing::reset_for_testing();
+        CHECK(ModelPricing::cost("gpt-4o", 1000, 500) == doctest::Approx(kGpt4oCost));
+    }
+
+    TEST_CASE("provider-prefixed id resolves via canonical fallback") {
+        ModelPricing::reset_for_testing();
+        CHECK(ModelPricing::cost("openai/gpt-4o", 1000, 500)
+              == doctest::Approx(kGpt4oCost));
+    }
+
+    TEST_CASE("tag-suffixed + mixed-case ids resolve via canonical fallback") {
+        ModelPricing::reset_for_testing();
+        CHECK(ModelPricing::cost("gpt-4o:latest", 1000, 500)
+              == doctest::Approx(kGpt4oCost));
+        CHECK(ModelPricing::cost("OpenAI/GPT-4o", 1000, 500)
+              == doctest::Approx(kGpt4oCost));
+    }
+
+    TEST_CASE("genuinely unknown model still returns 0.0") {
+        ModelPricing::reset_for_testing();
+        CHECK(ModelPricing::cost("no-such-model-xyz", 1000, 500) == 0.0);
+        // Canonicalises to a still-unknown id — must not spuriously price.
+        CHECK(ModelPricing::cost("acme/no-such-model-xyz:v2", 1000, 500) == 0.0);
+    }
+
+} // TEST_SUITE ModelPricing canonical wiring

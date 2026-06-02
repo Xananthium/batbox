@@ -401,7 +401,10 @@ batbox_add_unit_test(test_usage_tracker
     unit/test_usage_tracker.cpp  batbox_core)
 target_sources(test_usage_tracker PRIVATE
     ${PROJECT_SOURCE_DIR}/src/inference/UsageTracker.cpp
-    ${PROJECT_SOURCE_DIR}/src/inference/ModelPricing.cpp)
+    ${PROJECT_SOURCE_DIR}/src/inference/ModelPricing.cpp
+    # ModelPricing::cost() falls back to map_to_canonical_model on a raw miss;
+    # CanonicalModel.cpp is the leaf TU that defines it (no Provider/cpr deps).
+    ${PROJECT_SOURCE_DIR}/src/inference/CanonicalModel.cpp)
 target_link_libraries(test_usage_tracker PRIVATE simdjson::simdjson)
 
 # CPP 5.15 — TodoWriteTool: per-session todo list management

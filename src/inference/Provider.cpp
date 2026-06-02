@@ -141,43 +141,10 @@ std::unique_ptr<Provider> ProviderRegistry::create(
 }
 
 // ---------------------------------------------------------------------------
-// map_to_canonical_model
+// map_to_canonical_model — defined in CanonicalModel.cpp (kept in its own leaf
+// TU so light consumers like ModelPricing.cpp can link the symbol without the
+// Provider/Client/cpr chain).  Declared in Provider.hpp.
 // ---------------------------------------------------------------------------
-
-std::string map_to_canonical_model(std::string_view raw) {
-    // 1. Trim surrounding ASCII whitespace.
-    std::size_t begin = 0;
-    std::size_t end   = raw.size();
-    auto is_ws = [](unsigned char c) {
-        return c == ' ' || c == '\t' || c == '\n' || c == '\r'
-            || c == '\f' || c == '\v';
-    };
-    while (begin < end && is_ws(static_cast<unsigned char>(raw[begin])))   ++begin;
-    while (end > begin && is_ws(static_cast<unsigned char>(raw[end - 1]))) --end;
-    std::string_view s = raw.substr(begin, end - begin);
-
-    if (s.empty()) {
-        return std::string{};
-    }
-
-    // 2. Strip leading "<vendor>/" prefix segment(s): keep only the final
-    //    '/'-segment.  "openai/gpt-4o" → "gpt-4o"; "a/b/c" → "c".  Using the
-    //    LAST segment (not just dropping the first) makes this a fixed point so
-    //    the function is idempotent.  A trailing '/' is ignored (no empty tail).
-    if (const std::size_t slash = s.rfind('/');
-        slash != std::string_view::npos && slash + 1 < s.size()) {
-        s = s.substr(slash + 1);
-    }
-
-    // 3. Strip a trailing ":tag" deployment suffix (Ollama/Together style).
-    //    "llama3.2:3b-cloud" → "llama3.2"; "qwen2.5:latest" → "qwen2.5".
-    if (const std::size_t colon = s.find(':'); colon != std::string_view::npos) {
-        s = s.substr(0, colon);
-    }
-
-    // 4. Lowercase the result.
-    return to_lower_copy(s);
-}
 
 // ---------------------------------------------------------------------------
 // should_use_responses_api

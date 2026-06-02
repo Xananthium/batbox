@@ -37,6 +37,11 @@
 
 namespace batbox::inference {
 
+// Defined in Provider.hpp (src/inference/Provider.cpp).  Forward-declared here
+// rather than #include'd so the pricing TU does not pull in the full
+// Provider/Client/Config/cpr include chain for a single free function.
+std::string map_to_canonical_model(std::string_view raw);
+
 // =============================================================================
 // Embedded pricing table — content of data/models.json
 // =============================================================================
@@ -271,9 +276,17 @@ double ModelPricing::cost(std::string_view model,
                            int completion_tokens) {
     const PriceTable& table = get_table();
 
-    const auto it = table.find(std::string(model));
+    auto it = table.find(std::string(model));
     if (it == table.end()) {
-        return 0.0;  // Unknown model — zero cost.
+        // Raw id missed — retry under the canonical normalisation so that
+        // provider-prefixed / tag-suffixed / mixed-case ids
+        // (e.g. "openai/gpt-4o", "gpt-4o:latest", "GPT-4O") resolve to the
+        // same priced entry.  Fallback-only: a raw hit above is never touched,
+        // so this can never regress an existing successful lookup.
+        it = table.find(map_to_canonical_model(model));
+        if (it == table.end()) {
+            return 0.0;  // Unknown model — zero cost.
+        }
     }
 
     const PriceEntry& pe = it->second;

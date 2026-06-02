@@ -1,6 +1,6 @@
 # include/batbox/inference
 
-OpenAI-compatible inference client headers: request/response types, streaming SSE parser, tool call accumulator, and usage tracking.
+OpenAI-compatible inference client headers: request/response types, streaming SSE parser, tool call accumulator, usage tracking, and the provider abstraction (S8/S9) that wraps the client behind a polymorphic interface.
 
 ## Files
 
@@ -27,8 +27,22 @@ HTTP client wrapping cpr for the inference endpoint.
 ### ModelPricing.hpp
 Static model cost lookup table.
 
-- `ModelPricing::cost(model, prompt_tokens, completion_tokens) -> double` — looks up model in the pricing table (loaded from data/models.json); returns USD cost; returns 0.0 for unknown models
+- `ModelPricing::cost(model, prompt_tokens, completion_tokens) -> double` — looks up model in the pricing table (loaded from data/models.json); on a raw miss, retries under `map_to_canonical_model` so prefixed/tagged/mixed-case ids resolve; returns USD cost; returns 0.0 for unknown models
 - `ModelPricing::reset_for_testing()` — clears the cached pricing table; used in unit tests to force reload
+
+### Provider.hpp
+S8/S9 provider abstraction — a polymorphic seam *around* the existing `Client` (composition, not rewrite; all HTTP/retry/quirk handling stays in `Client`).
+
+- `ProviderMetadata` — static provider identity: canonical `name`, `base_url`, human-readable `description`
+- `Provider` — pure-virtual interface; method surface mirrors `Client` so call-sites migrate without signature churn
+  - `Provider::chat(req) -> Result<ChatResponse>` — non-streaming completion (pure virtual)
+  - `Provider::stream_chat(req, on_delta, ct) -> Result<UsageDelta>` — SSE streaming completion (pure virtual)
+  - `Provider::name() / metadata()` — provider identity accessors (pure virtual)
+  - `Provider::manages_own_context() -> bool` — S9 hook; default `false` (batbox owns the window and runs compaction); a backend that owns its own window overrides to `true` so batbox compaction stands down
+- `OpenAiCompatibleProvider` — the one concrete `Provider` (final) for every OpenAI-compatible endpoint; owns a `Client` and delegates all HTTP to it; ctor flag `manages_own_context` exposes the S9 opt-out
+- `ProviderRegistry::create(cfg, manages_own_context=false) -> unique_ptr<Provider>` — factory; resolves the provider from `Config` (today always an `OpenAiCompatibleProvider`); the single seam where a future non-compatible provider branches in
+- `map_to_canonical_model(raw) -> std::string` — deterministic, idempotent model-id normaliser (trim → keep last `/`-segment → strip trailing `:tag` → lowercase); used for pricing lookup / display / capability gating
+- `should_use_responses_api(provider_name, model) -> bool` — Chat-Completions vs Responses-API routing seam; always `false` today (batbox speaks only Chat Completions)
 
 ### SseParser.hpp
 Streaming SSE (Server-Sent Events) line parser.
