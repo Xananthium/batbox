@@ -70,8 +70,10 @@ void fill_random(std::array<std::uint8_t, 16>& buf) {
     if (got == static_cast<ssize_t>(buf.size())) {
         return;
     }
-    // Unexpected short read or error — fall through to /dev/urandom
-    [[fallthrough]];
+    // Unexpected short read or error — fall through to the /dev/urandom block
+    // below. (No [[fallthrough]] attribute: this is plain control flow, not a
+    // switch case; on Linux BATBOX_HAS_ARC4RANDOM is undefined so the next
+    // #if block is compiled in and execution continues into it.)
 
 #endif
 
@@ -81,9 +83,9 @@ void fill_random(std::array<std::uint8_t, 16>& buf) {
     if (!f) {
         throw std::runtime_error("batbox::Uuid::v4(): cannot open /dev/urandom");
     }
-    std::size_t got = std::fread(buf.data(), 1, buf.size(), f);
+    std::size_t n_read = std::fread(buf.data(), 1, buf.size(), f);
     std::fclose(f);
-    if (got != buf.size()) {
+    if (n_read != buf.size()) {
         throw std::runtime_error("batbox::Uuid::v4(): short read from /dev/urandom");
     }
 #endif

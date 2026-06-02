@@ -30,6 +30,7 @@
 #include <batbox/core/Result.hpp>
 
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
