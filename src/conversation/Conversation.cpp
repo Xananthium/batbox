@@ -269,6 +269,17 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         return notepad.reinjection_slice(key);
     };
 
+    // S5 (DIS-983): the pad reference cited in compaction tombstones — the path
+    // of the SAME pad notepad_slice re-injects, keyed identically (session_id
+    // else agent_id else "default"). Evaluated lazily so it reflects session_id_
+    // at the point of compaction (which may be set later in this run_turn).
+    auto notepad_ref = [this]() -> std::string {
+        batbox::tools::NotepadStore notepad;
+        const std::string key =
+            batbox::tools::NotepadStore::session_key(session_id_, std::string{});
+        return notepad.pad_path(key).string();
+    };
+
     std::string preflight_body_str;
     {
         // Determine the resolved context length for this turn.
@@ -331,20 +342,28 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         logger_cw->debug("ctx-budget: est={}tok threshold={}tok ctx_len={}tok pct={}%",
                          est, threshold, resolved_ctx_len, pct);
 
-        if (est >= threshold) {
-            // Attempt compaction.
+        // S5 (DIS-983): gate compaction on the S9 stand-down rule — skip
+        // entirely when the active provider manages its own context window.
+        if (batbox::conversation::compaction_should_run(est >= threshold,
+                                                        manages_own_context_)) {
+            // S5: the sink is the NOTEPAD, not an LLM summary. Structurally
+            // prune the raw tool-output bodies in the head to tombstones that
+            // cite the working pad (where the S1 distiller + S6 agent already
+            // wrote the gold); the protected tail stays verbatim. No network
+            // call — deterministic and authored.
             Compactor compactor{cfg_.compact.keep_last_n_turns_verbatim};
-            auto [child_src, child_tok] = ct.child();
-            try {
-                auto compact_res = compactor.compact(messages_, client_,
-                                                      std::move(child_tok));
-                if (!compact_res) {
-                    return batbox::Err(compact_res.error());
-                }
-                messages_ = std::move(compact_res.value());
-            } catch (const batbox::CancelledException&) {
-                return batbox::Err(std::string("cancelled"));
+            const std::size_t before_n = messages_.size();
+            auto compact_res =
+                compactor.compact_to_notepad(messages_, notepad_ref());
+            if (!compact_res) {
+                return batbox::Err(compact_res.error());
             }
+            messages_ = std::move(compact_res.value());
+            logger_cw->warn(
+                "ctx-compact (proactive): est={}tok >= threshold={}tok — "
+                "pruned head tool-output to notepad ({} msgs, last {} verbatim)",
+                est, threshold, before_n,
+                cfg_.compact.keep_last_n_turns_verbatim);
 
             // Rebuild preflight_body_str after compaction so iteration 0 uses the compacted wire body.
             batbox::inference::ChatRequest post_compact_req =
@@ -363,6 +382,14 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
             preflight_body_str.clear();
             preflight_body_str.reserve(4096);
             batbox::inference::to_wire_string(post_compact_req, preflight_body_str);
+        } else if (est >= threshold && manages_own_context_) {
+            // S5 (DIS-983) AC5: stand-down. The gate would fire, but the active
+            // provider owns its own context window — batbox does not double-
+            // manage it. Skip compaction; log so the path is observable.
+            logger_cw->warn(
+                "ctx-compact: stand-down — provider manages own context; "
+                "skipping compaction (est={}tok threshold={}tok)",
+                est, threshold);
         }
     }
 
@@ -380,6 +407,12 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
     std::string                   accumulated_content;
     std::string                   finish_reason;
     batbox::inference::UsageDelta usage;
+
+    // S5 (DIS-983) AC1: one-shot reactive overflow retry guard. If an endpoint
+    // loudly rejects the prompt as too large, we compact and retry the turn
+    // EXACTLY once; a second overflow surfaces as a normal error. The single
+    // shot is what prevents the "compact, resend still-too-big, loop" failure.
+    bool overflow_retry_used = false;
 
     // ---- Tool-call loop ----
     // Iterates until finish_reason != "tool_calls", or k_max_tool_turns reached.
@@ -566,6 +599,32 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         // stream_src goes out of scope here; streaming is complete.
 
         if (!stream_res) {
+            // S5 (DIS-983) AC1: reactive cross-provider overflow handling.
+            // Normalise the loud "prompt exceeds context window" errors the
+            // OpenAI-compatible endpoints return into one typed signal; on that
+            // signal compact HARD (notepad sink) and retry the turn once. Stands
+            // down (AC5) when the provider owns its own window. Any non-overflow
+            // error — or a second overflow — stays a normal error.
+            if (!overflow_retry_used
+                    && !manages_own_context_
+                    && batbox::inference::is_overflow_error(stream_res.error())) {
+                overflow_retry_used = true;
+                logger->warn(
+                    "ctx-overflow (reactive): provider rejected prompt as too "
+                    "large [{}] — compacting to notepad and retrying once",
+                    stream_res.error());
+                Compactor compactor{cfg_.compact.keep_last_n_turns_verbatim};
+                auto compact_res =
+                    compactor.compact_to_notepad(messages_, notepad_ref());
+                if (compact_res) {
+                    messages_ = std::move(compact_res.value());
+                }
+                // Retry the same logical turn: the for-loop's ++tool_turn moves
+                // us off iteration 0's stale preflight_body_str onto the rebuild
+                // path (top of loop rebuilds `req` from the compacted messages_
+                // and re-applies the notepad reminder).
+                continue;
+            }
             return batbox::Err(stream_res.error());
         }
 

@@ -23,6 +23,7 @@ HTTP client wrapping cpr for the inference endpoint.
 - `Client::Client(cfg)` — constructs from ApiConfig (base_url, api_key, timeout); wires cpr session headers
 - `Client::chat(req) -> Result<ChatResponse>` — POSTs to /v1/chat/completions with req serialised as JSON; returns parsed ChatResponse or HTTP/parse error
 - `Client::stream_chat(req, on_delta, ct) -> Result<UsageDelta>` — POSTs with stream=true; calls on_delta(StreamDelta) for each SSE event; returns aggregated usage on stream end; cooperative cancellation via ct
+- `is_overflow_error(error_message) -> bool` (free fn, DIS-983 S5/AC1) — normalises the cross-provider "prompt exceeds the model's context window" errors (the Client's `"http <code>: <body-excerpt>"` strings) into one typed signal: `context_length_exceeded`, `maximum context length`, `reduce the length`, `prompt is too long`, `context window`, etc. Case-insensitive; conservative — rate-limit / auth / generic-400 / transport errors return false. Conversation reacts by compacting and retrying the turn once
 
 ### ModelPricing.hpp
 Static model cost lookup table.

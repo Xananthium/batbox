@@ -1428,6 +1428,74 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_notepad_survives_compacti
 endif()
 
 # ---------------------------------------------------------------------------
+# DIS-983 S5 — Compactor::compact_to_notepad: the notepad-sink prune.
+#   AC2 structural prune · AC3 gold-preservation · AC4 gate-holds · AC6 re-inject.
+# Network-free at runtime (the cpr chain is linked only because Compactor.cpp's
+# legacy compact() shares the TU with Client). NotepadStore.cpp added directly.
+# ---------------------------------------------------------------------------
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_compact_to_notepad.cpp)
+    add_executable(test_compact_to_notepad
+        ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_compact_to_notepad.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/NotepadStore.cpp)
+    set_target_properties(test_compact_to_notepad PROPERTIES
+        CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+    target_include_directories(test_compact_to_notepad PRIVATE
+        ${PROJECT_SOURCE_DIR}/include)
+    target_link_libraries(test_compact_to_notepad PRIVATE
+        doctest::doctest
+        batbox_conversation
+        batbox_inference
+        batbox_config
+        batbox_core
+        cpr::cpr
+        simdjson::simdjson)
+    doctest_discover_tests(test_compact_to_notepad)
+endif()
+
+# ---------------------------------------------------------------------------
+# DIS-983 S5 — AC1: cross-provider context-overflow detection.
+# is_overflow_error() lives in Client.cpp (batbox_inference).
+# ---------------------------------------------------------------------------
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_overflow_detection.cpp)
+    add_executable(test_overflow_detection
+        ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_overflow_detection.cpp)
+    set_target_properties(test_overflow_detection PROPERTIES
+        CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+    target_include_directories(test_overflow_detection PRIVATE
+        ${PROJECT_SOURCE_DIR}/include)
+    target_link_libraries(test_overflow_detection PRIVATE
+        doctest::doctest
+        batbox_inference
+        batbox_config
+        batbox_core
+        cpr::cpr
+        simdjson::simdjson)
+    doctest_discover_tests(test_overflow_detection)
+endif()
+
+# ---------------------------------------------------------------------------
+# DIS-983 S5 — AC5: S9 stand-down. compaction_should_run (Compactor.cpp) tied to
+# the real OpenAiCompatibleProvider::manages_own_context() (Provider.cpp).
+# ---------------------------------------------------------------------------
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_compaction_standdown.cpp)
+    add_executable(test_compaction_standdown
+        ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_compaction_standdown.cpp)
+    set_target_properties(test_compaction_standdown PROPERTIES
+        CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+    target_include_directories(test_compaction_standdown PRIVATE
+        ${PROJECT_SOURCE_DIR}/include)
+    target_link_libraries(test_compaction_standdown PRIVATE
+        doctest::doctest
+        batbox_conversation
+        batbox_inference
+        batbox_config
+        batbox_core
+        cpr::cpr
+        simdjson::simdjson)
+    doctest_discover_tests(test_compaction_standdown)
+endif()
+
+# ---------------------------------------------------------------------------
 # CPP 5.20 — AskUserQuestionTool: single-select, multi-select, headless mode
 # Integration test: compile AskUserQuestionTool.cpp directly.
 # Link batbox_permissions + batbox_config + simdjson for tool infrastructure.

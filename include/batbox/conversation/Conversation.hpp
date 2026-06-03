@@ -274,6 +274,26 @@ public:
     [[nodiscard]] Result<void> start_session();
 
     // -------------------------------------------------------------------------
+    // set_manages_own_context()  — S9 stand-down wiring (S5, DIS-983, AC5)
+    //
+    // Tell this Conversation whether the active provider manages its own context
+    // window (i.e. Provider::manages_own_context()).  When true, batbox stands
+    // ITS compaction down entirely — both the proactive pre-flight prune and the
+    // reactive overflow-retry prune become no-ops, so batbox does not
+    // double-manage a window the backend already owns.
+    //
+    // Defaults to false (the normal OpenAI-compatible case): batbox owns the
+    // window and runs compaction.  The construction site that builds a Provider
+    // should wire this from provider->manages_own_context().  Additive setter
+    // (no constructor churn); safe to call before run_turn().
+    // -------------------------------------------------------------------------
+    void set_manages_own_context(bool v) noexcept { manages_own_context_ = v; }
+
+    [[nodiscard]] bool manages_own_context() const noexcept {
+        return manages_own_context_;
+    }
+
+    // -------------------------------------------------------------------------
     // set_on_message_appended_cb()
     //
     // Register a callback invoked from the worker thread each time a tool-call
@@ -552,6 +572,12 @@ private:
     /// Guards so the first-token latency is only recorded once per tool-call
     /// loop iteration (reset at the top of each iteration, set on first delta).
     bool first_token_recorded_{false};
+
+    /// S9 stand-down flag (S5, DIS-983, AC5).  When true the active provider
+    /// manages its own context window, so batbox skips ALL compaction (proactive
+    /// and reactive).  Defaults false: batbox owns the window.  Set via
+    /// set_manages_own_context() from Provider::manages_own_context().
+    bool manages_own_context_{false};
 
     /// Convert messages_ to the wire format (WireMessage[]) for ChatRequest.
     /// When registry is non-null, populates req.tools with available schemas.

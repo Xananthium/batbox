@@ -207,6 +207,60 @@ bool provider_needs_quirks(const std::string& provider) noexcept {
 } // anonymous namespace
 
 // ---------------------------------------------------------------------------
+// is_overflow_error — cross-provider context-overflow detection (S5, DIS-983)
+// ---------------------------------------------------------------------------
+//
+// Ported in shape from opencode provider/error.ts:isOverflow.  The Client
+// surfaces every non-2xx response as the string "http <code>: <body-excerpt>"
+// (see chat()/stream_chat below), so the overflow signal lives in that excerpt.
+// We lower-fold once and match a curated set of overflow signatures shared
+// across the OpenAI-compatible endpoints batbox targets:
+//
+//   openai / groq / kimi / deepseek : "context_length_exceeded",
+//                                      "maximum context length (is)"
+//   vllm / llama-cpp                 : "maximum context length",
+//                                      "please reduce the length of the messages"
+//   anthropic-shaped gateways        : "prompt is too long",
+//                                      "input length and max_tokens exceed context"
+//   generic                          : "context window", "reduce the length",
+//                                      "exceeds the context", "too many tokens"
+//
+// Deliberately conservative: a 429 rate-limit, a 401 auth error, or a generic
+// 400 validation failure does NOT match, so it stays a normal error (AC1).
+bool is_overflow_error(std::string_view error_message) noexcept {
+    // Lower-fold into a local buffer (string_view → owned, ASCII fold only).
+    std::string m;
+    m.reserve(error_message.size());
+    for (char c : error_message) {
+        m.push_back(static_cast<char>(
+            std::tolower(static_cast<unsigned char>(c))));
+    }
+
+    auto has = [&m](std::string_view needle) noexcept {
+        return m.find(needle) != std::string::npos;
+    };
+
+    // Canonical OpenAI-family error code (most providers echo it verbatim).
+    if (has("context_length_exceeded")) return true;
+    if (has("context_window_exceeded")) return true;
+
+    // Phrasing variants across providers.
+    if (has("maximum context length"))  return true;   // openai/vllm
+    if (has("maximum context"))         return true;   // "exceeds the model's maximum context"
+    if (has("context window"))          return true;   // generic
+    if (has("reduce the length"))       return true;   // openai/vllm "please reduce the length"
+    if (has("exceeds the context"))     return true;
+    if (has("exceed context"))          return true;
+    if (has("exceeds context"))         return true;
+    if (has("prompt is too long"))      return true;   // anthropic-shaped
+    if (has("input is too long"))       return true;
+    if (has("too many tokens"))         return true;
+    if (has("exceed context limit"))    return true;   // anthropic "max_tokens exceed context limit"
+
+    return false;
+}
+
+// ---------------------------------------------------------------------------
 // Construction
 // ---------------------------------------------------------------------------
 

@@ -121,6 +121,64 @@ Compactor::compact(const std::vector<Message>& msgs,
 }
 
 // =============================================================================
+// compact_to_notepad()  — THE SINK (S5, DIS-983)
+//
+// Network-free structural prune.  Head Role::Tool bodies → tombstones citing
+// the notepad; head User/Assistant text kept verbatim; tail kept verbatim.
+// =============================================================================
+
+Result<std::vector<Message>>
+Compactor::compact_to_notepad(const std::vector<Message>& msgs,
+                              const std::string&          notepad_ref) const
+{
+    const int total = static_cast<int>(msgs.size());
+
+    // Determine the split point: tail_start == first message kept verbatim.
+    const int tail_start = std::max(0, total - keep_last_n_);
+
+    // Nothing to prune (head is empty) → return unchanged, no-op.
+    if (tail_start == 0) {
+        return msgs;
+    }
+
+    std::vector<Message> out;
+    out.reserve(msgs.size());
+
+    int pruned_count = 0;
+
+    // ---- Head: prune raw tool-output bodies to tombstones. ----
+    for (int i = 0; i < tail_start; ++i) {
+        Message m = msgs[static_cast<std::size_t>(i)];  // copy (preserve ids/ts)
+
+        if (m.role == Role::Tool) {
+            const std::size_t original_bytes = m.content.size();
+            const std::string tool_name =
+                m.tool_name.value_or(std::string{"(unknown)"});
+            // Replace ONLY the body; keep role + tool_call_id + tool_name so the
+            // assistant↔tool wire pairing remains valid after the prune.
+            m.content = make_tombstone(tool_name, original_bytes, notepad_ref);
+            ++pruned_count;
+        }
+        // User / Assistant (and any System) text turns: kept verbatim.
+
+        out.push_back(std::move(m));
+    }
+
+    // ---- Tail: preserve verbatim. ----
+    for (int i = tail_start; i < total; ++i) {
+        out.push_back(msgs[static_cast<std::size_t>(i)]);
+    }
+
+    // Fire the status callback.
+    if (on_status_) {
+        const int verbatim_count = total - tail_start;  // tail size
+        on_status_(format_notepad_status_note(total, pruned_count, verbatim_count));
+    }
+
+    return out;
+}
+
+// =============================================================================
 // build_summary_request_messages()
 //
 // Wire layout:
@@ -180,6 +238,58 @@ std::string Compactor::format_status_note(int total_turns,
          + " summary + "
          + std::to_string(verbatim_count)
          + " recent";
+}
+
+// =============================================================================
+// format_notepad_status_note()  — observability for the notepad-sink path (AC7)
+// =============================================================================
+
+/*static*/
+std::string Compactor::format_notepad_status_note(int total_turns,
+                                                  int pruned_count,
+                                                  int verbatim_count)
+{
+    return "context compacted: "
+         + std::to_string(total_turns)
+         + " turns \xE2\x86\x92 "   // UTF-8 → (U+2192)
+         + std::to_string(pruned_count)
+         + " pruned to notepad + "
+         + std::to_string(verbatim_count)
+         + " recent verbatim";
+}
+
+// =============================================================================
+// make_tombstone()  — the marker left in place of a pruned tool-result body
+// =============================================================================
+
+/*static*/
+std::string Compactor::make_tombstone(const std::string& tool_name,
+                                      std::size_t        original_bytes,
+                                      const std::string& notepad_ref)
+{
+    // Faithful to AC3: records WHAT was dropped and WHERE the gold lives.
+    std::string t = "[batbox-compacted] tool result '";
+    t += tool_name;
+    t += "' (";
+    t += std::to_string(original_bytes);
+    t += " bytes) pruned from context during compaction.";
+    if (!notepad_ref.empty()) {
+        t += " If distilled, its gold persists in the working notepad: ";
+        t += notepad_ref;
+        t += ".";
+    }
+    t += " (raw remains in the on-disk session transcript.)";
+    return t;
+}
+
+// =============================================================================
+// compaction_should_run()  — S9 stand-down gate (AC5)
+// =============================================================================
+
+bool compaction_should_run(bool gate_needs_compact,
+                           bool provider_manages_own_context) noexcept
+{
+    return gate_needs_compact && !provider_manages_own_context;
 }
 
 } // namespace batbox::conversation
