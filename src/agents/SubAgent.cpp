@@ -153,6 +153,15 @@ std::string SubAgent::last_result() const {
 }
 
 // =============================================================================
+// set_quiescence_hook_for_test() — install the DIS-1001 quiescence seam
+// =============================================================================
+
+void SubAgent::set_quiescence_hook_for_test(std::function<void()> hook) {
+    std::lock_guard<std::mutex> lock{test_hook_mutex_};
+    quiescence_hook_for_test_ = std::move(hook);
+}
+
+// =============================================================================
 // terminate_interrogations() — close the channel on run-loop exit (AC5)
 //
 // Called by the run loop's RAII reaper on EVERY exit path (normal return,
@@ -447,6 +456,21 @@ void SubAgent::run(std::stop_token /*st*/) {
             // Quiescent: no pending peer messages.  Build the result summary.
             // -----------------------------------------------------------------
             const bool standing = standing_.load(std::memory_order_acquire);
+
+            // DIS-1001 test seam: fire AFTER `standing` is cached but BEFORE we act
+            // on it, so a racing promote() can set standing_=true (too late for the
+            // cached read) and observe this agent as `running` at its step 1, while
+            // this loop still commits to the closed exit it already decided on.
+            // Null in production (one mutex-guarded copy per quiescence).
+            {
+                std::function<void()> qhook;
+                {
+                    std::lock_guard<std::mutex> lock{test_hook_mutex_};
+                    qhook = quiescence_hook_for_test_;
+                }
+                if (qhook) qhook();
+            }
+
             std::string summary;
             {
                 std::lock_guard<std::mutex> lock{snapshot_mutex_};

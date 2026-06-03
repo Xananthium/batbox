@@ -32,6 +32,7 @@
 #include <batbox/core/CancelToken.hpp>
 
 #include <cstddef>
+#include <functional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -242,6 +243,33 @@ public:
     /// concurrently with spawn(); the stored Config must outlive its agents
     /// (it is copied into the supervisor).
     void set_agent_config(const batbox::config::Config& cfg);
+
+    // =========================================================================
+    // Test-only introspection / fault-injection (DIS-1001).
+    //
+    // These exist to deterministically exercise the promote() / natural-exit
+    // TOCTOU on the standing slot pool.  They are NOT part of the production
+    // contract: production code never calls them and the hook is null by default
+    // (one predictable null-check per promote()).
+    // =========================================================================
+
+    /// Count currently-available semaphore permits by acquiring all of them and
+    /// immediately releasing them back.  ONLY valid when the supervisor is
+    /// quiescent (no agent acquiring/releasing concurrently) — used to assert the
+    /// slot pool was neither over- nor under-released after a promote/exit race.
+    [[nodiscard]] std::size_t available_slots_for_test();
+
+    /// Install a hook invoked inside promote() AFTER step 1 (mark-standing under
+    /// agents_mutex) and BEFORE step 2 (register in the LRU pool under
+    /// standing_mutex).  A test sets this to drive the promoted agent to a
+    /// terminal exit — so on_exit() runs first — and prove step 2 refuses to
+    /// re-register an already-exited agent.  Pass {} to clear.
+    void set_promote_race_hook_for_test(std::function<void()> hook);
+
+    /// Install a quiescence seam on a spawned agent (by id) — passthrough to
+    /// SubAgent::set_quiescence_hook_for_test.  No-op on an unknown handle.
+    void set_agent_quiescence_hook_for_test(std::string_view        agent_id,
+                                            std::function<void()>   hook);
 
 private:
     struct Impl;

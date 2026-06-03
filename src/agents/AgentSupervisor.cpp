@@ -161,6 +161,20 @@ struct AgentSupervisor::Impl {
     std::unordered_set<std::string>   slot_released;
     int                               max_standing{DEFAULT_STANDING_LIMIT};
 
+    // exited — ids whose on_exit() has run (DIS-1001).  Set under standing_mutex
+    // the instant an agent terminates, BEFORE promote() step 2 can register it.
+    // Because on_exit() and promote() step 2 are serialized on standing_mutex,
+    // an id present here means the closed exit already (or will) account for the
+    // slot; promote() step 2 must then REFUSE to register it, else it double-
+    // releases the slot on_exit() already returned and leaves a stale standing_lru
+    // entry.  Monotonic over the supervisor's lifetime (one id per terminated
+    // agent — a handful of UUID strings); cleared in the destructor.
+    std::unordered_set<std::string>   exited;
+
+    // Test-only fault-injection hook fired between promote() step 1 and step 2
+    // (DIS-1001).  Null in production — one predictable null-check per promote().
+    std::function<void()>             promote_race_hook;
+
     // -------------------------------------------------------------------------
     // Default Config — kept alive for the duration of this Impl so that
     // SubAgent::cfg_ (a const Config&) never becomes a dangling reference.
@@ -251,6 +265,11 @@ struct AgentSupervisor::Impl {
         bool slot_already_released = false;
         {
             std::lock_guard<std::mutex> lk(standing_mutex);
+            // DIS-1001: publish the terminal marker under standing_mutex BEFORE
+            // releasing the slot.  A promote() step 2 serialized after us will see
+            // it and refuse to register this now-dead agent (no second release, no
+            // stale standing_lru entry).
+            exited.insert(id);
             auto it = slot_released.find(id);
             if (it != slot_released.end()) {
                 slot_already_released = true;
@@ -322,6 +341,11 @@ AgentSupervisor::~AgentSupervisor() {
             }
             impl_->agents.clear();
             impl_->insertion_order.clear();
+        }
+        {
+            // Release the DIS-1001 terminal-marker set (no agent can register now).
+            std::lock_guard<std::mutex> lk(impl_->standing_mutex);
+            impl_->exited.clear();
         }
         // Destroy each SubAgent (joins its jthread) while impl_ is still alive.
         // The on_exit callbacks may fire here and access impl_->active_mutex.
@@ -491,6 +515,14 @@ void AgentSupervisor::promote(std::string_view agent_id) {
         it->second->promote();
     }
 
+    // Test-only seam (DIS-1001): between the status-checked step 1 above and the
+    // registration in step 2 below is exactly the window in which the agent's run
+    // loop — having cached standing_=false at quiescence BEFORE our step-1 store —
+    // can exit closed and fire on_exit().  The race test drives that exit here.
+    if (impl_->promote_race_hook) {
+        impl_->promote_race_hook();
+    }
+
     // 2. Register in the LRU pool.  Decide everything under standing_mutex, then
     //    act on the slot/eviction OUTSIDE it (lock-ordering invariant: never hold
     //    standing_mutex while touching agents_mutex/pending_mutex).
@@ -498,6 +530,17 @@ void AgentSupervisor::promote(std::string_view agent_id) {
     std::string victim;
     {
         std::lock_guard<std::mutex> lk(impl_->standing_mutex);
+        // DIS-1001 TOCTOU guard.  Step 1 read `running` under agents_mutex, but
+        // between that read and this critical section the agent's loop may have
+        // cached standing_=false at quiescence, exited closed, and run on_exit()
+        // — which is serialized with us on standing_mutex and marks `exited`.
+        // If it already ran, on_exit() has ALREADY accounted for the slot; adding
+        // the agent now would double-release that slot and leave a stale
+        // standing_lru entry that surfaces a `done` agent.  Refuse to register.
+        if (impl_->exited.count(id)) {
+            // Already terminal — leave the slot/LRU exactly as on_exit() left it.
+            // newly_standing stays false; no slot release, no registration.
+        } else {
         auto existing = std::find(impl_->standing_lru.begin(),
                                   impl_->standing_lru.end(), id);
         if (existing != impl_->standing_lru.end()) {
@@ -515,6 +558,7 @@ void AgentSupervisor::promote(std::string_view agent_id) {
                 victim = std::move(impl_->standing_lru.back());
                 impl_->standing_lru.pop_back();
             }
+        }
         }
     }
 
@@ -620,6 +664,37 @@ void AgentSupervisor::set_agent_config(const batbox::config::Config& cfg) {
     // Caller contract: not called concurrently with spawn() (no live agent is
     // reading default_cfg_ at this point).
     impl_->default_cfg_ = cfg;
+}
+
+// =============================================================================
+// Test-only introspection / fault-injection (DIS-1001)
+// =============================================================================
+
+std::size_t AgentSupervisor::available_slots_for_test() {
+    // Drain every available permit, then hand them all straight back.  Safe only
+    // in a quiescent supervisor (no agent acquiring/releasing concurrently): the
+    // caller guarantees that by draining all agents first.
+    std::size_t n = 0;
+    while (impl_->slots.try_acquire()) {
+        ++n;
+    }
+    for (std::size_t i = 0; i < n; ++i) {
+        impl_->slots.release();
+    }
+    return n;
+}
+
+void AgentSupervisor::set_promote_race_hook_for_test(std::function<void()> hook) {
+    impl_->promote_race_hook = std::move(hook);
+}
+
+void AgentSupervisor::set_agent_quiescence_hook_for_test(
+    std::string_view agent_id, std::function<void()> hook) {
+    std::shared_lock<std::shared_mutex> lk(impl_->agents_mutex);
+    auto it = impl_->agents.find(std::string(agent_id));
+    if (it != impl_->agents.end()) {
+        it->second->set_quiescence_hook_for_test(std::move(hook));
+    }
 }
 
 } // namespace batbox::agents

@@ -44,10 +44,13 @@
 
 #include <algorithm>
 #include <chrono>
+#include <condition_variable>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <functional>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -324,5 +327,93 @@ TEST_SUITE("StandingRegistry") {
         // The gold is STILL reachable via the re-injected pad — lossless.
         const std::string slice = pad.reinjection_slice(key);
         CHECK(slice.find("GOLD: the root cause") != std::string::npos);
+    }
+
+    // -----------------------------------------------------------------------
+    // DIS-1001 — promote() racing a natural quiescent CLOSED exit must not
+    // double-release a semaphore slot or leave a stale standing_lru entry.
+    //
+    // The race (found by Wren during the DIS-988 gate): the run loop caches
+    // standing_=false at quiescence and never re-checks it before the closed
+    // exit; promote() step 1 sets standing_=true too late; if on_exit() then
+    // runs BEFORE promote() step 2, both release the same slot and step 2 leaves
+    // a stale LRU entry for a `done` agent.
+    //
+    // We reproduce the EXACT interleaving deterministically with two seams (no
+    // sleeps): a quiescence seam pauses the agent in the "standing cached=false,
+    // status still running, closed exit committed" window; a promote seam pauses
+    // promote() between step 1 (which therefore provably sees `running`) and
+    // step 2.  We release the agent first, drain it to a full natural exit
+    // (wait_all() ⇒ on_exit() complete), THEN let step 2 proceed — forcing the
+    // on_exit-before-step2 ordering that triggers the bug.  With the fix, step 2
+    // refuses to register the now-exited agent.
+    // -----------------------------------------------------------------------
+    TEST_CASE("DIS-1001: promote racing natural quiescent-exit keeps slots+LRU consistent") {
+        const std::string script = find_fixture_script();
+        REQUIRE_FALSE(script.empty());
+        FakeServer srv;
+        REQUIRE(srv.start(script));
+        hermetic_env(srv.base_url());
+
+        AgentSupervisor sup(2);          // max_concurrent = 2
+        sup.set_agent_config(make_test_config(srv.base_url()));
+        AgentSpec spec; spec.name = "racer";
+        CancelSource root;
+
+        // Spawn X — it acquires one of the two slots and starts running.
+        const std::string x = sup.spawn(spec, "task", "", root.token());
+
+        std::mutex m;
+        std::condition_variable cv;
+        bool quiesced = false, release_quiesce = false;   // Seam A (agent)
+        bool promote_paused = false, release_promote = false;  // Seam B (promote)
+
+        // Seam A: pause X at its first quiescence (standing cached=false, running).
+        sup.set_agent_quiescence_hook_for_test(x, [&] {
+            { std::lock_guard<std::mutex> lk(m); quiesced = true; }
+            cv.notify_all();
+            std::unique_lock<std::mutex> lk(m);
+            cv.wait(lk, [&] { return release_quiesce; });
+        });
+
+        // Seam B: pause promote() between step 1 and step 2.
+        sup.set_promote_race_hook_for_test([&] {
+            { std::lock_guard<std::mutex> lk(m); promote_paused = true; }
+            cv.notify_all();
+            std::unique_lock<std::mutex> lk(m);
+            cv.wait(lk, [&] { return release_promote; });
+        });
+
+        // 1. Wait until X has cached standing=false at quiescence (still running).
+        {
+            std::unique_lock<std::mutex> lk(m);
+            cv.wait(lk, [&] { return quiesced; });
+        }
+
+        // 2. Promote X on another thread.  step 1 sees `running`, sets standing_
+        //    (too late for X's cached read), then pauses at Seam B.
+        std::thread pth([&] { sup.promote(x); });
+        {
+            std::unique_lock<std::mutex> lk(m);
+            cv.wait(lk, [&] { return promote_paused; });
+        }
+
+        // 3. Release X's loop → it proceeds on the cached standing=false → natural
+        //    closed exit → on_exit() runs (marks exited, releases X's own slot).
+        { std::lock_guard<std::mutex> lk(m); release_quiesce = true; }
+        cv.notify_all();
+
+        // 4. Block until X has fully exited (on_exit() complete ⇒ active_count 0).
+        sup.wait_all();
+
+        // 5. Release promote() step 2 → it MUST refuse to register the exited X.
+        { std::lock_guard<std::mutex> lk(m); release_promote = true; }
+        cv.notify_all();
+        pth.join();
+
+        // Invariants: no stale LRU entry, and the slot pool is permit-consistent
+        // (exactly max_concurrent permits available — not max_concurrent + 1).
+        CHECK(sup.standing_count() == 0);
+        CHECK(sup.available_slots_for_test() == 2);
     }
 }

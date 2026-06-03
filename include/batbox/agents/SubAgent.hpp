@@ -198,6 +198,17 @@ public:
     // status line surfaces).  Empty until the first turn completes.  Thread-safe.
     [[nodiscard]] std::string last_result() const;
 
+    // -------------------------------------------------------------------------
+    // Test-only fault-injection (DIS-1001)
+    // -------------------------------------------------------------------------
+
+    // set_quiescence_hook_for_test() — install a callback fired by the run loop at
+    // each quiescence, AFTER it has cached `standing_` for this turn but BEFORE it
+    // acts on it.  Lets a test pause the loop in the "standing cached, status still
+    // running, closed exit committed" window to deterministically race promote()
+    // against a natural quiescent exit.  Null in production; thread-safe.
+    void set_quiescence_hook_for_test(std::function<void()> hook);
+
 private:
     // -------------------------------------------------------------------------
     // run() — conversation loop, executes inside the jthread
@@ -277,6 +288,12 @@ private:
     // -- Standing mode (S2/S3, DIS-988) --------------------------------------
     // standing_: set by promote(); makes the run loop park instead of exit.
     std::atomic<bool>           standing_{false};
+
+    // Test-only quiescence seam (DIS-1001); null in production.  Guarded by its
+    // own mutex because a test may install it (from another thread) AFTER this
+    // agent's jthread has already started running.
+    mutable std::mutex          test_hook_mutex_;
+    std::function<void()>       quiescence_hook_for_test_;
 
     // Interrogation channel between the parent (interrogate()) and the run loop.
     // interrogate() pushes a PendingInterrogation and notifies; the parked run
