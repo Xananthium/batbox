@@ -553,6 +553,11 @@ static Result<void, std::string> apply_env(Config& cfg, const EnvMap& env) {
         if (!r) return Err(r.error());
         cfg.tools.task_parallel_limit = *r;
     }
+    if (auto it = env.find("BATBOX_MAX_TOOL_TURNS"); it != env.end()) {
+        auto r = parse_int("BATBOX_MAX_TOOL_TURNS", it->second);
+        if (!r) return Err(r.error());
+        cfg.tools.max_tool_turns = *r;
+    }
 
     // --- MCP group -----------------------------------------------------------
     if (auto it = env.find("BATBOX_MCP_CONFIG"); it != env.end()) {
@@ -575,6 +580,11 @@ static Result<void, std::string> apply_env(Config& cfg, const EnvMap& env) {
         auto r = parse_bool("BATBOX_DEMON_ENABLED", it->second);
         if (!r) return Err(r.error());
         cfg.agents.demon_enabled = *r;
+    }
+    if (auto it = env.find("BATBOX_MAX_SUBAGENT_TURN_CYCLES"); it != env.end()) {
+        auto r = parse_int("BATBOX_MAX_SUBAGENT_TURN_CYCLES", it->second);
+        if (!r) return Err(r.error());
+        cfg.agents.max_subagent_turn_cycles = *r;
     }
 
     // --- Security group ------------------------------------------------------
@@ -790,6 +800,7 @@ static void apply_settings_json(Config& cfg, const Json& j) {
     cfg.tools.bash_timeout_sec     = ji("tools", "bash_timeout_sec",     cfg.tools.bash_timeout_sec);
     cfg.tools.bash_max_output_bytes= ji("tools", "bash_max_output_bytes", cfg.tools.bash_max_output_bytes);
     cfg.tools.task_parallel_limit  = ji("tools", "task_parallel_limit",  cfg.tools.task_parallel_limit);
+    cfg.tools.max_tool_turns       = ji("tools", "max_tool_turns",       cfg.tools.max_tool_turns);
 
     // MCP
     if (const auto v = js("mcp", "config_path"); !v.empty()) cfg.mcp.config_path = resolve_path(v);
@@ -799,6 +810,8 @@ static void apply_settings_json(Config& cfg, const Json& j) {
     if (const auto v = js("agents", "agents_config"); !v.empty()) cfg.agents.agents_config = resolve_path(v);
     if (const auto v = js("agents", "agents_dir");    !v.empty()) cfg.agents.agents_dir    = resolve_path(v);
     cfg.agents.demon_enabled = jb("agents", "demon_enabled", cfg.agents.demon_enabled);
+    cfg.agents.max_subagent_turn_cycles =
+        ji("agents", "max_subagent_turn_cycles", cfg.agents.max_subagent_turn_cycles);
 
     // Security
     if (const auto v = js("security", "permission_mode"); !v.empty()) {
@@ -958,6 +971,17 @@ Result<void, std::string> Config::validate() const {
         return Err("BATBOX_TASK_PARALLEL_LIMIT: must be in [1, 64] (got " +
                    std::to_string(tools.task_parallel_limit) + ")");
     }
+    // max_tool_turns must be a positive per-turn ceiling (S11, DIS-1044).
+    if (tools.max_tool_turns < 1) {
+        return Err("BATBOX_MAX_TOOL_TURNS: must be >= 1 (got " +
+                   std::to_string(tools.max_tool_turns) + ")");
+    }
+    // max_subagent_turn_cycles must be a positive lifetime ceiling (S11 doom-loop
+    // guard, DIS-1044).
+    if (agents.max_subagent_turn_cycles < 1) {
+        return Err("BATBOX_MAX_SUBAGENT_TURN_CYCLES: must be >= 1 (got " +
+                   std::to_string(agents.max_subagent_turn_cycles) + ")");
+    }
     // sidecar startup timeout positive.
     if (sidecar.startup_timeout_sec <= 0) {
         return Err("BATBOX_SIDECAR_STARTUP_TIMEOUT_SEC: must be > 0 (got " +
@@ -1069,6 +1093,7 @@ Json Config::to_json() const {
     j["tools"]["bash_timeout_sec"]      = tools.bash_timeout_sec;
     j["tools"]["bash_max_output_bytes"] = tools.bash_max_output_bytes;
     j["tools"]["task_parallel_limit"]   = tools.task_parallel_limit;
+    j["tools"]["max_tool_turns"]        = tools.max_tool_turns;
 
     j["mcp"]["config_path"]         = mcp.config_path.string();
     j["mcp"]["startup_timeout_sec"] = mcp.startup_timeout_sec;
@@ -1076,6 +1101,7 @@ Json Config::to_json() const {
     j["agents"]["agents_config"]  = agents.agents_config.string();
     j["agents"]["agents_dir"]     = agents.agents_dir.string();
     j["agents"]["demon_enabled"]  = agents.demon_enabled;
+    j["agents"]["max_subagent_turn_cycles"] = agents.max_subagent_turn_cycles;
 
     j["security"]["permission_mode"]   = to_string(security.permission_mode);
     j["security"]["auto_approve_reads"]= security.auto_approve_reads;

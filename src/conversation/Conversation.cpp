@@ -48,11 +48,14 @@ namespace batbox::conversation {
 // Constants
 // =============================================================================
 
-/// Maximum number of tool-call loop iterations per run_turn() call.
+/// Default maximum number of tool-call loop iterations per run_turn() call.
 /// Prevents infinite loops when a model repeatedly emits tool_calls.
-/// Matches the acceptance criterion; can be made configurable via Config in
-/// a future task.
-static constexpr int k_max_tool_turns = 20;
+/// S11 (DIS-1044): this is now the FALLBACK only — run_turn() reads the live
+/// value from cfg_.tools.max_tool_turns (defaulting to this same 20, so an
+/// absent config key leaves behaviour byte-identical to before).  Kept as a
+/// named constant so a Config built with a non-positive value still degrades to
+/// the historical cap rather than disabling the guard.
+static constexpr int k_default_max_tool_turns = 20;
 
 // =============================================================================
 // Constructor
@@ -434,9 +437,17 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
     // shot is what prevents the "compact, resend still-too-big, loop" failure.
     bool overflow_retry_used = false;
 
+    // S11 (DIS-1044): per-turn tool-call cap is now Config-driven.  Read the live
+    // value once at the top of the turn; a non-positive value degrades to the
+    // historical default (never "unbounded").  Default 20 → byte-identical to the
+    // old constexpr when the knob is absent.
+    const int max_tool_turns =
+        cfg_.tools.max_tool_turns > 0 ? cfg_.tools.max_tool_turns
+                                      : k_default_max_tool_turns;
+
     // ---- Tool-call loop ----
-    // Iterates until finish_reason != "tool_calls", or k_max_tool_turns reached.
-    for (int tool_turn = 0; tool_turn <= k_max_tool_turns; ++tool_turn) {
+    // Iterates until finish_reason != "tool_calls", or max_tool_turns reached.
+    for (int tool_turn = 0; tool_turn <= max_tool_turns; ++tool_turn) {
 
         // -- Cancellation check at top of each iteration --
         if (ct.is_cancelled()) {
@@ -708,10 +719,10 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
             }
 
             // ---- 4b. Check loop cap ----
-            if (tool_turn >= k_max_tool_turns) {
+            if (tool_turn >= max_tool_turns) {
                 logger->warn("Conversation::run_turn: tool-call loop cap ({}) "
                              "reached; forcing stop after last assistant chunk",
-                             k_max_tool_turns);
+                             max_tool_turns);
                 // Exit loop — will fall through to stop-branch finalisation.
                 break;
             }
@@ -852,7 +863,7 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
 
             logger->debug("Conversation::run_turn: tool-call turn {} / {} "
                           "complete, looping back",
-                          tool_turn + 1, k_max_tool_turns);
+                          tool_turn + 1, max_tool_turns);
 
             // Loop back to the next inference request.
             continue;

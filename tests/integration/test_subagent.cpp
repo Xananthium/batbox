@@ -37,6 +37,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <future>
 #include <string>
 #include <thread>
 #include <vector>
@@ -983,6 +984,154 @@ TEST_SUITE("SubAgent integration") {
         ::unsetenv("BATBOX_CONFIG_DIR");
         std::error_code ec;
         fs::remove_all(cfg_dir, ec);
+    }
+
+    // -----------------------------------------------------------------------
+    // S11 / DIS-1044 — doom-loop guard on the SubAgent outer turn-cycle loop.
+    //
+    // AC1 + AC3: drive a STANDING subagent past a small per-subagent turn-cycle
+    //   cap via repeated interrogations (the deterministic many-outer-turn
+    //   driver — each interrogation is exactly one run_turn against the fake
+    //   server's plain-stop response).  Assert the loop terminates CLEANLY:
+    //     - terminal status `done` (NOT failed — no error spiral, no throw),
+    //     - a DoomLoopGuard event is observable carrying the trip count,
+    //     - the harvest-shaped exit fired (a Completed terminal was emitted, no
+    //       Errored event), preserving whatever gold the window held,
+    //     - on_exit ran (jthread joined, no hang/crash).
+    //
+    // Counting semantics under test: the cap counts the initial prompt turn AND
+    // every interrogation turn toward one shared budget (cap=3 → turns 1,2,3 run;
+    // the 3rd interrogation's re-entry is the one refused).
+    // -----------------------------------------------------------------------
+    TEST_CASE("S11/DIS-1044: turn-cycle cap terminates a standing agent cleanly") {
+        std::string script = find_fixture_script();
+        REQUIRE_FALSE(script.empty());
+
+        FakeServer srv;
+        REQUIRE(srv.start(script));
+
+        auto cfg = make_test_config(srv.base_url());
+        cfg.agents.max_subagent_turn_cycles = 3;   // small cap for a hermetic drive
+
+        AgentEventQueue q;
+        auto [src, tok] = CancelToken::make_root();
+        std::string agent_id = batbox::Uuid::v4().to_string();
+        std::atomic<bool> exited{false};
+
+        SubAgent agent{
+            agent_id,
+            make_test_spec("doomed-agent"),
+            "Say hello.",
+            std::move(tok),
+            q,
+            cfg,
+            [&exited]{ exited = true; }
+        };
+
+        // Standing BEFORE start() → the agent survives its first quiescence
+        // instead of closing, so interrogations can drive many outer turns.
+        agent.promote();
+        agent.start();
+
+        // Drive interrogations until one resolves with the empty sentinel — the
+        // signal that the guard tripped (the tripping interrogation is delivered
+        // but never run; the reaper fulfils its promise with "").
+        bool tripped = false;
+        for (int i = 0; i < 8 && !tripped; ++i) {
+            auto f = agent.interrogate("question " + std::to_string(i));
+            if (f.wait_for(8000ms) != std::future_status::ready) break;
+            if (f.get().empty()) tripped = true;
+        }
+        CHECK(tripped);
+
+        // on_exit must fire — the jthread terminated (no hang, no crash).
+        const auto deadline = std::chrono::steady_clock::now() + 5000ms;
+        while (!exited.load() && std::chrono::steady_clock::now() < deadline) {
+            std::this_thread::sleep_for(20ms);
+        }
+        CHECK(exited.load());
+
+        // Terminal status is the CLEAN `done`, not `failed`/`cancelled`.
+        CHECK(agent.status() == SubAgentStatus::done);
+
+        // Drain every event and assert the guard's observable signature.
+        std::vector<AgentEvent> events = q.drain();
+        bool saw_doom_loop = false;
+        bool saw_completed = false;
+        bool saw_errored   = false;
+        std::string doom_payload;
+        for (const auto& e : events) {
+            if (e.kind == AgentEvent::Kind::DoomLoopGuard) {
+                saw_doom_loop = true;
+                doom_payload  = e.payload;
+            } else if (e.kind == AgentEvent::Kind::Completed) {
+                saw_completed = true;
+            } else if (e.kind == AgentEvent::Kind::Errored) {
+                saw_errored = true;
+            }
+        }
+        CHECK(saw_doom_loop);                                   // AC1: event emitted
+        CHECK(doom_payload.find("3") != std::string::npos);     // carries the count
+        CHECK(saw_completed);                                   // AC3: harvest-shaped exit
+        CHECK_FALSE(saw_errored);                               // clean, no error spiral
+    }
+
+    // -----------------------------------------------------------------------
+    // AC4: the guard is an ADDITIONAL exit, not a replacement.  Below the cap a
+    // standing agent answers interrogations normally and NEVER emits a
+    // DoomLoopGuard event; cancellation then exits it cleanly as before.
+    // -----------------------------------------------------------------------
+    TEST_CASE("S11/DIS-1044: under-cap turns never trip the guard; cancel still works") {
+        std::string script = find_fixture_script();
+        REQUIRE_FALSE(script.empty());
+
+        FakeServer srv;
+        REQUIRE(srv.start(script));
+
+        auto cfg = make_test_config(srv.base_url());
+        cfg.agents.max_subagent_turn_cycles = 50;  // far above the turns we drive
+
+        AgentEventQueue q;
+        auto [src, tok] = CancelToken::make_root();
+        std::string agent_id = batbox::Uuid::v4().to_string();
+        std::atomic<bool> exited{false};
+
+        SubAgent agent{
+            agent_id,
+            make_test_spec("under-cap-agent"),
+            "Say hello.",
+            std::move(tok),
+            q,
+            cfg,
+            [&exited]{ exited = true; }
+        };
+
+        agent.promote();
+        agent.start();
+
+        // Two interrogations, both well under the cap → both answer normally.
+        for (int i = 0; i < 2; ++i) {
+            auto f = agent.interrogate("q" + std::to_string(i));
+            REQUIRE(f.wait_for(8000ms) == std::future_status::ready);
+            CHECK_FALSE(f.get().empty());   // a real answer, not the trip sentinel
+        }
+
+        // Cancel — the agent must exit cleanly via the cancellation path (AC4),
+        // NOT via the doom-loop guard.
+        agent.cancel();
+        const auto deadline = std::chrono::steady_clock::now() + 5000ms;
+        while (!exited.load() && std::chrono::steady_clock::now() < deadline) {
+            std::this_thread::sleep_for(20ms);
+        }
+        CHECK(exited.load());
+
+        // No DoomLoopGuard event was ever emitted.
+        std::vector<AgentEvent> events = q.drain();
+        bool saw_doom_loop = false;
+        for (const auto& e : events) {
+            if (e.kind == AgentEvent::Kind::DoomLoopGuard) saw_doom_loop = true;
+        }
+        CHECK_FALSE(saw_doom_loop);
     }
 
 } // TEST_SUITE("SubAgent integration")

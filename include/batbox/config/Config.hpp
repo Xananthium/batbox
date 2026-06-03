@@ -184,6 +184,16 @@ struct ToolsConfig {
     int  bash_timeout_sec    = 120;     ///< BATBOX_BASH_TIMEOUT_SEC
     int  bash_max_output_bytes = 1'048'576; ///< BATBOX_BASH_MAX_OUTPUT_BYTES (1 MB)
     int  task_parallel_limit = 4;       ///< BATBOX_TASK_PARALLEL_LIMIT
+
+    /// Max tool-call loop iterations inside a SINGLE Conversation::run_turn()
+    /// (S11, DIS-1044).  Bounds a model that repeatedly emits tool_calls within
+    /// one inference turn.  Default 20 makes the per-turn cap byte-identical to
+    /// the historical `k_max_tool_turns` constexpr — this knob only surfaces it;
+    /// an absent key leaves the loop unchanged.  Applies to the main conversation
+    /// AND every subagent's conversation.  Paired with the outer-loop cap below
+    /// (max_subagent_turn_cycles): this bounds tool-calls WITHIN a turn, that
+    /// bounds the NUMBER of turns a subagent runs across its life.
+    int  max_tool_turns      = 20;      ///< BATBOX_MAX_TOOL_TURNS
 };
 
 /// MCP server / transport settings.
@@ -197,6 +207,30 @@ struct AgentsConfig {
     std::filesystem::path agents_config = "~/.batbox/agents.json"; ///< BATBOX_AGENTS_CONFIG
     std::filesystem::path agents_dir    = "~/.batbox/agents";      ///< BATBOX_AGENTS_DIR
     bool                  demon_enabled = false;                   ///< BATBOX_DEMON_ENABLED
+
+    /// S11 doom-loop guard (DIS-1044).  Hard ceiling on the number of OUTER
+    /// turn-cycles a single SubAgent runs across its entire life — the count of
+    /// Conversation::run_turn() invocations driven by its outer lifecycle loop:
+    /// the initial prompt turn, every peer-message turn, AND every interrogation
+    /// turn all count toward this ONE shared cap.  Each individual turn is
+    /// already bounded to max_tool_turns tool-calls; this bounds how MANY turns
+    /// can run, so a closed subagent under repeated interrogation, two standing
+    /// subagents ping-ponging peer-messages, or a self-perpetuating investigation
+    /// cannot doom-loop at the turn granularity (local-model loops are *more*
+    /// prone to this than frontier models — the regime batbox runs in).
+    ///
+    /// On reaching the cap the subagent terminates CLEANLY (terminal `done`,
+    /// gold already in the notepad/journal is preserved, a DoomLoopGuard event is
+    /// emitted) — never an error spiral — and is resumable via the DIS-1021 log,
+    /// so a legitimately long-lived busy agent that trips the cap is recycled
+    /// losslessly, not killed.  That clean-and-resumable property is why a single
+    /// generous ceiling is safe even for the peer/interrogation paths.
+    ///
+    /// Default 100: far beyond any focused closed task (typically <10 turns) and
+    /// a normal standing window's interrogation load, but a firm stop well before
+    /// a runaway ping-pong burns meaningful local GPU.  Tune up for genuinely
+    /// long-lived standing agents.  Must be >= 1 (a positive ceiling).
+    int                   max_subagent_turn_cycles = 100;          ///< BATBOX_MAX_SUBAGENT_TURN_CYCLES
 };
 
 /// Permission / safety mode settings (Decision of Record #6).

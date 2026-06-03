@@ -40,9 +40,10 @@ using batbox::agents::AgentEventQueue;
 using Kind = AgentEvent::Kind;
 
 // ---------------------------------------------------------------------------
-// 1. All 10 Kind values exist and kind_label() returns non-empty strings
+// 1. All 11 Kind values exist and kind_label() returns non-empty strings
+//    (DIS-1044 added Kind::DoomLoopGuard — the S11 doom-loop guard event)
 // ---------------------------------------------------------------------------
-TEST_CASE("All 10 Kind values defined") {
+TEST_CASE("All 11 Kind values defined") {
     constexpr Kind all_kinds[] = {
         Kind::Started,
         Kind::StepBegan,
@@ -54,8 +55,9 @@ TEST_CASE("All 10 Kind values defined") {
         Kind::Cancelled,
         Kind::ParentMessageObserved,
         Kind::Queued,
+        Kind::DoomLoopGuard,
     };
-    CHECK(std::size(all_kinds) == 10u);
+    CHECK(std::size(all_kinds) == 11u);
 
     for (Kind k : all_kinds) {
         const char* label = AgentEvent::kind_label(k);
@@ -66,7 +68,7 @@ TEST_CASE("All 10 Kind values defined") {
 
 TEST_CASE("kind_label returns distinct strings for each Kind") {
     std::vector<std::string> labels;
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 11; ++i) {
         labels.emplace_back(AgentEvent::kind_label(static_cast<Kind>(i)));
     }
     // All labels must be distinct
@@ -145,6 +147,15 @@ TEST_CASE("make_queued: Kind::Queued, position_hint may be empty") {
     auto e2 = AgentEvent::make_queued("agent-10", "queued, 1/4");
     CHECK(e2.kind == Kind::Queued);
     CHECK(e2.payload == "queued, 1/4");
+}
+
+TEST_CASE("make_doom_loop_guard: Kind::DoomLoopGuard, payload carries the count") {
+    auto e = AgentEvent::make_doom_loop_guard("agent-11", 100);
+    CHECK(e.kind == Kind::DoomLoopGuard);
+    CHECK(e.agent_id == "agent-11");
+    // The cycle count that tripped the guard must be observable in the payload.
+    CHECK(e.payload.find("100") != std::string::npos);
+    CHECK(std::string(AgentEvent::kind_label(e.kind)) == "doom_loop_guard");
 }
 
 // ---------------------------------------------------------------------------

@@ -475,10 +475,39 @@ void SubAgent::run(std::stop_token /*st*/) {
     }
 
     // -------------------------------------------------------------------------
+    // S11 doom-loop guard (DIS-1044) — bound the OUTER turn-cycle loop.
+    //
+    // Each individual run_turn() is already capped at cfg.tools.max_tool_turns
+    // tool-calls (the main-conversation guard).  This counter bounds how MANY
+    // run_turn() cycles this subagent runs across its whole life — the surface
+    // this liberation track created and the one the main-conversation guard does
+    // NOT cover.
+    //
+    // COUNTING SEMANTICS (the one judgment call Sherry flagged): every inference
+    // turn counts toward this ONE shared cap — the initial prompt, every
+    // peer-message turn, AND every interrogation turn alike.  Peer/interrogation
+    // turns are NOT exempted, deliberately: the doom-loops this guard exists to
+    // stop (two standing agents ping-ponging peer-messages, a closed agent under
+    // repeated interrogation, a self-perpetuating investigation) ARE the peer and
+    // interrogation re-entry paths — exempting them would exempt exactly the
+    // surfaces we are guarding.  That is safe because tripping the cap is a CLEAN,
+    // resumable termination (see the trip block below), not a destructive kill: a
+    // legitimately long-lived busy standing agent that reaches the ceiling is
+    // recycled losslessly (gold already in the notepad/journal; restartable via
+    // the DIS-1021 resume log), so a single generous ceiling protects the runaway
+    // case without penalising the legitimate one.  cfg.agents.max_subagent_turn_cycles
+    // (default 100) is the ceiling; <= 0 disables the guard (defensive — config
+    // validation already forbids that, so only a hand-built Config can disable it).
+    // -------------------------------------------------------------------------
+    const int max_turn_cycles = agent_cfg.agents.max_subagent_turn_cycles;
+    int       turn_cycles     = 0;
+
+    // -------------------------------------------------------------------------
     // Conversation loop.
     // -------------------------------------------------------------------------
     while (true) {
-        // Check for cancellation before starting a new turn.
+        // Check for cancellation before starting a new turn.  Cancellation is
+        // checked BEFORE the doom-loop guard so a stop request always wins (AC4).
         if (child_token_.is_cancelled()) {
             if (!line_buffer.empty()) {
                 append_output_line(line_buffer);
@@ -486,6 +515,44 @@ void SubAgent::run(std::stop_token /*st*/) {
             }
             set_status(SubAgentStatus::cancelled);
             event_queue_.push(AgentEvent::make_cancelled(id_, "stop_requested"));
+            return;
+        }
+
+        // S11 doom-loop guard (DIS-1044): if this subagent has already run its
+        // budgeted number of outer turn-cycles, terminate CLEANLY before running
+        // another one.  This is an ADDITIONAL exit alongside cancellation, error,
+        // and natural completion — never a replacement (AC4): we only reach here
+        // when none of those fired, i.e. the loop WOULD otherwise re-enter
+        // run_turn() via a peer-message or interrogation.  The exit mirrors the
+        // closed/quiescent path (flush → build summary → Completed) so whatever
+        // gold is in the notepad/journal is preserved and any completion-keyed
+        // harvest fires identically; we then annotate WHY with a DoomLoopGuard
+        // event carrying the count, set the terminal `done` status (clean, NOT
+        // failed — no error spiral, no throw), and return.  Any in-flight
+        // interrogation promise is released with the empty sentinel by the
+        // InterrogationReaper as this frame unwinds (the question was delivered
+        // but never run — sentinel is the honest "not answered" signal).
+        if (max_turn_cycles > 0 && turn_cycles >= max_turn_cycles) {
+            if (!line_buffer.empty()) {
+                append_output_line(line_buffer);
+                line_buffer.clear();
+            }
+            std::string summary;
+            {
+                std::lock_guard<std::mutex> lock{snapshot_mutex_};
+                for (const auto& line : last_5_lines_) {
+                    if (!summary.empty()) summary += '\n';
+                    summary += line;
+                }
+                last_result_  = summary;
+                current_step_ = "doom-loop guard";
+            }
+            // DoomLoopGuard FIRST, then Completed: a consumer that stops at the
+            // first terminal event (e.g. collect_until_terminal) still observes
+            // the guard annotation in the same drained batch as the Completed.
+            event_queue_.push(AgentEvent::make_doom_loop_guard(id_, turn_cycles));
+            event_queue_.push(AgentEvent::make_completed(id_, summary));
+            set_status(SubAgentStatus::done);
             return;
         }
 
@@ -520,6 +587,11 @@ void SubAgent::run(std::stop_token /*st*/) {
             }
             return;
         }
+
+        // S11 (DIS-1044): a productive inference turn completed — count it toward
+        // the per-subagent turn-cycle cap.  Checked at the TOP of the next
+        // iteration so the (cap+1)-th re-entry is the one refused.
+        ++turn_cycles;
 
         // Flush any remaining partial line from this turn.
         if (!line_buffer.empty()) {

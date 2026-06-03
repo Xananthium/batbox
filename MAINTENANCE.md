@@ -4,6 +4,39 @@ Operational notes for running and maintaining batbox's test tiers and substrates
 
 ---
 
+## Agent-loop safety bounds — doom-loop guards (S11, DIS-1044)
+
+Two cooperating turn-cycle caps bound the agent loop so a runaway model cannot
+burn local GPU without a ceiling. Both are Config knobs; **absent → historical
+default**, so existing configs are byte-unchanged.
+
+| Knob | Config path | Env var | Default | Bounds |
+|---|---|---|---|---|
+| Per-turn tool-call cap | `tools.max_tool_turns` | `BATBOX_MAX_TOOL_TURNS` | `20` | tool-call iterations **inside one** `Conversation::run_turn()` (main chat AND every subagent) |
+| Per-subagent turn-cycle cap | `agents.max_subagent_turn_cycles` | `BATBOX_MAX_SUBAGENT_TURN_CYCLES` | `100` | the **number of** `run_turn()` cycles a single `SubAgent` runs across its life |
+
+- The per-turn cap was always present as the `k_max_tool_turns=20` constexpr in
+  `Conversation.cpp`; DIS-1044 only surfaced it as a knob (the value is read live
+  per turn; a non-positive value degrades to the historical 20, never unbounded).
+- The per-subagent cap is the new organ: `SubAgent::run()`'s outer `while(true)`
+  loop counts **every** inference turn — the initial prompt, every peer-message
+  turn, and every interrogation turn — toward one shared budget. On reaching the
+  cap the subagent terminates **cleanly** (`SubAgentStatus::done`, a
+  `DoomLoopGuard` AgentEvent carrying the count, gold preserved in the
+  notepad/journal), never an error/throw. It is resumable via the DIS-1021 log,
+  so a legitimately long-lived busy standing agent that trips the cap is recycled
+  losslessly — that clean-and-resumable property is why a single generous ceiling
+  is safe even for the peer/interrogation paths. Raise the knob for genuinely
+  long-lived standing agents.
+- Both knobs are validated `>= 1`. The `<= 0 disables` branch in `SubAgent::run()`
+  is defensive only (config validation already forbids non-positive values).
+- Hermetic coverage: `tests/integration/test_subagent.cpp`
+  (`S11/DIS-1044: turn-cycle cap terminates a standing agent cleanly` +
+  the under-cap/cancel control) and `tests/unit/test_agent_event.cpp`
+  (`make_doom_loop_guard`). No ollama dependency; default `ctest` covers them.
+
+---
+
 ## Real-model (ollama) test substrate — `requires_ollama` tier  (DIS-1017)
 
 batbox's subagent organs are proven two ways:
