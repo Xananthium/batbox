@@ -34,6 +34,25 @@ The universal subagent-dispatch seam (S7, DIS-979). Interposes at `ToolRegistry:
 - `ToolSubagentEnvelope::set_decider(hook)` / `set_distiller(hook)` — swap hooks at runtime; null is ignored (never-null invariant)
 - `ToolSubagentEnvelope::decider()` / `distiller()` — non-owning const view of the installed hooks
 
+### ThresholdEngulfDecider.hpp
+S1 (DIS-980). Fills the `IEngulfDecider` hook: engulf iff a **non-error** result's `body` size strictly exceeds a configured byte threshold (goose `large_response_handler` / `GOOSE_MAX_TOOL_RESPONSE_SIZE` shape). Cheap + side-effect-free; size is the trigger, not tool identity.
+- `ThresholdEngulfDecider(max_response_bytes)` — ctor takes the byte threshold (from `cfg.distill.max_tool_response_size`)
+- `should_engulf(...) -> bool` — true iff `!result.is_error && result.body.size() > threshold`
+- `threshold() -> size_t` — the configured threshold
+
+### ReportGoldTool.hpp
+S4 (DIS-980). The structured final-output contract a distillation subagent emits through — `report_gold(answer, confidence?, follow_up_ok?)` (goose `FinalOutputTool` shape). The distiller's INTERNAL contract: NOT registered in the curated 39-tool surface.
+- `struct ReportGold { answer; optional<double> confidence; optional<bool> follow_up_ok; }`
+- `ReportGoldTool::schema_json()` — the OpenAI function object (answer required); `is_read_only()==true`, `requires_confirmation()==false`
+- `ReportGoldTool::parse(args) -> optional<ReportGold>` — shared shape parser (nullopt when answer absent/empty/non-string or args non-object); backs both `run()` and the distiller's harvest
+- `ReportGoldTool::run(args, ctx)` — surfaces the parsed result as `ToolResult::ok(answer, {answer, confidence?, follow_up_ok?})`, or error when invalid
+
+### SubagentDistiller.hpp
+S4 (DIS-980). Fills the `IResultDistiller` hook: engulfs a too-big result into a **one-shot** call on a LOCAL OpenAI-compatible endpoint (`cfg.distill.*`, NOT `cfg.api`), forces the local model to emit via `report_gold` (only tool offered + `tool_choice` pinned), and returns the distilled gold. Closed lifecycle (window discarded; `follow_up_ok` captured, not acted upon). Robust: unreachable/5xx/no-call/wrong-tool/cancelled → returns the original result, never throws.
+- `SubagentDistiller(const Config&)` — reads `cfg.distill.*` at distill-time
+- `distill(tool_name, args, result, ctx) -> ToolResult` — the engulf→distill→harvest-or-fallback path
+- `install_subagent_distillation(registry, cfg)` — startup wiring (AC6): installs the decider + distiller into the registry's existing envelope; no-op when `cfg.distill.enabled` is false (S7-identical). The S7 seam is NOT modified.
+
 ### ToolContext.hpp
 Per-dispatch context injected into every ITool::run() call.
 

@@ -49,6 +49,9 @@ target_link_libraries(batbox_tools
         batbox_mcp
         batbox_tools_bash
         batbox_agents
+        # S4 (DIS-980): SubagentDistiller drives a one-shot OpenAiCompatibleProvider
+        # against the local distill endpoint.
+        batbox_inference
 )
 
 # ---------------------------------------------------------------------------
@@ -100,6 +103,10 @@ target_sources(batbox_tools
         .placeholder.cpp
         ToolRegistry.cpp
         ToolSubagentEnvelope.cpp
+        # S1+S4 (DIS-980) — closed tool-subagent organs
+        ThresholdEngulfDecider.cpp
+        ReportGoldTool.cpp
+        SubagentDistiller.cpp
         ReadTool.cpp
         WriteTool.cpp
         EditTool.cpp

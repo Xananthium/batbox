@@ -49,6 +49,8 @@ Shared helpers for CLI smoke tests: process spawn, stdout capture, fake server p
 
 ### test_envelope_no_bypass.cpp — S7 (DIS-979) universal subagent-dispatch seam, end-to-end via the orchestrator: no un-wrapped path (native + MCP-shaped tools both traverse the envelope; sentinel distiller rewrites both); spy observes exactly one pass per dispatched call and zero for pre-run rejections; default envelope byte-identical; hooks swappable through `registry.envelope()`; static_assert pins the live McpTool to the same dispatch path.
 
+### test_subagent_distiller.cpp — S1+S4 (DIS-980) closed tool-subagent, end-to-end against the LOCAL fake distill endpoint (fake_distill_server.py) and through the real `ToolRegistry::dispatch` envelope: gold path returns the distilled line (endpoint separation proven — `cfg.api` left at cloud, call hits `cfg.distill.*`); closed lifecycle (`follow_up_ok` captured, not acted upon); robustness fallbacks (unreachable / 500 / no report_gold / wrong tool / pre-cancelled → original result); install-into-envelope distills via dispatch (AC6); disabled = S7-identical + below-threshold not engulfed (AC7).
+
 ### perf_probes.hpp
 Helper macros for measuring wall-clock time in performance budget tests (test_perf_budget.cpp).
 

@@ -60,3 +60,11 @@ Lightweight persistent state for changelog tracking.
 
 - `read_last_seen_changelog_version() -> optional<string>` — reads the last-acknowledged changelog version from ~/.batbox/state.json; returns nullopt when absent
 - `write_last_seen_changelog_version(version) -> void` — writes version string to ~/.batbox/state.json; used by the changelog dialog to suppress already-seen entries
+
+### Config.hpp — DistillConfig (S1+S4, DIS-980)
+`struct DistillConfig` (member `Config::distill`) configures the closed tool-subagent distillation: a LOCAL OpenAI-compatible endpoint kept deliberately separate from `ApiConfig` (the main/cloud model).
+- `enabled` — `BATBOX_DISTILL_ENABLED`; install the decider+distiller at startup (default false → S7-identical)
+- `base_url` / `api_key` / `model` — `BATBOX_DISTILL_BASE_URL` / `_API_KEY` / `_MODEL`; the local endpoint (required when enabled)
+- `max_tool_response_size` — `BATBOX_MAX_TOOL_RESPONSE_SIZE`; engulf threshold in bytes (default 200k, goose ballpark)
+- `request_timeout_sec` / `max_tokens` — `BATBOX_DISTILL_TIMEOUT_SEC` / `_MAX_TOKENS`; bound a hung endpoint / cap the golden line
+- `validate()` requires a URL-shaped `base_url` + non-empty `model` when enabled; thresholds/timeouts must be > 0. `api_key` is redacted by `redacted_for_display()`.

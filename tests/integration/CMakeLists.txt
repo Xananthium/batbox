@@ -971,6 +971,60 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_conversation_basic.cpp)
 endif()
 
 # ---------------------------------------------------------------------------
+# DIS-980 (S1+S4) — test_subagent_distiller
+#
+# Drives the closed tool-subagent distiller against the LOCAL fake distill
+# endpoint (tests/fixtures/fake_distill_server.py) and through the real
+# ToolRegistry::dispatch envelope.  Hermetic — the fixture is spawned per test
+# in the --mode the case needs; no GPU/network.  Links the feature TUs +
+# component libs (the S7 seam is unmodified — ToolRegistry/ToolSubagentEnvelope
+# come from batbox_tools).
+# ---------------------------------------------------------------------------
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_subagent_distiller.cpp)
+
+    add_executable(test_subagent_distiller
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_subagent_distiller.cpp
+    )
+
+    set_target_properties(test_subagent_distiller PROPERTIES
+        CXX_STANDARD          20
+        CXX_STANDARD_REQUIRED ON
+        CXX_EXTENSIONS        OFF
+    )
+
+    target_include_directories(test_subagent_distiller
+        PRIVATE
+            ${PROJECT_SOURCE_DIR}/include
+    )
+
+    target_compile_definitions(test_subagent_distiller
+        PRIVATE
+            BATBOX_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures"
+    )
+
+    target_link_libraries(test_subagent_distiller
+        PRIVATE
+            doctest::doctest
+            batbox_tools
+            batbox_inference
+            batbox_config
+            batbox_core
+            batbox_permissions
+            batbox_mcp
+            batbox_tools_bash
+            cpr::cpr
+            simdjson::simdjson
+            spdlog::spdlog
+            fmt::fmt
+            ZLIB::ZLIB
+    )
+
+    include(doctest)
+    doctest_discover_tests(test_subagent_distiller)
+
+endif()
+
+# ---------------------------------------------------------------------------
 # PEXT2 3.4 (D-8) -- Config snapshot race regression test
 #
 # Verifies that Conversation::run_turn() snapshots cfg.api.default_model and

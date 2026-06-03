@@ -19,6 +19,9 @@
 
 #include <batbox/app/WireTools.hpp>
 
+// S1+S4 (DIS-980): closed tool-subagent distillation install hook.
+#include <batbox/tools/SubagentDistiller.hpp>
+
 // Read-only / zero-dep tools
 #include <batbox/tools/ReadTool.hpp>
 #include <batbox/tools/WriteTool.hpp>
@@ -307,6 +310,18 @@ void wire_tools(
     assert(registry.size() == 39 &&
            "wire_tools: expected exactly 39 tools — "
            "a tool was added or removed without updating this count");
+
+    // -------------------------------------------------------------------------
+    // S1+S4 (DIS-980) — closed tool-subagent distillation.
+    //
+    // Install the threshold engulf decider + the subagent distiller into the
+    // registry's existing ToolSubagentEnvelope (the S7 seam, unmodified).  This
+    // is a no-op unless cfg.distill.enabled is true, so the default tool surface
+    // is byte-identical to S7.  report_gold is the distiller's INTERNAL contract
+    // (the main model never calls it) and is therefore deliberately NOT one of
+    // the 39 curated tools — the count assertion above is unaffected.
+    // -------------------------------------------------------------------------
+    install_subagent_distillation(registry, cfg);
 }
 
 } // namespace batbox::app

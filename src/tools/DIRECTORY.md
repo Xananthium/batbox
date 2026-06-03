@@ -56,5 +56,9 @@ S7 (DIS-979) implementation of the universal subagent-dispatch seam. `process()`
 ### WorkflowTool.cpp — `run()` parses step definitions from args; constructs Workflow; calls Workflow::execute(); returns step outputs.
 ### WriteTool.cpp — `run()` validates path; writes content to tmp file; renames atomically; returns byte count.
 
+### ThresholdEngulfDecider.cpp — S1 (DIS-980). `should_engulf()`: engulf iff a non-error result's body strictly exceeds the configured byte threshold; never engulfs errors; size is the trigger not tool identity.
+### ReportGoldTool.cpp — S4 (DIS-980). The `report_gold(answer, confidence?, follow_up_ok?)` structured handoff: `schema_json()`, `parse()` (shared shape parser), `run()` surfaces the parsed result in `structured_payload`. The distiller's internal contract (not in the 39-tool surface).
+### SubagentDistiller.cpp — S4 (DIS-980). `distill()`: one-shot call to the LOCAL distill endpoint (`cfg.distill.*`, not `cfg.api`), forces `report_gold` via tool_choice, harvests the gold, falls back to the original on any failure/cancel (never throws). `install_subagent_distillation()` wires the decider+distiller into the registry envelope at startup (no-op when disabled; S7 seam untouched).
+
 ### CMakeLists.txt
 Build rules for the tools static library.
