@@ -36,6 +36,8 @@
 #include <string_view>
 #include <vector>
 
+namespace batbox::config { struct Config; }
+
 namespace batbox::agents {
 
 // =============================================================================
@@ -231,6 +233,15 @@ public:
 
     /// standing_count — number of subagents currently in the standing pool.
     [[nodiscard]] std::size_t standing_count() const;
+
+    /// set_agent_config — override the Config handed to subsequently-spawned
+    /// SubAgents.  By default the supervisor builds agents from
+    /// Config::load_default() (pure built-in defaults); this lets a caller (and
+    /// hermetic tests) point spawned agents at a specific endpoint instead.
+    /// Affects only agents spawned AFTER this call — must NOT be called
+    /// concurrently with spawn(); the stored Config must outlive its agents
+    /// (it is copied into the supervisor).
+    void set_agent_config(const batbox::config::Config& cfg);
 
 private:
     struct Impl;

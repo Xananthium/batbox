@@ -58,6 +58,7 @@ Semaphore-based agent execution supervisor + LRU-bounded standing-subagent regis
 - `AgentSupervisor::set_max_standing_subagents(n)` — sets the hard LRU bound on the standing pool; lowering it evicts down to fit (AC5)
 - `AgentSupervisor::standing_status() -> vector<StandingStatus>` — bounded {id,name,status_line} list of warm subagents, most-recently-interrogated first; source for the AC4 status line
 - `AgentSupervisor::standing_count() -> size_t` — number of subagents currently in the standing pool
+- `AgentSupervisor::set_agent_config(cfg)` — override the Config handed to subsequently-spawned SubAgents (default is `Config::load_default()` pure defaults); lets callers/hermetic tests point spawned agents at a specific endpoint. Affects only later spawns; not concurrent with spawn()
 - `StandingStatus` (struct) — `{id, name, status_line}` one-line-per-warm-window status record (AC4)
 
 ### Demon.hpp

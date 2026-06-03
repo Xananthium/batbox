@@ -615,4 +615,11 @@ std::size_t AgentSupervisor::standing_count() const {
     return impl_->standing_lru.size();
 }
 
+void AgentSupervisor::set_agent_config(const batbox::config::Config& cfg) {
+    // Copy-assign into the long-lived member SubAgents reference by const&.
+    // Caller contract: not called concurrently with spawn() (no live agent is
+    // reading default_cfg_ at this point).
+    impl_->default_cfg_ = cfg;
+}
+
 } // namespace batbox::agents

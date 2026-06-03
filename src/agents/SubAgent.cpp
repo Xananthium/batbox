@@ -47,6 +47,15 @@ SubAgent::SubAgent(std::string              agent_id,
     child_source_ = std::move(child_src);
     child_token_  = std::move(child_tok);
 
+    // Wake a PARKED standing agent on cancellation.  The park wait blocks on
+    // interrogate_cv_; cancellation (parent-cascade or self) trips child_token_
+    // but does not notify the cv, so register a callback that does.  Without
+    // this the loop would sleep through an eviction / parent-cancel and the
+    // jthread join would hang.  The handle is kept alive as a member.
+    cancel_wake_handle_ = child_token_.on_cancel([this]() {
+        interrogate_cv_.notify_all();
+    });
+
     // Status begins at queued; jthread not yet started.
     status_.store(SubAgentStatus::queued, std::memory_order_release);
 }

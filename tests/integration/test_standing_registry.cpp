@@ -244,9 +244,12 @@ TEST_SUITE("StandingRegistry") {
         REQUIRE_FALSE(script.empty());
         FakeServer srv;
         REQUIRE(srv.start(script));
-        hermetic_env(srv.base_url());    // supervisor agents use load_default → fake
+        hermetic_env(srv.base_url());    // hermetic HOME for sessions
 
         AgentSupervisor sup;             // default max_concurrent=4, max_standing=4
+        // Point spawned agents at the fake server (AgentSupervisor otherwise
+        // builds them from Config::load_default = real openai, no key).
+        sup.set_agent_config(make_test_config(srv.base_url()));
         AgentSpec spec; spec.name = "warm";
         CancelSource root;
 

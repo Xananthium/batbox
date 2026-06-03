@@ -289,6 +289,14 @@ private:
     // would ever pop it).  Guarded by interrogate_mutex_.
     bool                                  terminated_{false};
 
+    // Wakes the park wait when the agent is cancelled (parent-cascade OR self):
+    // a parked standing agent blocks on interrogate_cv_, but cancellation does
+    // not otherwise notify it, so register a child_token_ on_cancel callback that
+    // fires interrogate_cv_.notify_all().  Without this, LRU eviction / parent
+    // cancel of a parked agent would deadlock its join.  Declared before thread_
+    // so it outlives the jthread join in the destructor.
+    std::shared_ptr<void>                 cancel_wake_handle_;
+
     // The jthread; declared last so that all other members are initialised
     // before the thread can access them via the run() lambda.
     std::jthread                thread_;
