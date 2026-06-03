@@ -11,6 +11,7 @@
 #include <cerrno>
 #include <fstream>
 #include <iostream>
+#include <optional>  // std::optional (incidental Linux/GCC-13 build fix)
 #include <sstream>
 #include <string>
 #include <string_view>

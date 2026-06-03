@@ -36,7 +36,11 @@
 #include <sys/wait.h>
 #include <termios.h>
 #include <unistd.h>
-#include <util.h>       // forkpty() — macOS <util.h>; Linux <pty.h>
+#if defined(__APPLE__)
+#include <util.h>       // forkpty() — macOS
+#else
+#include <pty.h>        // forkpty() — Linux/glibc (incidental Linux build fix)
+#endif
 
 #include <atomic>
 #include <chrono>

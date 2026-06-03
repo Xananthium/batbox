@@ -70,8 +70,8 @@ void fill_random(std::array<std::uint8_t, 16>& buf) {
     if (got == static_cast<ssize_t>(buf.size())) {
         return;
     }
-    // Unexpected short read or error — fall through to /dev/urandom
-    [[fallthrough]];
+    // Unexpected short read or error — fall through to the /dev/urandom block
+    // below (NB: not a switch, so no [[fallthrough]] attribute here).
 
 #endif
 
@@ -81,9 +81,12 @@ void fill_random(std::array<std::uint8_t, 16>& buf) {
     if (!f) {
         throw std::runtime_error("batbox::Uuid::v4(): cannot open /dev/urandom");
     }
-    std::size_t got = std::fread(buf.data(), 1, buf.size(), f);
+    // NB: distinct name from the getrandom() `got` above — on Linux without
+    // arc4random BOTH blocks compile into this one scope, so reusing `got` is a
+    // redeclaration (conflicting ssize_t vs size_t).  Incidental Linux-build fix.
+    std::size_t n_read = std::fread(buf.data(), 1, buf.size(), f);
     std::fclose(f);
-    if (got != buf.size()) {
+    if (n_read != buf.size()) {
         throw std::runtime_error("batbox::Uuid::v4(): short read from /dev/urandom");
     }
 #endif
