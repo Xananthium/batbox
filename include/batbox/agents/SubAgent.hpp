@@ -54,6 +54,7 @@
 #include <future>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <thread>
@@ -123,6 +124,19 @@ public:
     // Safe to call exactly once after construction.
     // -------------------------------------------------------------------------
     void start();
+
+    // -------------------------------------------------------------------------
+    // prepare_resume() — DIS-1021: arm this SubAgent to RELOAD a prior session
+    //
+    // Construct via the normal ctor, then call prepare_resume() before start()
+    // to make run() restore() the conversation from a prior session log instead
+    // of delivering initial_prompt_ fresh.  The constructor's initial_prompt is
+    // reinterpreted as an OPTIONAL follow-up user turn (empty → continue forward
+    // from restored history with no new user message).
+    //
+    // MUST be called before start().  Thread-unsafe with respect to start()/run().
+    // -------------------------------------------------------------------------
+    void prepare_resume(batbox::session::SessionFile sf);
 
     // -------------------------------------------------------------------------
     // cancel() — request cooperative cancellation
@@ -253,6 +267,12 @@ private:
     const std::string   id_;
     const AgentSpec     spec_;
     const std::string   initial_prompt_;
+
+    // DIS-1021 — when set (via prepare_resume()), run() restore()s the
+    // conversation from this prior session log instead of starting fresh, and
+    // treats initial_prompt_ as an optional follow-up user turn.  Set once
+    // before start(); read only by the run() jthread thereafter.
+    std::optional<batbox::session::SessionFile> resume_from_;
 
     // Shared event queue (non-owning reference; AgentSupervisor owns it).
     AgentEventQueue&    event_queue_;

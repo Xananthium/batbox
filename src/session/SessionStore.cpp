@@ -365,6 +365,83 @@ SessionStore::resume_for_cwd(const fs::path& working_dir)
 }
 
 // =============================================================================
+// find_session_for_agent() — DIS-1021
+// =============================================================================
+std::optional<SessionFile>
+SessionStore::find_session_for_agent(const std::string& agent_id)
+{
+    if (agent_id.empty()) {
+        return std::nullopt;
+    }
+
+    // Get up to 256 recent sessions (already sorted most-recent-first).
+    auto recs_res = list_recent(256);
+    if (!recs_res) {
+        BATBOX_LOG_WARN("SessionStore::find_session_for_agent: list_recent failed: {}",
+                        recs_res.error());
+        return std::nullopt;
+    }
+
+    for (const auto& rec : recs_res.value()) {
+        if (rec.agent_id != agent_id) continue;
+
+        auto sf_res = load(rec.id.to_string());
+        if (!sf_res) continue;          // skip files that cannot be read
+
+        return sf_res.value();
+    }
+
+    return std::nullopt;
+}
+
+// =============================================================================
+// adopt_restored() — DIS-1021
+// =============================================================================
+void
+SessionStore::adopt_restored(const SessionFile& sf)
+{
+    const std::string id = sf.id.to_string();
+
+    // Compute the first-user-message preview (truncated to 120 chars) outside
+    // the lock — it is a cheap O(messages) scan over already-parsed Json.
+    std::string preview;
+    for (const auto& m : sf.messages) {
+        if (m.contains("role") && m["role"].is_string() &&
+            m["role"].get<std::string>() == "user" &&
+            m.contains("content") && m["content"].is_string()) {
+            std::string c = m["content"].get<std::string>();
+            if (c.size() > 120) c = c.substr(0, 120);
+            preview = std::move(c);
+            break;
+        }
+    }
+
+    std::lock_guard<std::mutex> lock(maps_mutex_);
+
+    session_agent_ids_[id]   = sf.agent_id;
+    session_models_[id]      = sf.model_at_start;
+    session_created_at_[id]  = sf.created_at;
+    session_turn_counts_[id] = sf.messages.size();
+    session_previews_[id]    = std::move(preview);
+
+    // Ensure a per-session mutex exists (mirror new_session step 5).
+    if (session_mutexes_.find(id) == session_mutexes_.end()) {
+        session_mutexes_[id] = std::make_unique<std::mutex>();
+    }
+
+    // Best-effort path seed: probe the canonical on-disk forms.  If neither
+    // exists, leave session_paths_ unset — append_message() falls back to
+    // index path resolution, which is fine.
+    auto try_json    = sessions_dir_ / (id + ".json");
+    auto try_json_gz = sessions_dir_ / (id + ".json.gz");
+    if (fs::exists(try_json))         session_paths_[id] = try_json;
+    else if (fs::exists(try_json_gz)) session_paths_[id] = try_json_gz;
+
+    // NOTE: deliberately does NOT set current_session_id_ — an adopted session
+    // is not one this store created.
+}
+
+// =============================================================================
 // current_session_id()
 // =============================================================================
 std::optional<std::string>

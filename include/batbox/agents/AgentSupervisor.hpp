@@ -178,6 +178,31 @@ public:
     /// then wait_all() to join before the supervisor is destroyed.
     void wait_all();
 
+    // -------------------------------------------------------------------------
+    // resume_subagent — DIS-1021: reload a CLOSED subagent and continue it (AC4)
+    // -------------------------------------------------------------------------
+
+    /// Reload a CLOSED subagent from its durable log and continue it forward.
+    ///
+    /// Finds the session by the original agent id (DIS-1020 lineage tag),
+    /// reconstructs a minimal AgentSpec (model + endpoint re-adopted from the
+    /// log), respawns a SubAgent that restore()s the conversation, and runs it.
+    /// The follow_up text, when non-empty, is delivered as an optional follow-up
+    /// user turn against the restored history (empty → just continue forward).
+    ///
+    /// Closed agents are never erased from the registry, so the resumed agent is
+    /// given a FRESH agent id (the return value).
+    ///
+    /// @param target_agent_id  The original (closed) agent's id.
+    /// @param follow_up        Optional follow-up user turn (may be empty).
+    /// @param ct               Parent cancel token; cancelling cascades.
+    ///
+    /// @returns The NEW live agent id, or the empty string if no log was found
+    ///          for target_agent_id.
+    std::string resume_subagent(std::string_view target_agent_id,
+                                std::string_view follow_up,
+                                CancelToken      ct);
+
     // =========================================================================
     // Standing-subagent registry — the warm window (S2/S3, DIS-988)
     //

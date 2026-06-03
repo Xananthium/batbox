@@ -38,8 +38,11 @@
 #include <batbox/agents/SubAgent.hpp>
 #include <batbox/config/Config.hpp>
 #include <batbox/core/CancelToken.hpp>
+#include <batbox/core/Json.hpp>
 #include <batbox/core/Logging.hpp>
 #include <batbox/core/Uuid.hpp>
+#include <batbox/session/SessionFile.hpp>   // DIS-1021: resume from durable log
+#include <batbox/session/SessionStore.hpp>  // DIS-1021: locate the subagent's log
 
 #include <algorithm>
 #include <atomic>
@@ -88,6 +91,43 @@ std::string first_line_truncated(const std::string& s, std::size_t max) {
         line += "…";
     }
     return line;
+}
+
+/// DIS-1021 (AC2) — reconstruct an EndpointOverride from a persisted endpoint
+/// REFERENCE blob ({ base_url, model, use_distill_endpoint, api_key_ref }), so a
+/// resumed subagent re-points at the SAME endpoint its prior run used.
+///
+/// Returns std::nullopt when the blob is absent / not an object (legacy or
+/// default cfg.api session) — the resumed agent then targets cfg.api unchanged.
+///
+/// LIMITATION: inline (per-spec) api keys were never persisted by design (only
+/// the reference is stored), so an "inline" reference is resolved best-effort to
+/// cfg.api.api_key here.
+std::optional<EndpointOverride>
+endpoint_from_blob(const batbox::Json& blob, const batbox::config::Config& cfg) {
+    if (!blob.is_object()) {
+        return std::nullopt;
+    }
+
+    const bool use_distill = blob.value("use_distill_endpoint", false);
+    if (use_distill) {
+        // run() will pull base_url / api_key / model from cfg.distill.* — the
+        // re-point to the local distill endpoint.
+        EndpointOverride ep;
+        ep.use_distill_endpoint = true;
+        return ep;
+    }
+
+    EndpointOverride ep;
+    ep.use_distill_endpoint = false;
+    ep.base_url = blob.value("base_url", std::string{});
+    ep.model    = blob.value("model", std::string{});
+
+    const std::string ref = blob.value("api_key_ref", std::string{"cfg.api"});
+    // "inline" keys were never persisted (reference-only design) → best-effort
+    // cfg.api key.  "cfg.distill" / "cfg.api" re-resolve from the live config.
+    ep.api_key = (ref == "cfg.distill") ? cfg.distill.api_key : cfg.api.api_key;
+    return ep;
 }
 } // namespace
 
@@ -421,6 +461,82 @@ std::string AgentSupervisor::spawn(const AgentSpec&  spec,
                 "/" + std::to_string(impl_->slots_limit);
             impl_->event_queue.push(AgentEvent::make_queued(agent_id, hint));
         }
+    }
+
+    return agent_id;
+}
+
+// =============================================================================
+// resume_subagent — DIS-1021 (AC4): reload a CLOSED subagent and continue it
+// =============================================================================
+
+std::string AgentSupervisor::resume_subagent(std::string_view target_agent_id,
+                                             std::string_view follow_up,
+                                             CancelToken      ct)
+{
+    // 1. Locate the durable log written by the original (closed) subagent.
+    //    SessionStore{} resolves paths::config_dir() / "sessions", honouring
+    //    $BATBOX_CONFIG_DIR — the same dir SubAgent's run() store uses.
+    batbox::session::SessionStore lookup_store{};
+    auto sf = lookup_store.find_session_for_agent(std::string(target_agent_id));
+    if (!sf) {
+        return std::string{};   // no log → nothing to resume
+    }
+
+    // 2. Reconstruct a minimal AgentSpec: model + endpoint re-adopted from the
+    //    log so the resumed run re-points at the SAME endpoint (AC2).
+    AgentSpec spec;
+    spec.name        = "resumed:" + std::string(target_agent_id).substr(0, 8);
+    spec.description = "resumed subagent";
+    if (!sf->model_at_start.empty()) {
+        spec.model = sf->model_at_start;
+    }
+    spec.endpoint = endpoint_from_blob(sf->endpoint, impl_->default_cfg_);
+
+    // 3. Mirror spawn() exactly — a FRESH agent id (closed agents are never
+    //    erased from the registry, so the original id is still occupied).
+    const std::string agent_id = batbox::Uuid::v4().to_string();
+
+    impl_->increment_active();
+
+    Impl* pimpl = impl_;
+    auto on_exit_cb = [pimpl, agent_id]() {
+        pimpl->on_exit(agent_id);
+    };
+
+    auto agent = std::make_unique<SubAgent>(
+        agent_id,
+        spec,
+        std::string(follow_up),
+        std::move(ct),
+        impl_->event_queue,
+        impl_->default_cfg_,
+        std::move(on_exit_cb)
+    );
+
+    // Arm the resume BEFORE registering/starting (prepare_resume() must run
+    // before start()): run() will restore() the conversation from this log
+    // instead of delivering a fresh prompt.
+    agent->prepare_resume(*sf);
+
+    // Register in the agents map and preserve insertion order.
+    {
+        std::unique_lock<std::shared_mutex> lk(impl_->agents_mutex);
+        impl_->agents.emplace(agent_id, std::move(agent));
+        impl_->insertion_order.push_back(agent_id);
+    }
+
+    // Attempt a non-blocking slot acquisition.
+    if (impl_->slots.try_acquire()) {
+        std::shared_lock<std::shared_mutex> lk(impl_->agents_mutex);
+        impl_->agents.at(agent_id)->start();
+    } else {
+        std::lock_guard<std::mutex> lk(impl_->pending_mutex);
+        impl_->pending_ids.push_back(agent_id);
+        const std::string hint =
+            "queued, " + std::to_string(impl_->pending_ids.size()) +
+            "/" + std::to_string(impl_->slots_limit);
+        impl_->event_queue.push(AgentEvent::make_queued(agent_id, hint));
     }
 
     return agent_id;

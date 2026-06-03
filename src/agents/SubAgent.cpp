@@ -85,6 +85,14 @@ void SubAgent::start() {
 }
 
 // =============================================================================
+// prepare_resume() — DIS-1021: arm run() to restore() from a prior session log
+// =============================================================================
+
+void SubAgent::prepare_resume(batbox::session::SessionFile sf) {
+    resume_from_ = std::move(sf);
+}
+
+// =============================================================================
 // cancel() — request cooperative cancellation
 // =============================================================================
 
@@ -366,23 +374,47 @@ void SubAgent::run(std::stop_token /*st*/) {
     // false for every current OpenAI-compatible endpoint — no behaviour change.
     conv.set_manages_own_context(provider_owns_context);
 
-    // -------------------------------------------------------------------------
-    // DIS-1020 — turn the session journal ON for this subagent.
-    //
-    // The subagent owns the same journaling Conversation as the main chat, but
-    // until now nothing recorded WHO ran or on WHICH endpoint.  We attach the
-    // agent id and a resolved-endpoint REFERENCE blob, then OPEN the session
-    // eagerly (before the first turn) so session_id_ is non-empty and every
-    // append_message inside run_turn() writes to disk — making this subagent's
-    // whole context durable instead of vanishing when the window closes.
-    //
-    // api_key handling (Paulina refinement b): we persist an endpoint REFERENCE,
-    // never the raw key.  `api_key_ref` names where the key is re-resolved from
-    // at resume time (cfg.distill / cfg.api / inline-omitted); base_url + model +
-    // use_distill_endpoint pin the provider so resume targets the right endpoint
-    // (e.g. the local 3090 distill endpoint, not cfg.api).  These logs are
-    // local-only and are never synced off this box.
-    {
+    if (resume_from_.has_value()) {
+        // ---------------------------------------------------------------------
+        // DIS-1021 — RESUME path: reload a CLOSED subagent from its durable log.
+        //
+        // restore() reloads recorded tool RESULTS as messages but NEVER
+        // re-dispatches the tool CALLS (design note §3), and adopts the original
+        // session_id_ from the file — so appends made by this resumed run
+        // continue the SAME log.  We do NOT call set_session_identity() /
+        // start_session() here: the file header already carries agent_id +
+        // endpoint, and restore() already adopted the session id.
+        //
+        // adopt_restored() re-seeds this store's identity maps so the next
+        // append_message() preserves the index agent_id/model/created_at instead
+        // of clobbering them with empty values (this store did not create the
+        // session).
+        // ---------------------------------------------------------------------
+        store.adopt_restored(*resume_from_);
+
+        if (auto rr = conv.restore(*resume_from_); !rr) {
+            set_status(SubAgentStatus::failed);
+            event_queue_.push(AgentEvent::make_errored(
+                id_, "resume restore failed: " + rr.error()));
+            return;
+        }
+    } else {
+        // ---------------------------------------------------------------------
+        // DIS-1020 — FRESH path: turn the session journal ON for this subagent.
+        //
+        // The subagent owns the same journaling Conversation as the main chat, but
+        // until now nothing recorded WHO ran or on WHICH endpoint.  We attach the
+        // agent id and a resolved-endpoint REFERENCE blob, then OPEN the session
+        // eagerly (before the first turn) so session_id_ is non-empty and every
+        // append_message inside run_turn() writes to disk — making this subagent's
+        // whole context durable instead of vanishing when the window closes.
+        //
+        // api_key handling (Paulina refinement b): we persist an endpoint REFERENCE,
+        // never the raw key.  `api_key_ref` names where the key is re-resolved from
+        // at resume time (cfg.distill / cfg.api / inline-omitted); base_url + model +
+        // use_distill_endpoint pin the provider so resume targets the right endpoint
+        // (e.g. the local 3090 distill endpoint, not cfg.api).  These logs are
+        // local-only and are never synced off this box.
         batbox::Json endpoint_ref = batbox::Json::object();
         endpoint_ref["base_url"] = agent_cfg.api.base_url;
         endpoint_ref["model"]    = agent_cfg.api.default_model;
@@ -425,8 +457,22 @@ void SubAgent::run(std::stop_token /*st*/) {
 
     // -------------------------------------------------------------------------
     // Deliver the initial user prompt.
+    //
+    // FRESH path: initial_prompt_ is the agent's first user turn — always
+    // delivered.
+    //
+    // DIS-1021 RESUME path: initial_prompt_ is reinterpreted as an OPTIONAL
+    // follow-up user turn against the restored history.  An empty prompt means
+    // "continue forward from restored history with no new user message", so the
+    // loop's first run_turn() picks up where the prior run left off.
     // -------------------------------------------------------------------------
-    conv.user_message(initial_prompt_);
+    if (resume_from_.has_value()) {
+        if (!initial_prompt_.empty()) {
+            conv.user_message(initial_prompt_);
+        }
+    } else {
+        conv.user_message(initial_prompt_);
+    }
 
     // -------------------------------------------------------------------------
     // Conversation loop.

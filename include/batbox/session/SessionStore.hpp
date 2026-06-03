@@ -228,6 +228,39 @@ public:
     resume_for_cwd(const std::filesystem::path& working_dir);
 
     // -------------------------------------------------------------------------
+    // find_session_for_agent() — DIS-1021 subagent resume lookup
+    //
+    // Finds the most recently updated session whose index record carries the
+    // given agent_id (DIS-1020's per-subagent lineage tag).  This is the lookup
+    // the supervisor uses to reload a CLOSED subagent from its durable log.
+    //
+    // Returns std::nullopt if agent_id is empty or no matching session is found.
+    //
+    // Implementation (mirrors resume_for_cwd):
+    //   1. Calls list_recent(256) to get candidates, already most-recent-first.
+    //   2. Returns the first whose SessionIndexRecord::agent_id == agent_id,
+    //      loading the full SessionFile.  Skips files that cannot be read.
+    // -------------------------------------------------------------------------
+    [[nodiscard]] std::optional<SessionFile>
+    find_session_for_agent(const std::string& agent_id);
+
+    // -------------------------------------------------------------------------
+    // adopt_restored() — DIS-1021 re-seed identity for a foreign session
+    //
+    // When a SessionFile was created by a DIFFERENT SessionStore instance (e.g.
+    // a subagent's prior run) and is now being resumed, this store's in-memory
+    // identity maps have no entry for it.  append_message() would then rewrite
+    // the index record from those EMPTY maps, clobbering the agent_id / model /
+    // created_at the on-disk log carries.
+    //
+    // adopt_restored() re-seeds the identity maps for sf.id from the loaded
+    // SessionFile so a subsequent append_message() preserves identity in the
+    // index instead of erasing it.  It does NOT set current_session_id_ (the
+    // adopted session is not "the session this store created").
+    // -------------------------------------------------------------------------
+    void adopt_restored(const SessionFile& sf);
+
+    // -------------------------------------------------------------------------
     // current_session_id()
     //
     // Returns the session id of the most recently created session via
