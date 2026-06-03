@@ -254,6 +254,21 @@ Writes a structured todo/checklist to the conversation session state.
 
 - `TodoWriteTool` — is_read_only=false, requires_confirmation=false; run() serialises the todo JSON and stores it in the session's metadata
 
+### NotepadStore.hpp  (DIS-981 S6 — the working-memory notepad)
+The third memory horizon (ephemeral → WORKING=notepad → durable). Out-of-band, disk-backed, session-keyed markdown pad — NOT a Message, so it survives compaction by construction. Append-with-light-headers (not goose's overwrite-blob, not a checklist).
+
+- `NotepadStore::NotepadStore(root={})` — root defaults to $BATBOX_NOTEPAD_DIR or config_dir()/"notepads"
+- `NotepadStore::default_root() -> path` / `session_key(session_id, agent_id) -> string` (session_id else agent_id else "default")
+- `NotepadStore::append(key, note, section="") -> Result<void>` — append-only; lazy born header on first jot; empty note rejected
+- `NotepadStore::read(key) -> string` / `grep(key, query, max_chars=8192) -> string` (matching entries; empty query = whole pad) / `reinjection_slice(key, max_chars=4096) -> string` (bounded tail; empty when no pad)
+- `NotepadStore::export_pad(key) -> string` / `archive(key) -> Result<void>` (move to archive/; curator ingest out of scope) / `pad_path(key) -> path`
+
+### NotepadAppendTool.hpp  (DIS-981 S6)
+- `NotepadAppendTool` — `notepad_append`; args {note (required), section?}; is_read_only=false, requires_confirmation=false; jots a nugget to the session pad
+
+### NotepadReadTool.hpp  (DIS-981 S6)
+- `NotepadReadTool` — `notepad_read`; args {query?, max_chars?}; is_read_only=true, requires_confirmation=false; greps the pad (or whole pad if no query)
+
 ### ToolSearchTool.hpp
 Fuzzy-searches the ToolRegistry by name and description.
 

@@ -122,6 +122,9 @@ target_sources(batbox_tools
         TaskStopTool.cpp
         SendMessageTool.cpp
         TodoWriteTool.cpp
+        NotepadStore.cpp          # DIS-981 S6 — out-of-band working-memory pad
+        NotepadAppendTool.cpp     # DIS-981 S6 — notepad write tool
+        NotepadReadTool.cpp       # DIS-981 S6 — notepad read/grep tool
         TaskStore.cpp
         TaskCreateTool.cpp
         TaskListTool.cpp

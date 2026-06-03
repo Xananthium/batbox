@@ -49,6 +49,9 @@ S7 (DIS-979) implementation of the universal subagent-dispatch seam. `process()`
 ### TeamCreateTool.cpp — `run()` calls TeamRegistry::create_team; optionally adds initial member agent_ids.
 ### TeamDeleteTool.cpp — `run()` calls TeamRegistry::delete_team by name.
 ### TodoWriteTool.cpp — `run()` serialises todo JSON into session state metadata.
+### NotepadStore.cpp — (DIS-981 S6) disk-backed, session-keyed working-memory pad: `append()` (with light `## section` header, never overwrite), `read()`/`grep()`/`reinjection_slice()`, `export_pad()`/`archive()`. Out-of-band markdown file per session key → survives compaction by construction. Process-wide write mutex; reads lock-free.
+### NotepadAppendTool.cpp — (DIS-981 S6) `notepad_append` write ITool; jots `note` (+optional `section`) to the session's pad. is_read_only=false, requires_confirmation=false. LEAST_FORCE: jots the nugget, not the transcript.
+### NotepadReadTool.cpp — (DIS-981 S6) `notepad_read` read/grep ITool; `query` greps matching entries, omit for whole pad. is_read_only=true.
 ### ToolSearchTool.cpp — `run()` fuzzy-searches ToolRegistry by name and description; returns ranked results.
 ### VerifyPlanExecutionTool.cpp — `run()` compares PlanMode plan_text against tool call history; reports unexecuted steps.
 ### WebFetchTool.cpp — `run()` calls SidecarManager::request<FetchRequest,FetchResponse>("/fetch",...); returns FetchResponse.markdown.

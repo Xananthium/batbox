@@ -15,6 +15,7 @@ All test files are named `test_<feature>.cpp` and use doctest. Registered with C
 ### test_ask_user_question.cpp — AskUserQuestionTool dispatches QuestionCard and returns selections
 ### test_bash_tool.cpp — BashTool forkpty execution; timeout; cancellation; output cap
 ### test_compactor.cpp — Compactor::compact() sends summarization request and installs result
+### test_notepad_survives_compaction.cpp — (S6, DIS-981, AC3) runs a REAL Compactor pass over a long conversation against fake_openai_server.py and asserts the out-of-band NotepadStore pad is byte-identical before/after (and still grep-able) — the property that makes context-trimming safe
 ### test_config_reload.cpp — reload_config() diffs changed fields; fires ConfigReloadBus
 ### test_config_tool.cpp — ConfigTool get/set subcommands read/write live Config
 ### test_conversation_basic.cpp — Conversation::run_turn() sends messages and returns assistant response

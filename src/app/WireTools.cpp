@@ -29,6 +29,8 @@
 #include <batbox/tools/GlobTool.hpp>
 #include <batbox/tools/GrepTool.hpp>
 #include <batbox/tools/TodoWriteTool.hpp>
+#include <batbox/tools/NotepadAppendTool.hpp>
+#include <batbox/tools/NotepadReadTool.hpp>
 #include <batbox/tools/SleepTool.hpp>
 #include <batbox/tools/SnipTool.hpp>
 #include <batbox/tools/PowerShellTool.hpp>
@@ -125,6 +127,13 @@ void wire_tools(
 
     // 6. TodoWrite — append to ./BATBOX.md project memory
     registry.register_tool(std::make_unique<TodoWriteTool>());
+
+    // 6b. Notepad (DIS-981, S6) — the working-memory horizon. notepad_append
+    // jots a nugget (plan/finding/decision) into an out-of-band, per-session
+    // markdown pad that survives compaction and is re-injected each turn;
+    // notepad_read greps it. Separate artifact from TodoWrite (a checklist).
+    registry.register_tool(std::make_unique<NotepadAppendTool>());
+    registry.register_tool(std::make_unique<NotepadReadTool>());
 
     // 7. Sleep — interruptible sleep with CancelToken support
     registry.register_tool(std::make_unique<SleepTool>());

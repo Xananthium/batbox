@@ -39,6 +39,9 @@ All test files follow the naming convention `test_<component>.cpp`. Tests are re
 ### test_threshold_decider.cpp — ThresholdEngulfDecider (S1, DIS-980): engulf at/above/below the boundary (strictly-greater); error results never engulfed; size-is-trigger; side-effect-free
 ### test_report_gold.cpp — ReportGoldTool (S4, DIS-980): schema shape (answer required); `parse()` valid/missing/empty/non-string/non-object + ignored wrong-typed optionals; `run()` surfaces the structured result / errors on invalid
 ### test_distill_config.cpp — DistillConfig (S1+S4, DIS-980): defaults; `BATBOX_DISTILL_*` + threshold env loading; `validate()` (enabled requires URL base_url + model; thresholds/timeouts > 0)
+### test_notepad_store.cpp — NotepadStore (S6, DIS-981): append accumulates (never overwrites); `## section` headers preserved; one pad per session key; session_key derivation; grep returns only matching entries (case-insensitive); reinjection_slice bounded + tail-biased; archive moves the pad; LEAST_FORCE (empty note rejected)
+### test_notepad_tools.cpp — notepad ITools (S6, DIS-981): identity + permission flags (append not-read-only, read read-only, neither confirms); schema shape; append→read/grep round-trip keyed by session_id; empty note rejected; empty-pad read sentinel
+### test_notepad_reminder.cpp — NotepadReminder (S6, DIS-981, AC4): compose wraps non-empty slice; reminder appended as the tail message; pad mutations change ONLY the tail (cached system-prompt prefix byte-identical across pads); empty pad = no-op
 
 ### CMakeLists.txt
 Links unit test binary against all batbox static libraries; registers with CTest.

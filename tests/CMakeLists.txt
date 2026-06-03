@@ -441,6 +441,30 @@ target_link_libraries(test_todo_write PRIVATE
     batbox_config
     simdjson::simdjson)
 
+# ---------------------------------------------------------------------------
+# DIS-981 S6 — NotepadStore: append/headers/per-key/grep/slice/archive.
+# NotepadStore.cpp pulls Paths from batbox_core only.
+# ---------------------------------------------------------------------------
+batbox_add_unit_test(test_notepad_store
+    unit/test_notepad_store.cpp  batbox_core)
+target_sources(test_notepad_store PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/tools/NotepadStore.cpp)
+
+# ---------------------------------------------------------------------------
+# DIS-981 S6 — notepad ITools: schema, flags, append→read/grep round-trip.
+# Mirrors test_todo_write's link set (ToolContext pulls PermissionMode).
+# ---------------------------------------------------------------------------
+batbox_add_unit_test(test_notepad_tools
+    unit/test_notepad_tools.cpp  batbox_core)
+target_sources(test_notepad_tools PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/tools/NotepadAppendTool.cpp
+    ${PROJECT_SOURCE_DIR}/src/tools/NotepadReadTool.cpp
+    ${PROJECT_SOURCE_DIR}/src/tools/NotepadStore.cpp)
+target_link_libraries(test_notepad_tools PRIVATE
+    batbox_permissions
+    batbox_config
+    simdjson::simdjson)
+
 # CPP 5.2 — ToolRegistry: register_tool, find_by_name, available_tool_schemas, dispatch
 # Link batbox_tools (which includes ToolRegistry.cpp) and its dependencies.
 # CancelToken.cpp is provided via batbox_core.
@@ -1362,6 +1386,46 @@ batbox_add_unit_test(test_system_prompt
     unit/test_system_prompt.cpp  batbox_core)
 target_sources(test_system_prompt PRIVATE
     ${PROJECT_SOURCE_DIR}/src/conversation/SystemPrompt.cpp)
+
+# ---------------------------------------------------------------------------
+# DIS-981 S6 — NotepadReminder: per-turn tail re-injection. AC4 — pad surfaces
+# as the tail message; cached prefix unchanged by pad mutations; empty=no-op.
+# Uses only the ChatRequest/WireMessage header structs.
+# ---------------------------------------------------------------------------
+batbox_add_unit_test(test_notepad_reminder
+    unit/test_notepad_reminder.cpp  batbox_core)
+target_sources(test_notepad_reminder PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/conversation/NotepadReminder.cpp)
+target_link_libraries(test_notepad_reminder PRIVATE
+    batbox_config
+    simdjson::simdjson)
+
+# ---------------------------------------------------------------------------
+# DIS-981 S6 — AC3 (decisive): the notepad survives a REAL Compactor pass.
+# Spawns the shared fake_openai_server.py fixture (read-only) and links the
+# Compactor + Client stack (cpr/curl/simdjson/spdlog/fmt), mirroring how
+# tests/integration/test_compactor.cpp builds.
+# ---------------------------------------------------------------------------
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_notepad_survives_compaction.cpp)
+    add_executable(test_notepad_survives_compaction
+        ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_notepad_survives_compaction.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/NotepadStore.cpp)
+    set_target_properties(test_notepad_survives_compaction PROPERTIES
+        CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+    target_include_directories(test_notepad_survives_compaction PRIVATE
+        ${PROJECT_SOURCE_DIR}/include)
+    target_compile_definitions(test_notepad_survives_compaction PRIVATE
+        BATBOX_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+    target_link_libraries(test_notepad_survives_compaction PRIVATE
+        doctest::doctest
+        batbox_conversation
+        batbox_inference
+        batbox_config
+        batbox_core
+        cpr::cpr
+        simdjson::simdjson)
+    doctest_discover_tests(test_notepad_survives_compaction)
+endif()
 
 # ---------------------------------------------------------------------------
 # CPP 5.20 — AskUserQuestionTool: single-select, multi-select, headless mode
