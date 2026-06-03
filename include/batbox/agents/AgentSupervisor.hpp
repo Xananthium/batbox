@@ -175,6 +175,63 @@ public:
     /// then wait_all() to join before the supervisor is destroyed.
     void wait_all();
 
+    // =========================================================================
+    // Standing-subagent registry — the warm window (S2/S3, DIS-988)
+    //
+    // A *standing* subagent keeps its conversation alive after it produces a
+    // result (it is NOT collapsed to a string), so the parent can interrogate it
+    // with follow-up turns against the still-engulfed context.  The standing set
+    // is a SEPARATE, LRU-bounded pool that lives ALONGSIDE the active-work
+    // parallelism semaphore: promoting an agent hands its active slot back to the
+    // pool, so parked windows never starve new spawns.  Under pressure the
+    // least-recently-interrogated standing subagent is evicted (its window is
+    // discarded and its stop_token fired) — lossless by construction because the
+    // gold is already in the notepad (S6).
+    //
+    // Step 7 exposes the explicit promote + interrogate API.  WHEN to promote
+    // (closed→standing) is the step-8 selection heuristic — NOT decided here.
+    // =========================================================================
+
+    /// One warm subagent's line for the parent's status surface (AC4).
+    struct StandingStatus {
+        std::string id;           ///< Opaque agent handle.
+        std::string name;         ///< Display name (AgentSpec::name).
+        std::string status_line;  ///< One-line status (truncated last result).
+    };
+
+    /// promote — mark a known subagent STANDING and register it in the LRU pool.
+    ///
+    /// The subagent's run loop will park at quiescence instead of exiting, and
+    /// the agent's active-work slot is handed back to the pool.  If promoting
+    /// pushes the pool past max_standing_subagents, the least-recently-
+    /// interrogated standing subagent is evicted.  Idempotent: re-promoting an
+    /// already-standing agent just refreshes its LRU recency.  Safe no-op on an
+    /// unknown handle.
+    void promote(std::string_view agent_id);
+
+    /// interrogate — issue a follow-up user turn against a standing subagent's
+    /// warm window and return its answer (blocking).
+    ///
+    /// Refreshes the agent's LRU recency, then runs the question against the
+    /// still-engulfed context (the source is NOT re-engulfed).  Returns the empty
+    /// string on an unknown / non-standing / evicted handle — never hangs, never
+    /// throws (the warm window always fulfils, AC5).
+    [[nodiscard]] std::string interrogate(std::string_view agent_id,
+                                          std::string_view question);
+
+    /// set_max_standing_subagents — set the LRU bound on the standing pool.
+    /// Clamped to >= 0.  Lowering it below the current pool size evicts the
+    /// least-recently-interrogated agents until the pool fits.
+    void set_max_standing_subagents(int n);
+
+    /// standing_status — the bounded list of warm subagents available for
+    /// follow-up, most-recently-interrogated first.  Source for the AC4 status
+    /// line injected into the parent each turn.
+    [[nodiscard]] std::vector<StandingStatus> standing_status() const;
+
+    /// standing_count — number of subagents currently in the standing pool.
+    [[nodiscard]] std::size_t standing_count() const;
+
 private:
     struct Impl;
     Impl* impl_; ///< Pimpl — hides semaphore, jthreads, and map from callers.
