@@ -48,8 +48,10 @@
 #include <batbox/session/SessionStore.hpp>
 
 #include <atomic>
+#include <condition_variable>
 #include <deque>
 #include <functional>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -158,6 +160,44 @@ public:
         return status_.load(std::memory_order_acquire);
     }
 
+    // -------------------------------------------------------------------------
+    // Standing mode — the warm, interrogable window (S2/S3, DIS-988)
+    // -------------------------------------------------------------------------
+
+    // promote() — mark this subagent STANDING.
+    //
+    // A standing subagent does NOT collapse its conversation to a string and
+    // exit when it reaches quiescence (no pending work) — it PARKS with its
+    // Conversation still alive on the jthread stack, waiting for follow-up
+    // interrogations.  This is the goose deferred-closed fix: the parent talks
+    // to a warm window, not a re-spawned one.  Idempotent; thread-safe.
+    void promote() noexcept;
+
+    // is_standing() — true once promote() has been called.  Thread-safe.
+    [[nodiscard]] bool is_standing() const noexcept {
+        return standing_.load(std::memory_order_acquire);
+    }
+
+    // interrogate() — issue a follow-up user turn against the still-engulfed
+    // context and get the answer.
+    //
+    // Returns a future that resolves to the visible output of the follow-up
+    // turn.  The source is NOT re-engulfed: the question runs against the warm
+    // Conversation built by the original run.  Thread-safe; may be called from
+    // any thread (the parent).
+    //
+    // SAFETY (AC5): never hangs, never throws.  If the agent is not standing,
+    // has terminated, or has been cancelled/evicted, the returned future is
+    // already satisfied with an empty string (the "no warm window" sentinel).
+    // Any interrogation in flight when the agent exits for ANY reason is
+    // fulfilled with the sentinel by the run loop's reaper, so a caller blocked
+    // on .get() is always released.
+    [[nodiscard]] std::future<std::string> interrogate(std::string question);
+
+    // last_result() — the most recent quiescent result summary (the string the
+    // status line surfaces).  Empty until the first turn completes.  Thread-safe.
+    [[nodiscard]] std::string last_result() const;
+
 private:
     // -------------------------------------------------------------------------
     // run() — conversation loop, executes inside the jthread
@@ -178,6 +218,22 @@ private:
 
     /// Post a status-transition event to the shared queue and update status_.
     void set_status(SubAgentStatus s);
+
+    /// A queued follow-up turn for a standing subagent and the promise that
+    /// receives its answer.  The promise is shared so interrogate() can hold the
+    /// future end while the run loop fulfils the other end.
+    struct PendingInterrogation {
+        std::string                               question;
+        std::shared_ptr<std::promise<std::string>> answer;
+    };
+
+    /// Close the interrogation channel on run-loop exit (ANY path): mark
+    /// terminated_, fulfil @p current (the in-flight question, if any) and every
+    /// still-queued interrogation with the empty sentinel so no caller blocked on
+    /// .get() ever hangs.  Idempotent (guarded by terminated_).  Called by the
+    /// run loop's RAII reaper.
+    void terminate_interrogations(
+        const std::shared_ptr<std::promise<std::string>>& current) noexcept;
 
     // -------------------------------------------------------------------------
     // Members
@@ -213,6 +269,25 @@ private:
     std::vector<std::string>    last_5_lines_;
     std::string                 current_step_;
     std::size_t                 token_count_{0};
+
+    // Most recent quiescent result summary (guarded by snapshot_mutex_); the
+    // string the standing-status line surfaces for this warm window.
+    std::string                 last_result_;
+
+    // -- Standing mode (S2/S3, DIS-988) --------------------------------------
+    // standing_: set by promote(); makes the run loop park instead of exit.
+    std::atomic<bool>           standing_{false};
+
+    // Interrogation channel between the parent (interrogate()) and the run loop.
+    // interrogate() pushes a PendingInterrogation and notifies; the parked run
+    // loop pops it, runs a follow-up turn, and fulfils its promise.
+    mutable std::mutex                    interrogate_mutex_;
+    std::condition_variable               interrogate_cv_;
+    std::deque<PendingInterrogation>      interrogations_;
+    // terminated_: once the run loop has left for good, interrogate() must
+    // fulfil its own promise with the sentinel rather than enqueue (no consumer
+    // would ever pop it).  Guarded by interrogate_mutex_.
+    bool                                  terminated_{false};
 
     // The jthread; declared last so that all other members are initialised
     // before the thread can access them via the run() lambda.

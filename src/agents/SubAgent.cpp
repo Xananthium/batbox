@@ -93,6 +93,91 @@ void SubAgent::enqueue_message(std::string_view message) {
 }
 
 // =============================================================================
+// promote() — mark this subagent standing (S2/S3, DIS-988)
+// =============================================================================
+
+void SubAgent::promote() noexcept {
+    standing_.store(true, std::memory_order_release);
+    // Wake the run loop in case it is already parked at quiescence (harmless if
+    // it is mid-turn — the flag is re-read at the next quiescence).
+    interrogate_cv_.notify_one();
+}
+
+// =============================================================================
+// interrogate() — follow-up turn against the still-warm window
+// =============================================================================
+
+std::future<std::string> SubAgent::interrogate(std::string question) {
+    auto prom = std::make_shared<std::promise<std::string>>();
+    std::future<std::string> fut = prom->get_future();
+
+    bool enqueued = false;
+    {
+        std::lock_guard<std::mutex> lock{interrogate_mutex_};
+        if (!terminated_
+            && standing_.load(std::memory_order_acquire)
+            && !child_token_.is_cancelled()) {
+            interrogations_.push_back(
+                PendingInterrogation{std::move(question), prom});
+            enqueued = true;
+        }
+    }
+
+    if (enqueued) {
+        interrogate_cv_.notify_one();
+    } else {
+        // SAFETY (AC5): no warm window is available to answer this — there is no
+        // consumer that would ever pop the request, so fulfil the future now
+        // with the empty "no warm window" sentinel.  Never hang the caller.
+        prom->set_value(std::string{});
+    }
+    return fut;
+}
+
+// =============================================================================
+// last_result() — most recent quiescent result summary (status-line source)
+// =============================================================================
+
+std::string SubAgent::last_result() const {
+    std::lock_guard<std::mutex> lock{snapshot_mutex_};
+    return last_result_;
+}
+
+// =============================================================================
+// terminate_interrogations() — close the channel on run-loop exit (AC5)
+//
+// Called by the run loop's RAII reaper on EVERY exit path (normal return,
+// cancellation, eviction, exception unwind).  Marks the channel terminated and
+// fulfils the in-flight question plus every queued one with the empty sentinel,
+// so a parent blocked on interrogate().get() is always released.  Idempotent.
+// =============================================================================
+
+void SubAgent::terminate_interrogations(
+    const std::shared_ptr<std::promise<std::string>>& current) noexcept {
+    std::deque<PendingInterrogation> leftover;
+    {
+        std::lock_guard<std::mutex> lock{interrogate_mutex_};
+        if (terminated_) {
+            return;  // idempotent — already closed
+        }
+        terminated_ = true;
+        leftover.swap(interrogations_);
+    }
+
+    // Each promise is fulfilled exactly once (quiescence clears `current` before
+    // the next pop), but guard defensively: set_value throws only if the promise
+    // is already satisfied or has no shared state.
+    auto safe_fulfill = [](const std::shared_ptr<std::promise<std::string>>& p) {
+        if (!p) return;
+        try { p->set_value(std::string{}); } catch (...) { /* already satisfied */ }
+    };
+    safe_fulfill(current);
+    for (auto& pi : leftover) {
+        safe_fulfill(pi.answer);
+    }
+}
+
+// =============================================================================
 // snapshot() — point-in-time read for the TUI 10Hz ticker
 // =============================================================================
 
@@ -264,6 +349,23 @@ void SubAgent::run(std::stop_token /*st*/) {
     conv.set_manages_own_context(provider_owns_context);
 
     // -------------------------------------------------------------------------
+    // Standing-mode interrogation state (S2/S3, DIS-988).
+    //   pending_answer — promise to fulfil at the next quiescence when the
+    //                    current turn was driven by an interrogation.
+    //   interrogation_reaper — fires on ANY exit from run() (return, cancel,
+    //                    eviction, exception unwind), closing the interrogation
+    //                    channel so no parent blocked on interrogate().get()
+    //                    ever hangs (AC5).  Declared after `conv` so it is
+    //                    destroyed before `conv`.
+    // -------------------------------------------------------------------------
+    std::shared_ptr<std::promise<std::string>> pending_answer;
+    struct InterrogationReaper {
+        SubAgent*                                    self;
+        std::shared_ptr<std::promise<std::string>>*  slot;
+        ~InterrogationReaper() { self->terminate_interrogations(*slot); }
+    } interrogation_reaper{this, &pending_answer};
+
+    // -------------------------------------------------------------------------
     // Deliver the initial user prompt.
     // -------------------------------------------------------------------------
     conv.user_message(initial_prompt_);
@@ -332,7 +434,10 @@ void SubAgent::run(std::stop_token /*st*/) {
         auto pending = drain_pending_messages();
 
         if (pending.empty()) {
-            // No pending messages: agent work is complete.
+            // -----------------------------------------------------------------
+            // Quiescent: no pending peer messages.  Build the result summary.
+            // -----------------------------------------------------------------
+            const bool standing = standing_.load(std::memory_order_acquire);
             std::string summary;
             {
                 std::lock_guard<std::mutex> lock{snapshot_mutex_};
@@ -340,12 +445,64 @@ void SubAgent::run(std::stop_token /*st*/) {
                     if (!summary.empty()) summary += '\n';
                     summary += line;
                 }
-                current_step_ = "done";
+                last_result_  = summary;
+                current_step_ = standing ? "standing (warm)" : "done";
+            }
+
+            // If this turn was driven by an interrogation, answer it now and
+            // clear the slot so the reaper never double-fulfils the promise.
+            if (pending_answer) {
+                try { pending_answer->set_value(summary); } catch (...) {}
+                pending_answer.reset();
             }
 
             set_status(SubAgentStatus::done);
             event_queue_.push(AgentEvent::make_completed(id_, summary));
-            return;
+
+            // -----------------------------------------------------------------
+            // Closed mode (default, every non-promoted agent): collapse the
+            // window and exit.  conv is destroyed here — existing behaviour.
+            // -----------------------------------------------------------------
+            if (!standing) {
+                return;
+            }
+
+            // -----------------------------------------------------------------
+            // Standing mode (S2/S3, DIS-988): PARK with the Conversation still
+            // alive on this stack — the window is NOT collapsed to a string.
+            // Wait for the next interrogation (or cancel/eviction).
+            // -----------------------------------------------------------------
+            std::string next_question;
+            {
+                std::unique_lock<std::mutex> lock{interrogate_mutex_};
+                interrogate_cv_.wait(lock, [this] {
+                    return !interrogations_.empty()
+                           || child_token_.is_cancelled();
+                });
+
+                if (child_token_.is_cancelled()) {
+                    // LRU-evicted or parent-cancelled.  Lossless by
+                    // construction: the gold is already in the notepad (S6),
+                    // reachable via the re-injected pad after the window dies.
+                    // The reaper fulfils any queued interrogations with the
+                    // sentinel as this frame unwinds.
+                    set_status(SubAgentStatus::done);
+                    event_queue_.push(AgentEvent::make_cancelled(id_, "evicted"));
+                    return;
+                }
+
+                PendingInterrogation pi = std::move(interrogations_.front());
+                interrogations_.pop_front();
+                next_question  = std::move(pi.question);
+                pending_answer = std::move(pi.answer);
+            }
+
+            // Resume the warm window: deliver the follow-up turn against the
+            // still-engulfed context (the source is NOT re-engulfed) and loop.
+            event_queue_.push(AgentEvent::make_step_began(
+                id_, "interrogate", next_question.substr(0, 80)));
+            conv.user_message(next_question);
+            continue;
         }
 
         // Deliver each injected message as a new user turn and continue the loop.
