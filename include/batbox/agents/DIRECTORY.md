@@ -41,9 +41,10 @@ Agent specification parsed from a .md file's YAML frontmatter.
 
 - `AgentSpec::from_file(path) -> Result<AgentSpec>` — reads .md file, parses YAML frontmatter, returns populated AgentSpec or error
 - `AgentSpec::from_type(subagent_type) -> AgentSpec` — looks up built-in agent spec by subagent_type string (e.g. "database-agent")
+- `EndpointOverride` (struct) — optional per-agent inference-endpoint override (AC1, DIS-988). `use_distill_endpoint` reuses `cfg.distill.*` (the local 3090), or set `base_url`/`api_key`/`model` explicitly. Carried on `AgentSpec::endpoint` (nullopt → target `cfg.api` unchanged). Lets a standing subagent run on local free compute; threaded through `SubAgent::run()` via the S8 `ProviderRegistry`.
 
 ### AgentSupervisor.hpp
-4-slot semaphore-based agent execution supervisor.
+Semaphore-based agent execution supervisor + LRU-bounded standing-subagent registry (S2/S3, DIS-988).
 
 - `AgentSupervisor::AgentSupervisor()` — constructs with default max_concurrent=4
 - `AgentSupervisor::AgentSupervisor(max_concurrent)` — constructs with explicit concurrency limit
@@ -52,6 +53,12 @@ Agent specification parsed from a .md file's YAML frontmatter.
 - `AgentSupervisor::cancel(agent_id)` — fires the cancel token for a specific agent
 - `AgentSupervisor::enqueue_message(agent_id, message)` — injects a message into a running agent's queue
 - `AgentSupervisor::wait_all()` — blocks until all spawned agents reach terminal state
+- `AgentSupervisor::promote(agent_id)` — marks a subagent STANDING (warm window kept alive at quiescence) and registers it in the LRU pool; hands its active-work slot back so parked windows don't starve spawns; evicts least-recently-interrogated over `max_standing`. Idempotent; safe no-op on unknown handle (AC2/AC3)
+- `AgentSupervisor::interrogate(agent_id, question) -> string` — issues a follow-up turn against a standing subagent's still-engulfed context and returns the answer (blocking); refreshes LRU recency; "" on unknown/non-standing/evicted handle; never hangs/throws (AC2/AC5)
+- `AgentSupervisor::set_max_standing_subagents(n)` — sets the hard LRU bound on the standing pool; lowering it evicts down to fit (AC5)
+- `AgentSupervisor::standing_status() -> vector<StandingStatus>` — bounded {id,name,status_line} list of warm subagents, most-recently-interrogated first; source for the AC4 status line
+- `AgentSupervisor::standing_count() -> size_t` — number of subagents currently in the standing pool
+- `StandingStatus` (struct) — `{id, name, status_line}` one-line-per-warm-window status record (AC4)
 
 ### Demon.hpp
 The Demon advisor agent spec and rate limiter.
@@ -72,6 +79,10 @@ Single agent execution unit running in a jthread.
 - `SubAgent::id() -> string` — returns the agent's UUID string
 - `SubAgent::name() -> string` — returns the agent's display name (from AgentSpec)
 - `SubAgent::status() -> SubAgentStatus` — returns current lifecycle state (queued/running/done/failed/cancelled)
+- `SubAgent::promote()` — marks the agent STANDING: at quiescence the run loop PARKS (conv kept alive on the jthread) instead of collapsing to a string and exiting (AC2, DIS-988)
+- `SubAgent::is_standing() -> bool` — true once promoted
+- `SubAgent::interrogate(question) -> future<string>` — queues a follow-up turn against the warm window; future resolves to the answer, or the empty sentinel if not standing/terminated/cancelled (never hangs, AC5)
+- `SubAgent::last_result() -> string` — most recent quiescent result summary (the status-line source)
 - `status_label(SubAgentStatus) -> string_view` — returns human-readable label for the status enum
 
 ### Team.hpp

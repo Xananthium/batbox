@@ -38,6 +38,7 @@
 #include <batbox/agents/SubAgent.hpp>
 #include <batbox/config/Config.hpp>
 #include <batbox/core/CancelToken.hpp>
+#include <batbox/core/Logging.hpp>
 #include <batbox/core/Uuid.hpp>
 
 #include <algorithm>
@@ -272,6 +273,12 @@ struct AgentSupervisor::Impl {
         std::shared_lock<std::shared_mutex> lk(agents_mutex);
         auto it = agents.find(id);
         if (it != agents.end()) {
+            // AC6: the LRU-evict transition, provable by warn-log + the
+            // SubAgent's make_cancelled("evicted") event.
+            BATBOX_LOG_WARN(
+                "StandingRegistry: LRU-evicting warm subagent {} ('{}') — "
+                "window discarded, gold preserved in notepad (S6)",
+                id, it->second->name());
             it->second->cancel();  // fires child_token → park wait wakes → exit
         }
     }
@@ -507,6 +514,10 @@ void AgentSupervisor::promote(std::string_view agent_id) {
         // parked windows never starve new spawns.  start_pending_or_release()
         // either starts a queued agent on the freed slot or releases it.
         impl_->start_pending_or_release();
+        // AC6: the promote transition, provable by info-log.
+        BATBOX_LOG_INFO("StandingRegistry: promoted subagent {} to standing "
+                        "(pool now {}/{})",
+                        id, standing_count(), impl_->max_standing);
     }
     if (!victim.empty()) {
         impl_->evict_standing(victim);
@@ -538,6 +549,9 @@ std::string AgentSupervisor::interrogate(std::string_view agent_id,
         if (it == impl_->agents.end()) {
             return std::string{};
         }
+        // AC6: the interrogate transition, provable by debug-log.
+        BATBOX_LOG_DEBUG("StandingRegistry: interrogating warm subagent {} "
+                         "({} chars)", id, question.size());
         fut = it->second->interrogate(std::string(question));
     }
     return fut.get();  // SubAgent always fulfils (reaper) — never hangs.
