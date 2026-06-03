@@ -52,7 +52,7 @@ The proxy forces `temperature:0` for both arms equally.
 
 | Task | Class | Arm | Quality | Tokens | Model calls | Token Δ vs Claude |
 |------|-------|-----|---------|--------|-------------|-------------------|
-| lang-choice-2q | investigation | **batbox** | PASS | **2937** | 3 | **+248.4%** |
+| lang-choice-2q | investigation | **batbox** | PASS | **2755** | 3 | **+226.8%** |
 | lang-choice-2q | investigation | claude | PASS | 843 | 2 | — |
 | lang-choice-4q-deep | investigation | **batbox** | PASS | **5642** | 5 | **+238.9%** |
 | lang-choice-4q-deep | investigation | claude | PASS | 1665 | 4 | — |
@@ -78,8 +78,8 @@ direct answer, where the fresh-dispatch arm answered crisply. It still satisfied
 worth noting, not a quality win for batbox.)
 
 **Token spend: batbox loses, and the loss is structural.**
-- Multi-turn investigation: batbox costs **+248%** (2 turns) and **+239%** (4 turns) — i.e.
-  **~3.4×** the tokens for the same answers on the same model.
+- Multi-turn investigation: batbox costs **+227%** (2 turns) and **+239%** (4 turns) — i.e.
+  **~3.3–3.4×** the tokens for the same answers on the same model.
 - Flat lookup: batbox costs **+25%** even though it correctly stays closed — the
   `report_gold` structured-distill call carries tool-schema overhead the single plain
   completion does not.
@@ -124,6 +124,25 @@ organ change — it is **gated on board approval and not applied here** (see
 This result also directly feeds **DIS-1011**: if the warm window is justified by latency /
 no-re-distill rather than token thrift, its re-scope from a *correctness gate* to a
 *warm-cache hint* is the right read.
+
+## Re-verification on the post-DIS-1044 tree
+
+DIS-1044 (S11 doom-loop guard) landed *on top of* this eval and touched the exact
+surface the batbox arm drives — `SubAgent.cpp` (the outer turn-cycle loop) and
+`Conversation.cpp`. Re-ran the full eval on the integrated tree (HEAD `7b83777`,
+which includes the guard) to confirm the verdict still holds:
+
+- **4q-deep** (batbox 5642 / +239%) and **lookup** (batbox 1507 / +25%) reproduced
+  **byte-identical**.
+- **2q** came back batbox 2755 / **+227%** (vs the first run's 2937 / +248%) — a
+  ~7% wiggle from run-to-run model nondeterminism on the short task (qwen2.5:7b is
+  not perfectly deterministic even at temp 0; that run answered with a "Summary:"
+  framing). The verdict is unchanged: quality wash, batbox ~3.3–3.4× tokens on
+  multi-turn investigation.
+- All six arm-runs **PASS**. The doom-loop guard bounds *runaway* loops; it does not
+  affect bounded eval interactions, as expected.
+
+The committed `results-reference/` table reflects this post-DIS-1044 re-run.
 
 ## Reproduce
 

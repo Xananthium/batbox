@@ -4,7 +4,7 @@ Model held constant: `qwen2.5:7b` (temperature 0, via counting ollama proxy). To
 
 | Task | Class | Arm | Outcome | Tokens | Model calls | Token Δ vs Claude |
 |------|-------|-----|---------|--------|-------------|-------------------|
-| lang-choice-2q | investigation | batbox | PASS | 2937 | 3 | +248.4% |
+| lang-choice-2q | investigation | batbox | PASS | 2755 | 3 | +226.8% |
 | lang-choice-2q | investigation | claude | PASS | 843 | 2 | — |
 | lang-choice-4q-deep | investigation | batbox | PASS | 5642 | 5 | +238.9% |
 | lang-choice-4q-deep | investigation | claude | PASS | 1665 | 4 | — |
@@ -14,7 +14,7 @@ Model held constant: `qwen2.5:7b` (temperature 0, via counting ollama proxy). To
 ## Per-arm mechanism notes
 
 **lang-choice-2q [investigation]**
-- batbox: per-turn tokens (incl. spawn turn in q1): q1+=1800 q2+=1137 | a1[:55]="Based on the research, **Rust** would be the best fit f"
+- batbox: per-turn tokens (incl. spawn turn in q1): q1+=1715 q2+=1040 | a1[:55]="Summary: The research indicates that the choice of back"
 - claude: per-turn tokens: q1=432 q2=411 | a1[:55]="Rust wins decisively for raw runtime performance. It of"
 
 **lang-choice-4q-deep [investigation]**
