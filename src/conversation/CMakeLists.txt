@@ -50,4 +50,5 @@ target_sources(batbox_conversation
         PlanMode.cpp          # CPP 3.3 — plan-mode state machine
         Compactor.cpp         # CPP 3.5 — summarise-by-LLM + verbatim tail
         NotepadReminder.cpp   # DIS-981 S6 — per-turn notepad tail re-injection
+        StandingReminder.cpp  # DIS-988 S2/S3 AC4 — per-turn warm-subagent status tail
 )

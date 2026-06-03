@@ -89,6 +89,7 @@
 #include <batbox/conversation/ContextWindow.hpp>
 #include <batbox/conversation/Message.hpp>
 #include <batbox/conversation/PlanMode.hpp>
+#include <batbox/conversation/StandingReminder.hpp>
 #include <batbox/conversation/SystemPrompt.hpp>
 #include <batbox/core/CancelToken.hpp>
 #include <batbox/core/Result.hpp>
@@ -432,6 +433,28 @@ public:
                                                    double   /*cost_usd*/)> cb);
 
     // -------------------------------------------------------------------------
+    // set_standing_handles_provider()  (S2/S3 — DIS-988, AC4)
+    //
+    // Register a provider that returns the parent's current list of WARM
+    // standing subagents (most-recently-interrogated first).  When set and
+    // non-empty, run_turn() injects a bounded "warm subagents available for
+    // follow-up" reminder as a per-turn TAIL message — the same cache-
+    // disciplined shape as the S6 notepad reminder (NOT a cached system-prompt
+    // prefix).  When unset, or when it returns an empty list, NOTHING is
+    // injected and the prefix cache is never disturbed (default, no behaviour
+    // change).
+    //
+    // The orchestrator (App) wires this from AgentSupervisor::standing_status();
+    // the conversation layer stays decoupled from the agents layer via the
+    // layer-local StandingHandle POD.
+    //
+    // Thread safety: set before any background thread calls run_turn(); the
+    // provider is invoked on the worker thread during request assembly.
+    // -------------------------------------------------------------------------
+    void set_standing_handles_provider(
+        std::function<std::vector<batbox::conversation::StandingHandle>()> provider);
+
+    // -------------------------------------------------------------------------
     // last_reasoning()  (S10 — DIS-975)
     //
     // The isolated reasoning text from the most recent streaming turn, merged
@@ -578,6 +601,13 @@ private:
     /// and reactive).  Defaults false: batbox owns the window.  Set via
     /// set_manages_own_context() from Provider::manages_own_context().
     bool manages_own_context_{false};
+
+    /// S2/S3 (DIS-988, AC4): optional provider for the parent's warm standing-
+    /// subagent list.  When set and non-empty, run_turn() injects a bounded
+    /// "warm subagents available for follow-up" TAIL reminder.  Null by default
+    /// → no injection, cache untouched.  Set via set_standing_handles_provider().
+    std::function<std::vector<batbox::conversation::StandingHandle>()>
+        standing_handles_provider_;
 
     /// Convert messages_ to the wire format (WireMessage[]) for ChatRequest.
     /// When registry is non-null, populates req.tools with available schemas.

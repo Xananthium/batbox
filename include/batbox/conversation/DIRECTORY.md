@@ -20,6 +20,13 @@ Surfaces the working notepad each turn as a TAIL reminder, never in the cached s
 - `compose_notepad_reminder(pad_slice) -> string` — pure formatter; wraps the slice in `<notepad>…</notepad>`; empty slice → ""
 - `apply_notepad_reminder(req, pad_slice) -> bool` — appends a trailing {role:"system"} reminder message to req.messages (tail-only); empty slice = no-op returns false; cached prefix preserved
 
+### StandingReminder.hpp  (DIS-988 S2/S3 AC4 — per-turn warm-subagent status re-injection)
+Surfaces the parent's warm standing-subagent list each turn as a bounded TAIL reminder, same cache discipline as NotepadReminder (never the cached prefix). Layer-local `StandingHandle{id,name,status_line}` POD keeps the conversation layer decoupled from the agents layer.
+
+- `compose_standing_reminder(handles, max_handles=8) -> string` — pure formatter; wraps up to `max_handles` warm-subagent lines in `<warm_subagents>…</warm_subagents>` with a "(+N more)" bound; empty handles → ""
+- `apply_standing_reminder(req, handles, max_handles=8) -> bool` — appends a trailing {role:"system"} reminder to req.messages (tail-only); empty handles = no-op returns false; cached prefix preserved
+- Wired into `Conversation` via `set_standing_handles_provider(...)`; App supplies the provider from `AgentSupervisor::standing_status()`
+
 ### ContextWindow.hpp
 Token estimation and context limit management.
 

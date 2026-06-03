@@ -143,6 +143,12 @@ void Conversation::set_on_usage_delta_cb(
     on_usage_delta_cb_ = std::move(cb);
 }
 
+void Conversation::set_standing_handles_provider(
+    std::function<std::vector<batbox::conversation::StandingHandle>()> provider)
+{
+    standing_handles_provider_ = std::move(provider);
+}
+
 // =============================================================================
 // user_message()
 // =============================================================================
@@ -280,6 +286,15 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         return notepad.pad_path(key).string();
     };
 
+    // S2/S3 (DIS-988, AC4): the parent's warm standing-subagent list for per-turn
+    // TAIL re-injection.  Re-read fresh each call so promote/interrogate/evict
+    // are reflected next turn.  Empty when no provider is wired or the pool is
+    // empty → apply_standing_reminder is a no-op and the cache stays untouched.
+    auto standing_handles = [this]() -> std::vector<StandingHandle> {
+        if (!standing_handles_provider_) return {};
+        return standing_handles_provider_();
+    };
+
     std::string preflight_body_str;
     {
         // Determine the resolved context length for this turn.
@@ -329,6 +344,9 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         // pad and the token estimate accounts for it. Tail-only: the cached
         // system-prompt prefix is untouched.
         batbox::conversation::apply_notepad_reminder(preflight_req, notepad_slice());
+        // S2/S3 (DIS-988, AC4): warm standing-subagent status as a further TAIL
+        // reminder (after the pad, still tail-only — cache prefix untouched).
+        batbox::conversation::apply_standing_reminder(preflight_req, standing_handles());
         // Serialize the request as JSON for the bytes/4 estimate.
         // PEXT2 4.1 (D-3): use to_wire_string() to skip the intermediate
         // nlohmann tree — avoids ~2000 allocations per preflight call.
@@ -374,6 +392,8 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
             // body too. The pad itself is untouched by compaction (out-of-band) —
             // this just keeps iteration 0's post-compact body carrying it.
             batbox::conversation::apply_notepad_reminder(post_compact_req, notepad_slice());
+            // S2/S3 (DIS-988, AC4): re-inject the warm-subagent status tail too.
+            batbox::conversation::apply_standing_reminder(post_compact_req, standing_handles());
             // Re-serialize after compaction.
             // PEXT2 4.1 (D-3): use to_wire_string() here too — consistent with
             // the pre-compact path above; avoids an extra nlohmann tree build.
@@ -468,6 +488,8 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         // slice is re-read fresh so notes jotted earlier this loop surface now.
         // compose_system_prompt is NOT touched — cache discipline preserved.
         batbox::conversation::apply_notepad_reminder(req, notepad_slice());
+        // S2/S3 (DIS-988, AC4): warm-subagent status tail for tool_turn>0 too.
+        batbox::conversation::apply_standing_reminder(req, standing_handles());
 
         // Instantiate ToolCallOrchestrator for this streaming turn (only when
         // the registry and gate are configured).
