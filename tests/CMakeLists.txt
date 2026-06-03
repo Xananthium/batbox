@@ -1401,6 +1401,18 @@ target_link_libraries(test_notepad_reminder PRIVATE
     simdjson::simdjson)
 
 # ---------------------------------------------------------------------------
+# DIS-988 S2/S3 — AC4: the warm-subagent status TAIL reminder (pure formatter).
+# Uses only the ChatRequest/WireMessage header structs (mirrors notepad_reminder).
+# ---------------------------------------------------------------------------
+batbox_add_unit_test(test_standing_reminder
+    unit/test_standing_reminder.cpp  batbox_core)
+target_sources(test_standing_reminder PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/conversation/StandingReminder.cpp)
+target_link_libraries(test_standing_reminder PRIVATE
+    batbox_config
+    simdjson::simdjson)
+
+# ---------------------------------------------------------------------------
 # DIS-981 S6 — AC3 (decisive): the notepad survives a REAL Compactor pass.
 # Spawns the shared fake_openai_server.py fixture (read-only) and links the
 # Compactor + Client stack (cpr/curl/simdjson/spdlog/fmt), mirroring how
