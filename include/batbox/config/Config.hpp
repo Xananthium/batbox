@@ -211,6 +211,41 @@ struct CompactConfig {
     int  keep_last_n_turns_verbatim = 10; ///< BATBOX_KEEP_LAST_N_TURNS_VERBATIM
 };
 
+/// Closed tool-subagent distillation settings (S1+S4, DIS-980).
+///
+/// When a tool result exceeds max_tool_response_size bytes, the subagent
+/// dispatch envelope engulfs it into a ONE-SHOT distillation call on a LOCAL
+/// OpenAI-compatible endpoint (the 3090s) and returns only the golden line.
+/// The local endpoint is deliberately SEPARATE from ApiConfig (the main, often
+/// cloud, model) — distillation is free local compute.
+struct DistillConfig {
+    /// Install the threshold decider + distiller at startup.  When false the
+    /// dispatch envelope stays pure pass-through (byte-identical to S7).
+    bool        enabled = false;                  ///< BATBOX_DISTILL_ENABLED
+
+    /// Local OpenAI-compatible endpoint, e.g. "http://127.0.0.1:11434/v1".
+    /// Required when enabled.
+    std::string base_url;                         ///< BATBOX_DISTILL_BASE_URL
+
+    /// API key for the local endpoint (usually empty or "ollama" locally).
+    std::string api_key;                          ///< BATBOX_DISTILL_API_KEY
+
+    /// The small local model that reads the big output.  Required when enabled.
+    std::string model;                            ///< BATBOX_DISTILL_MODEL
+
+    /// Engulf threshold in bytes.  Default 200k matches goose's
+    /// GOOSE_MAX_TOOL_RESPONSE_SIZE (200k chars) — the same "too big to inline"
+    /// ballpark, ported as a byte count.
+    std::size_t max_tool_response_size = 200'000; ///< BATBOX_MAX_TOOL_RESPONSE_SIZE
+
+    /// Per-distill request timeout.  Bounds a hung local endpoint so distill()
+    /// never blocks the parent turn forever.
+    int         request_timeout_sec = 60;         ///< BATBOX_DISTILL_TIMEOUT_SEC
+
+    /// Cap on the distilled golden line length (the local model's max_tokens).
+    int         max_tokens = 512;                 ///< BATBOX_DISTILL_MAX_TOKENS
+};
+
 // ============================================================================
 // Top-level Config aggregate
 // ============================================================================
@@ -232,6 +267,7 @@ struct Config {
     AgentsConfig   agents;
     SecurityConfig security;
     CompactConfig  compact;
+    DistillConfig  distill;
 
     /// Incremented on every reload so components can detect a change cheaply.
     /// Not serialised to/from JSON — purely an in-process epoch counter.

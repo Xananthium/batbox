@@ -458,6 +458,38 @@ target_link_libraries(test_tool_registry PRIVATE
     simdjson::simdjson)
 
 
+# DIS-980 (S1) — ThresholdEngulfDecider: the threshold-gated engulf trigger.
+# Links batbox_tools (which now includes ThresholdEngulfDecider.cpp) + its OBJECT
+# deps, same shape as test_tool_registry (SubagentDistiller.cpp pulls inference).
+batbox_add_unit_test(test_threshold_decider
+    unit/test_threshold_decider.cpp  batbox_tools batbox_core)
+target_link_libraries(test_threshold_decider PRIVATE
+    batbox_mcp
+    batbox_inference
+    batbox_tools_bash
+    batbox_permissions
+    batbox_config
+    simdjson::simdjson)
+
+# DIS-980 (S4) — ReportGoldTool: the structured final-output contract.
+batbox_add_unit_test(test_report_gold
+    unit/test_report_gold.cpp  batbox_tools batbox_core)
+target_link_libraries(test_report_gold PRIVATE
+    batbox_mcp
+    batbox_inference
+    batbox_tools_bash
+    batbox_permissions
+    batbox_config
+    simdjson::simdjson)
+
+# DIS-980 (S1+S4) — DistillConfig: env-var loading + validate() for the threshold
+# and the local distill endpoint.  Config-only; links batbox_config + batbox_core.
+batbox_add_unit_test(test_distill_config
+    unit/test_distill_config.cpp  batbox_config batbox_core)
+target_link_libraries(test_distill_config PRIVATE
+    simdjson::simdjson)
+
+
 # CPP 7.2 — ScraplingClient: cpr POST helpers to sidecar (/fetch /search /select)
 # Link cpr::cpr, simdjson, and batbox_core for remaining symbols.
 # CancelToken.cpp and Json.cpp are provided via batbox_core.

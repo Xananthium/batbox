@@ -36,6 +36,9 @@ All test files follow the naming convention `test_<component>.cpp`. Tests are re
 ### test_input_bar.cpp — InputBar autocomplete popup and VimMode integration
 ### test_input_queue.cpp — InputQueue depth/empty/flatten_entry
 ### test_tool_subagent_envelope.cpp — ToolSubagentEnvelope (S7): default pass-through; decision hook gates the distiller; swappable hooks; null-hook fallback / never-null invariant
+### test_threshold_decider.cpp — ThresholdEngulfDecider (S1, DIS-980): engulf at/above/below the boundary (strictly-greater); error results never engulfed; size-is-trigger; side-effect-free
+### test_report_gold.cpp — ReportGoldTool (S4, DIS-980): schema shape (answer required); `parse()` valid/missing/empty/non-string/non-object + ignored wrong-typed optionals; `run()` surfaces the structured result / errors on invalid
+### test_distill_config.cpp — DistillConfig (S1+S4, DIS-980): defaults; `BATBOX_DISTILL_*` + threshold env loading; `validate()` (enabled requires URL base_url + model; thresholds/timeouts > 0)
 
 ### CMakeLists.txt
 Links unit test binary against all batbox static libraries; registers with CTest.
