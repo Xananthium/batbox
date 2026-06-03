@@ -12,19 +12,21 @@
 //   - the Chat-vs-Responses routing predicate (currently always Chat).
 //
 // Provider identity:
-//   provider_key_for_config() reproduces the Client's hint-resolution contract
-//   (the same rules verified by tests/unit/test_provider_hint.cpp) for the
-//   keys Client special-cases, and passes through any other non-empty hint
-//   verbatim (so "kimi"/"deepseek" — which are OpenAI-compatible and need no
-//   Client quirk — still surface as their own identity).  This duplicates the
-//   *rule shape*, not Client's internal symbol: Client's resolve_provider_hint
-//   is file-local by design.
+//   provider_key_for_config() resolves the identity key shown by name()/
+//   metadata().  Its contract is a deliberate *superset* of the Client wire
+//   path's resolve_provider_hint: empty/"auto" detects from base_url, and any
+//   non-empty hint surfaces verbatim (lowercased) — so OpenAI-compatible-but-
+//   unquirked providers ("kimi"/"deepseek") keep their own identity even though
+//   Client folds them to plain openai semantics.  The URL→provider detection
+//   and the hint vocabulary are NOT re-implemented here: both come from the one
+//   shared source in ProviderHint.{hpp,cpp} (DIS-1006), so the bare-`:1234`
+//   lm-studio case now resolves identically on the wire and identity paths.
 // ---------------------------------------------------------------------------
 
 #include <batbox/inference/Provider.hpp>
+#include <batbox/inference/ProviderHint.hpp>
 
 #include <algorithm>
-#include <array>
 #include <cctype>
 #include <string>
 #include <string_view>
@@ -41,51 +43,21 @@ std::string to_lower_copy(std::string_view s) {
     return out;
 }
 
-/// True when @p s is one of the provider keys the Client special-cases via its
-/// hint vocabulary (resolve_provider_hint kKnown set).
-bool is_client_known_key(const std::string& s) noexcept {
-    static constexpr std::array<std::string_view, 9> kKnown{
-        "openai", "vllm", "together", "ollama",
-        "anthropic", "groq", "mistral", "lm-studio", "llama-cpp"};
-    return std::any_of(kKnown.begin(), kKnown.end(),
-                       [&](std::string_view k) { return s == k; });
-}
-
-/// Detect a provider key from the base_url for the "auto"/empty-hint path.
-/// Mirrors Client.cpp's detect_provider_from_url contract (same precedence).
-std::string detect_from_url(std::string_view base_url) {
-    const std::string url = to_lower_copy(base_url);
-    auto has = [&](std::string_view needle) {
-        return url.find(needle) != std::string::npos;
-    };
-    if (has("together.ai") || has("together.xyz")) return "together";
-    if (has("groq.com"))                           return "groq";
-    if (has("mistral.ai"))                         return "mistral";
-    if (has("anthropic.com") || has("litellm"))    return "anthropic";
-    if (has("11434") || has("ollama"))             return "ollama";
-    if (has("lmstudio") || has(":1234/"))          return "lm-studio";
-    if (has("llama"))                              return "llama-cpp";
-    if (has("vllm"))                               return "vllm";
-    return "openai";
-}
-
-/// Resolve a provider identity key for a Config.
+/// Resolve a provider identity key for a Config (the name()/metadata() value).
 ///
-/// Contract (a superset of Client's resolve_provider_hint, for identity only):
-///   - empty / "auto"            → detect from base_url.
-///   - a Client-known key        → that key (lowercased).
-///   - any other non-empty hint  → the hint verbatim (lowercased).  This lets
-///     OpenAI-compatible-but-unquirked providers (kimi, deepseek, …) keep their
-///     own identity even though Client treats them as plain openai semantics.
+/// Contract — a superset of the shared wire-path resolve_provider_hint:
+///   - empty / "auto"           → detect_provider_from_url (the shared detector).
+///   - any other non-empty hint → that hint verbatim (lowercased).  Both the
+///     Client-known keys and unknown-but-OpenAI-compatible hints (kimi,
+///     deepseek, …) surface as their own identity here; the wire path's
+///     warn-and-fall-back-to-openai applies only to which *quirks* run, not to
+///     identity.
 std::string provider_key_for_config(const batbox::config::Config& cfg) {
     const std::string hint = to_lower_copy(cfg.api.provider_hint);
     if (hint.empty() || hint == "auto") {
-        return detect_from_url(cfg.api.base_url);
+        return detect_provider_from_url(cfg.api.base_url);
     }
-    if (is_client_known_key(hint)) {
-        return hint;
-    }
-    return hint; // verbatim identity for kimi/deepseek/etc.
+    return hint; // verbatim identity (known keys + kimi/deepseek/etc.)
 }
 
 } // anonymous namespace

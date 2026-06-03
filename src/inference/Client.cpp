@@ -57,6 +57,7 @@
 #include <batbox/core/Logging.hpp>
 #include <batbox/inference/ChatRequest.hpp>
 #include <batbox/inference/ChatResponse.hpp>
+#include <batbox/inference/ProviderHint.hpp>
 #include <batbox/inference/SseParser.hpp>
 
 #include <cpr/cpr.h>
@@ -104,77 +105,10 @@ bool is_retriable_status(long status) noexcept {
 // Provider quirk handling
 // ---------------------------------------------------------------------------
 
-/// Lowercase-fold a string in-place.
-std::string to_lower(std::string s) {
-    std::transform(s.begin(), s.end(), s.begin(),
-                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    return s;
-}
-
-/// Detect provider from base_url when hint is "auto" or empty.
-/// Priority order: most-specific domains first, local-port heuristics last.
-/// Falls back to "openai" when no pattern matches.
-std::string detect_provider_from_url(const std::string& base_url) {
-    const std::string url = to_lower(base_url);
-    if (url.find("together.ai") != std::string::npos
-            || url.find("together.xyz") != std::string::npos) {
-        return "together";
-    }
-    if (url.find("groq.com") != std::string::npos) {
-        return "groq";
-    }
-    if (url.find("mistral.ai") != std::string::npos) {
-        return "mistral";
-    }
-    if (url.find("anthropic.com") != std::string::npos
-            || url.find("litellm") != std::string::npos) {
-        return "anthropic";
-    }
-    if (url.find("11434") != std::string::npos
-            || url.find("ollama") != std::string::npos) {
-        return "ollama";
-    }
-    if (url.find("lmstudio") != std::string::npos
-            || url.find(":1234/") != std::string::npos
-            || url.find(":1234") == url.size() - 5) {
-        return "lm-studio";
-    }
-    if (url.find("llama") != std::string::npos) {
-        return "llama-cpp";
-    }
-    if (url.find("vllm") != std::string::npos) {
-        return "vllm";
-    }
-    return "openai";
-}
-
-/// Resolve the provider hint string to a canonical lowercase provider name.
-std::string resolve_provider_hint(const std::string& hint,
-                                  const std::string& base_url) {
-    const std::string norm = to_lower(hint);
-
-    if (norm.empty() || norm == "auto") {
-        return detect_provider_from_url(base_url);
-    }
-
-    static const std::string kKnown[] = {
-        "openai", "vllm", "together", "ollama",
-        "anthropic", "groq", "mistral", "lm-studio", "llama-cpp"
-    };
-    for (const auto& known : kKnown) {
-        if (norm == known) {
-            return norm;
-        }
-    }
-
-    auto lg = batbox::log::get("inference.client");
-    lg->warn(
-        "BATBOX_PROVIDER_HINT='{}' is not a recognised provider; "
-        "falling back to openai semantics. "
-        "Valid values: openai|vllm|together|ollama|anthropic|groq|mistral|lm-studio|llama-cpp|auto",
-        hint);
-    return "openai";
-}
+// detect_provider_from_url() / resolve_provider_hint() — the URL→provider
+// detector and the hint resolver — now live in ProviderHint.{hpp,cpp} as the
+// single source of truth shared with Provider.cpp's identity path (DIS-1006).
+// The call sites below resolve them via batbox::inference (unqualified lookup).
 
 /// Apply provider-specific pre-request transformations to the JSON body and
 /// HTTP headers.

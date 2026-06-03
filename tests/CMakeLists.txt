@@ -1313,6 +1313,7 @@ batbox_add_unit_test(test_provider_hint
     unit/test_provider_hint.cpp  batbox_core)
 target_sources(test_provider_hint PRIVATE
     ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
+    ${PROJECT_SOURCE_DIR}/src/inference/ProviderHint.cpp
     ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
     ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp)
 target_link_libraries(test_provider_hint PRIVATE

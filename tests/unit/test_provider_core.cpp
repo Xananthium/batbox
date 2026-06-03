@@ -24,6 +24,7 @@
 #include <doctest/doctest.h>
 
 #include <batbox/inference/Provider.hpp>
+#include <batbox/inference/ProviderHint.hpp>
 #include <batbox/inference/ModelPricing.hpp>
 #include <batbox/config/Config.hpp>
 
@@ -241,3 +242,80 @@ TEST_SUITE("ModelPricing canonical wiring") {
     }
 
 } // TEST_SUITE ModelPricing canonical wiring
+
+// ===========================================================================
+// TEST SUITE: bare-:1234 lm-studio convergence (DIS-1006)
+// ---------------------------------------------------------------------------
+// Regression for the provider-detection drift: a base_url ending in a bare
+// `:1234` (no trailing slash) resolved as "lm-studio" through the Client wire
+// path but MISDETECTED as "openai" through the Provider identity path, because
+// Provider.cpp carried its own URL heuristic that only matched ":1234/".
+//
+// With the detector unified in ProviderHint.{hpp,cpp}, both paths now consume
+// the same implementation.  These cases FAIL before the fix (Provider identity
+// returns "openai") and PASS after (both return "lm-studio").
+// ===========================================================================
+
+TEST_SUITE("provider-detection drift (DIS-1006)") {
+
+    using batbox::inference::detect_provider_from_url;
+    using batbox::inference::resolve_provider_hint;
+
+    // The exact divergent input: trailing bare port, no slash.
+    static constexpr const char* kBareLmStudio = "http://localhost:1234";
+
+    TEST_CASE("bare :1234 resolves to lm-studio on the shared detector") {
+        CHECK(detect_provider_from_url(kBareLmStudio) == "lm-studio");
+        // Client wire-path resolver (auto/empty) agrees.
+        CHECK(resolve_provider_hint("auto", kBareLmStudio) == "lm-studio");
+        CHECK(resolve_provider_hint("",     kBareLmStudio) == "lm-studio");
+    }
+
+    TEST_CASE("Provider identity path converges on bare :1234 (was openai)") {
+        auto cfg      = make_cfg("auto", kBareLmStudio);
+        auto provider = batbox::inference::ProviderRegistry::create(cfg);
+        REQUIRE(provider != nullptr);
+        // Pre-fix this was "openai"; post-fix it matches the wire path.
+        CHECK(provider->name() == "lm-studio");
+        CHECK(provider->metadata().name == "lm-studio");
+    }
+
+    TEST_CASE("both paths converge for bare :1234 (the point of the issue)") {
+        auto cfg      = make_cfg("auto", kBareLmStudio);
+        auto provider = batbox::inference::ProviderRegistry::create(cfg);
+        REQUIRE(provider != nullptr);
+        CHECK(provider->name() == resolve_provider_hint("auto", kBareLmStudio));
+    }
+
+    TEST_CASE("trailing-slash :1234/ unchanged (no regression)") {
+        CHECK(detect_provider_from_url("http://localhost:1234/v1") == "lm-studio");
+        auto cfg      = make_cfg("auto", "http://localhost:1234/v1");
+        auto provider = batbox::inference::ProviderRegistry::create(cfg);
+        REQUIRE(provider != nullptr);
+        CHECK(provider->name() == "lm-studio");
+    }
+
+    TEST_CASE("full known vocabulary resolves identically on both paths") {
+        struct Case { const char* url; const char* expect; };
+        const Case cases[] = {
+            {"https://api.openai.com/v1",      "openai"},
+            {"http://vllm-server:8000/v1",     "vllm"},
+            {"https://api.together.ai/v1",     "together"},
+            {"http://localhost:11434/v1",      "ollama"},
+            {"https://api.anthropic.com/v1",   "anthropic"},
+            {"https://api.groq.com/openai/v1", "groq"},
+            {"https://api.mistral.ai/v1",      "mistral"},
+            {"http://localhost:1234/v1",       "lm-studio"},
+            {"http://llama-server.local/v1",   "llama-cpp"},
+        };
+        for (const auto& c : cases) {
+            const std::string wire = resolve_provider_hint("auto", c.url);
+            CHECK(wire == c.expect);
+            auto cfg      = make_cfg("auto", c.url);
+            auto provider = batbox::inference::ProviderRegistry::create(cfg);
+            REQUIRE(provider != nullptr);
+            CHECK(provider->name() == wire);
+        }
+    }
+
+} // TEST_SUITE provider-detection drift (DIS-1006)

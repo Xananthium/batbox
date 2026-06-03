@@ -47,6 +47,12 @@ S8/S9 provider abstraction — a polymorphic seam *around* the existing `Client`
 - `OpenAiCompatibleProvider::reasoning_tags() -> ReasoningTags` — S10; the inline reasoning-tag convention this provider declares (`reasoning_tags_for_provider(name())`)
 - `reasoning_tags_for_config(cfg) -> ReasoningTags` — S10; resolve the provider identity for `cfg` and return its reasoning-tag convention; the seam the streaming delta path uses to build a `ReasoningAccumulator` from live `Config`
 
+### ProviderHint.hpp
+Single source of truth for "URL/hint → canonical provider name" (DIS-1006). Shared by the Client wire path (which quirks to apply) and the Provider identity path (`name()`/`metadata()`), which previously carried diverging copies.
+
+- `detect_provider_from_url(base_url) -> std::string` — auto/empty-hint detection; most-specific domains first, local-port heuristics last (incl. a base_url ending in bare `:1234` → `lm-studio`); falls back to `openai`
+- `resolve_provider_hint(hint, base_url) -> std::string` — Client wire-path contract: empty/`auto` → `detect_provider_from_url`; a known-vocabulary key → that key (lowercased); any other value warns on the `inference.client` channel and falls back to `openai`. Vocabulary: openai|vllm|together|ollama|anthropic|groq|mistral|lm-studio|llama-cpp. (The Provider identity path is a deliberate superset — it surfaces unknown-but-compatible hints like kimi/deepseek verbatim — and composes on `detect_provider_from_url` rather than re-implementing it.)
+
 ### ThinkSplitter.hpp
 S10 — standalone, stateful streaming filter that separates streamed `content` into **visible** vs. **reasoning** text by detecting an inline tag pair (default `<think>`/`</think>`). Cross-chunk-boundary correct: markers split across SSE chunks (`<thi` | `nk>`) are reassembled, and a partial marker is never emitted as visible. Dependency-light (std lib only) so it unit-tests in isolation, like `SseParser`/`ToolCallAccumulator`.
 
