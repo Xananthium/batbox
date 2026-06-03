@@ -16,12 +16,23 @@
 
 #include <exception>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
 namespace batbox::tools {
 
 namespace {
+
+/// Thrown by run_distillation() for every "soft" failure — an expected,
+/// recoverable condition (cancelled, unreachable endpoint, no/wrong report_gold,
+/// unparseable args, missing answer).  distill() catches it (it derives from
+/// std::exception) and converges it on the single fallback return.  The message
+/// preserves the per-path reason for the warn log so AC5's per-path granularity
+/// is not lost by the single-convergence structure.
+struct DistillFallback final : std::runtime_error {
+    using std::runtime_error::runtime_error;
+};
 
 /// Build the tight distiller prompt.  It carries the INTENT (tool name + the
 /// arguments the tool was dispatched with) plus the raw output, so the local
@@ -57,129 +68,142 @@ std::string build_distiller_prompt(std::string_view   tool_name,
 } // namespace
 
 // =============================================================================
-// distill — engulf into a one-shot local call, harvest report_gold, or fall back
+// run_distillation — the engulf → one-shot local call → harvest path.
+//
+// Returns the distilled gold ToolResult on success.  THROWS (DistillFallback for
+// soft/expected failures, or whatever the provider/JSON layer throws for hard
+// ones) on EVERY failure mode, so distill() can converge them all on one return.
+// Reads `result` but never consumes it — the raw stays whole back in distill().
+// =============================================================================
+
+ToolResult SubagentDistiller::run_distillation(std::string_view  tool_name,
+                                               const Json&       args,
+                                               const ToolResult& result,
+                                               ToolContext&      ctx) const {
+    // Cancellation already requested → do not even reach the endpoint.
+    if (ctx.cancel_token.is_cancelled()) {
+        throw DistillFallback("cancelled before distillation");
+    }
+
+    // -------------------------------------------------------------------------
+    // Throwaway Config pointed at the LOCAL distill endpoint.  This is the crux:
+    // the provider must hit cfg.distill.*, NOT cfg.api (the main / cloud model).
+    // Built from defaults so we only override the api fields the Provider/Client
+    // read; `local` outlives `provider` below.
+    // -------------------------------------------------------------------------
+    config::Config local = config::Config::load_default();
+    local.api.base_url            = cfg_.distill.base_url;
+    local.api.api_key             = cfg_.distill.api_key;
+    local.api.default_model       = cfg_.distill.model;
+    local.api.request_timeout_sec = cfg_.distill.request_timeout_sec;
+    local.api.max_tokens          = cfg_.distill.max_tokens;
+    local.api.provider_hint.clear();  // auto-detect (ollama/openai) from base_url
+
+    // report_gold is the ONLY tool offered and tool_choice pins it → the local
+    // model is forced to emit through the structured handoff.
+    ReportGoldTool report_tool;
+    const Json     gold_schema = report_tool.schema_json();
+
+    inference::ToolDef gold_def;
+    gold_def.type        = "function";
+    gold_def.name        = "report_gold";
+    gold_def.description = gold_schema.value("description", std::string{});
+    gold_def.schema      = gold_schema.contains("parameters")
+                               ? gold_schema.at("parameters")
+                               : Json::object();
+
+    inference::WireMessage user_msg;
+    user_msg.role    = "user";
+    user_msg.content = build_distiller_prompt(tool_name, args, result.body);
+
+    inference::ChatRequest req;
+    req.model      = cfg_.distill.model;
+    req.messages.push_back(std::move(user_msg));
+    req.tools.push_back(std::move(gold_def));
+    req.tool_choice = inference::ChatRequest::tool_choice_function("report_gold");
+    req.max_tokens  = cfg_.distill.max_tokens;
+    req.stream      = false;  // closed / one-shot
+    req.stream_options_include_usage = std::nullopt;
+
+    // One-shot call against the local endpoint.  Client::chat forces stream=false
+    // and surfaces transport / HTTP / parse failures as Err.
+    inference::OpenAiCompatibleProvider provider{local};
+    auto resp = provider.chat(req);
+
+    // Cancelled during the call → discard the (possibly partial) work.
+    if (ctx.cancel_token.is_cancelled()) {
+        throw DistillFallback("cancelled during distillation");
+    }
+    if (!resp.has_value()) {
+        throw DistillFallback("local endpoint failed: " + resp.error());
+    }
+
+    // Harvest the report_gold structured output.
+    const inference::ChatResponse& r = resp.value();
+    if (!r.tool_calls.has_value() || r.tool_calls->empty()) {
+        throw DistillFallback("model returned no tool_calls (report_gold never called)");
+    }
+
+    const inference::WireToolCall* gold_call = nullptr;
+    for (const auto& tc : *r.tool_calls) {
+        if (tc.function.name == "report_gold") {
+            gold_call = &tc;
+            break;
+        }
+    }
+    if (gold_call == nullptr) {
+        throw DistillFallback("no report_gold tool_call (wrong tool)");
+    }
+
+    // Json::parse throws on malformed args; that exception is itself a failure
+    // mode and converges on distill()'s single fallback — no local catch needed.
+    Json       parsed_args = Json::parse(gold_call->function.arguments);
+    const auto gold        = ReportGoldTool::parse(parsed_args);
+    if (!gold.has_value()) {
+        throw DistillFallback("report_gold missing 'answer'");
+    }
+
+    // -------------------------------------------------------------------------
+    // Success: the distilled golden line becomes the result the model sees.
+    // follow_up_ok is captured into the payload but NOT acted upon (S2/S3).
+    // -------------------------------------------------------------------------
+    Json payload = Json::object();
+    payload["distilled"]      = true;
+    payload["original_bytes"] = result.body.size();
+    if (gold->confidence.has_value())   payload["confidence"]   = *gold->confidence;
+    if (gold->follow_up_ok.has_value()) payload["follow_up_ok"] = *gold->follow_up_ok;
+
+    return ToolResult{gold->answer, /*is_error=*/false, std::move(payload)};
+}
+
+// =============================================================================
+// distill — single-convergence robustness wrapper (AC5).
+//
+// `result` is taken BY VALUE and is NEVER mutated below: the raw output is held
+// intact for the whole function, so there is no window where a mid-distillation
+// failure has already discarded the raw.  EVERY failure mode — a fired cancel
+// token, a transport/HTTP/parse error from the local endpoint, an absent or
+// wrong report_gold call, unparseable report_gold args, a missing 'answer', or
+// ANY thrown exception (std or otherwise) — converges on the SINGLE fallback
+// `return result;` below.  There is exactly ONE other return statement: the
+// success path (`return run_distillation(...)`), reached only when a complete
+// distilled gold line is in hand.  This makes "never lose data, never throw out
+// of distill()" provable BY INSPECTION (one convergence point), not just by
+// enumerating the unit tests.
 // =============================================================================
 
 ToolResult SubagentDistiller::distill(std::string_view tool_name,
                                       const Json&      args,
                                       ToolResult       result,
                                       ToolContext&     ctx) const {
-    const std::size_t original_bytes = result.body.size();
-
-    // Cancellation already requested → do not engulf; return the original.
-    if (ctx.cancel_token.is_cancelled()) {
-        return result;
-    }
-
     try {
-        // ---------------------------------------------------------------------
-        // Throwaway Config pointed at the LOCAL distill endpoint.  This is the
-        // crux: the provider must hit cfg.distill.*, NOT cfg.api (the main /
-        // cloud model).  Built from defaults so we only override the api fields
-        // the Provider/Client read; `local` outlives `provider` below.
-        // ---------------------------------------------------------------------
-        config::Config local = config::Config::load_default();
-        local.api.base_url            = cfg_.distill.base_url;
-        local.api.api_key             = cfg_.distill.api_key;
-        local.api.default_model       = cfg_.distill.model;
-        local.api.request_timeout_sec = cfg_.distill.request_timeout_sec;
-        local.api.max_tokens          = cfg_.distill.max_tokens;
-        local.api.provider_hint.clear();  // auto-detect (ollama/openai) from base_url
-
-        // report_gold is the ONLY tool offered and tool_choice pins it → the
-        // local model is forced to emit through the structured handoff.
-        ReportGoldTool report_tool;
-        const Json     gold_schema = report_tool.schema_json();
-
-        inference::ToolDef gold_def;
-        gold_def.type        = "function";
-        gold_def.name        = "report_gold";
-        gold_def.description = gold_schema.value("description", std::string{});
-        gold_def.schema      = gold_schema.contains("parameters")
-                                   ? gold_schema.at("parameters")
-                                   : Json::object();
-
-        inference::WireMessage user_msg;
-        user_msg.role    = "user";
-        user_msg.content = build_distiller_prompt(tool_name, args, result.body);
-
-        inference::ChatRequest req;
-        req.model      = cfg_.distill.model;
-        req.messages.push_back(std::move(user_msg));
-        req.tools.push_back(std::move(gold_def));
-        req.tool_choice = inference::ChatRequest::tool_choice_function("report_gold");
-        req.max_tokens  = cfg_.distill.max_tokens;
-        req.stream      = false;  // closed / one-shot
-        req.stream_options_include_usage = std::nullopt;
-
-        // One-shot call against the local endpoint.  Client::chat forces
-        // stream=false and surfaces transport / HTTP / parse failures as Err.
-        inference::OpenAiCompatibleProvider provider{local};
-        auto resp = provider.chat(req);
-
-        // Cancelled during the call → discard the (possibly partial) work.
-        if (ctx.cancel_token.is_cancelled()) {
-            return result;
-        }
-        if (!resp.has_value()) {
-            BATBOX_LOG_WARN("distill: local endpoint failed ({}); returning raw output",
-                            resp.error());
-            return result;  // unreachable / 5xx / parse error → original
-        }
-
-        // Harvest the report_gold structured output.
-        const inference::ChatResponse& r = resp.value();
-        if (!r.tool_calls.has_value() || r.tool_calls->empty()) {
-            BATBOX_LOG_WARN("distill: model returned no tool_calls; returning raw output");
-            return result;  // report_gold never called → original
-        }
-
-        const inference::WireToolCall* gold_call = nullptr;
-        for (const auto& tc : *r.tool_calls) {
-            if (tc.function.name == "report_gold") {
-                gold_call = &tc;
-                break;
-            }
-        }
-        if (gold_call == nullptr) {
-            BATBOX_LOG_WARN("distill: no report_gold tool_call; returning raw output");
-            return result;  // wrong tool → original
-        }
-
-        Json parsed_args;
-        try {
-            parsed_args = Json::parse(gold_call->function.arguments);
-        } catch (...) {
-            BATBOX_LOG_WARN("distill: report_gold arguments unparseable; returning raw output");
-            return result;
-        }
-
-        const auto gold = ReportGoldTool::parse(parsed_args);
-        if (!gold.has_value()) {
-            BATBOX_LOG_WARN("distill: report_gold missing 'answer'; returning raw output");
-            return result;  // no usable answer → original
-        }
-
-        // ---------------------------------------------------------------------
-        // Success: the distilled golden line becomes the result the model sees.
-        // follow_up_ok is captured into the payload but NOT acted upon (S2/S3).
-        // ---------------------------------------------------------------------
-        Json payload = Json::object();
-        payload["distilled"]      = true;
-        payload["original_bytes"] = original_bytes;
-        if (gold->confidence.has_value())   payload["confidence"]   = *gold->confidence;
-        if (gold->follow_up_ok.has_value()) payload["follow_up_ok"] = *gold->follow_up_ok;
-
-        std::string answer = gold->answer;
-        return ToolResult{std::move(answer), /*is_error=*/false, std::move(payload)};
+        return run_distillation(tool_name, args, result, ctx);  // success — the only non-fallback return
     } catch (const std::exception& e) {
-        // distill() must never throw — any unexpected failure falls back to raw.
-        BATBOX_LOG_WARN("distill: unexpected exception ({}); returning raw output", e.what());
-        return result;
+        BATBOX_LOG_WARN("distill: returning raw output ({})", e.what());
     } catch (...) {
-        BATBOX_LOG_WARN("distill: unexpected non-std exception; returning raw output");
-        return result;
+        BATBOX_LOG_WARN("distill: returning raw output (unknown non-std failure)");
     }
+    return result;  // <<<<< AC5: THE SINGLE FALLBACK CONVERGENCE POINT >>>>>
 }
 
 // =============================================================================

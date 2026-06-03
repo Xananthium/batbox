@@ -73,6 +73,17 @@ public:
                                      ToolContext&     ctx) const override;
 
 private:
+    /// The engulf → one-shot-local-call → harvest-report_gold path.  Returns the
+    /// distilled gold ToolResult on success; THROWS on EVERY failure mode (fired
+    /// cancel token, transport/HTTP/parse error, absent/wrong report_gold call,
+    /// unparseable args, missing 'answer', or any provider exception) so that
+    /// distill() can converge them all on its single fallback return (AC5).
+    /// Reads @p result but never consumes it — the raw stays intact in distill().
+    [[nodiscard]] ToolResult run_distillation(std::string_view  tool_name,
+                                              const Json&       args,
+                                              const ToolResult& result,
+                                              ToolContext&      ctx) const;
+
     const config::Config& cfg_;
 };
 
