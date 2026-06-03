@@ -1025,6 +1025,63 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_subagent_distiller.cpp)
 endif()
 
 # ---------------------------------------------------------------------------
+# DIS-1007 — test_selection_heuristic
+#
+# Drives the closed-vs-standing selection heuristic (ShapeSelectionHeuristic +
+# StandingSelector).  Hermetic: spawns BOTH fake servers per test —
+# fake_distill_server.py (report_gold first-turn extraction, incl. the new
+# --mode goldnofollowup) and fake_openai_server.py (the warm SubAgent's
+# conversation + follow-up interrogations).  Links batbox_agents (AgentSupervisor)
+# on top of the closed-distiller link set; the S7 seam is unmodified.
+# ---------------------------------------------------------------------------
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_selection_heuristic.cpp)
+
+    add_executable(test_selection_heuristic
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_selection_heuristic.cpp
+    )
+
+    set_target_properties(test_selection_heuristic PROPERTIES
+        CXX_STANDARD          20
+        CXX_STANDARD_REQUIRED ON
+        CXX_EXTENSIONS        OFF
+    )
+
+    target_include_directories(test_selection_heuristic
+        PRIVATE
+            ${PROJECT_SOURCE_DIR}/include
+    )
+
+    target_compile_definitions(test_selection_heuristic
+        PRIVATE
+            BATBOX_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures"
+    )
+
+    target_link_libraries(test_selection_heuristic
+        PRIVATE
+            doctest::doctest
+            batbox_agents
+            batbox_conversation
+            batbox_session
+            batbox_tools
+            batbox_inference
+            batbox_config
+            batbox_core
+            batbox_permissions
+            batbox_mcp
+            batbox_tools_bash
+            cpr::cpr
+            simdjson::simdjson
+            spdlog::spdlog
+            fmt::fmt
+            ZLIB::ZLIB
+    )
+
+    include(doctest)
+    doctest_discover_tests(test_selection_heuristic)
+
+endif()
+
+# ---------------------------------------------------------------------------
 # PEXT2 3.4 (D-8) -- Config snapshot race regression test
 #
 # Verifies that Conversation::run_turn() snapshots cfg.api.default_model and

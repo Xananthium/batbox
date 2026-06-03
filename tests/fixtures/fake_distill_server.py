@@ -13,7 +13,11 @@ array contains report_gold and whose tool_choice pins it.  This server answers
 according to its --mode so each robustness path can be exercised:
 
     --mode gold       (default) — return a report_gold tool_call carrying a
-                                   deterministic golden line.  The happy path.
+                                   deterministic golden line (follow_up_ok=True,
+                                   confidence=0.91).  The happy path.
+    --mode goldnofollowup — like gold but report_gold reports follow_up_ok=False
+                                   (the subagent declares it is done).  Drives the
+                                   DIS-1007 FOLLOW_UP_OK-CANCEL (close) path.
     --mode notool     — return a normal stop response with content and NO
                                    tool_calls (model never called report_gold).
     --mode wrongtool  — return a tool_call for a DIFFERENT tool (not report_gold).
@@ -74,6 +78,42 @@ def report_gold_response() -> dict:
                             "answer": GOLD_ANSWER,
                             "confidence": 0.91,
                             "follow_up_ok": True,
+                        }),
+                    },
+                }],
+            },
+            "finish_reason": "tool_calls",
+        }],
+        "usage": {"prompt_tokens": 50, "completion_tokens": 12, "total_tokens": 62},
+    }
+
+
+def report_gold_no_followup_response() -> dict:
+    """report_gold with follow_up_ok=False (subagent declares it is done).
+
+    Used by DIS-1007 to drive the FOLLOW_UP_OK-CANCEL path: an investigation was
+    predicted by shape, but the subagent's confirm-after signal says do NOT keep
+    the window warm.  Identical to gold mode except follow_up_ok is False.
+    """
+    return {
+        "id": "chatcmpl-distill-gold-nofollowup",
+        "object": "chat.completion",
+        "created": 1716000103,
+        "model": "fake-distill-model",
+        "choices": [{
+            "index": 0,
+            "message": {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [{
+                    "id": "call_gold002",
+                    "type": "function",
+                    "function": {
+                        "name": "report_gold",
+                        "arguments": json.dumps({
+                            "answer": GOLD_ANSWER,
+                            "confidence": 0.91,
+                            "follow_up_ok": False,
                         }),
                     },
                 }],
@@ -166,6 +206,8 @@ def make_handler(mode: str):
                 self._send_json(200, no_tool_response())
             elif mode == "wrongtool":
                 self._send_json(200, wrong_tool_response())
+            elif mode == "goldnofollowup":
+                self._send_json(200, report_gold_no_followup_response())
             else:  # gold (default)
                 self._send_json(200, report_gold_response())
 
@@ -175,7 +217,8 @@ def make_handler(mode: str):
 def main():
     parser = argparse.ArgumentParser(description="Fake distill server for batbox tests")
     parser.add_argument("--port", type=int, default=0)
-    parser.add_argument("--mode", choices=["gold", "notool", "wrongtool", "error"],
+    parser.add_argument("--mode",
+                        choices=["gold", "goldnofollowup", "notool", "wrongtool", "error"],
                         default="gold")
     args = parser.parse_args()
 

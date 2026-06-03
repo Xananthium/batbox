@@ -107,6 +107,10 @@ target_sources(batbox_tools
         ThresholdEngulfDecider.cpp
         ReportGoldTool.cpp
         SubagentDistiller.cpp
+        # DIS-1007 — the closed-vs-standing selection heuristic (predict-ahead,
+        # confirm-after).  The ownable-novelty organ of the liberation track.
+        SelectionHeuristic.cpp
+        StandingSelector.cpp
         ReadTool.cpp
         WriteTool.cpp
         EditTool.cpp

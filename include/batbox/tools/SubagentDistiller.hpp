@@ -47,8 +47,10 @@
 #pragma once
 
 #include <batbox/config/Config.hpp>
+#include <batbox/tools/ReportGoldTool.hpp>   // ReportGold — the gold-extraction result
 #include <batbox/tools/ToolSubagentEnvelope.hpp>
 
+#include <optional>
 #include <string_view>
 
 namespace batbox::tools {
@@ -71,6 +73,23 @@ public:
                                      const Json&      args,
                                      ToolResult       result,
                                      ToolContext&     ctx) const override;
+
+    /// extract_gold — run the SAME one-shot local report_gold call distill()
+    /// uses and return the parsed structured gold (answer + optional confidence
+    /// + optional follow_up_ok), or std::nullopt on ANY failure (unreachable /
+    /// HTTP error / no-or-wrong report_gold call / unparseable args / missing
+    /// answer / cancellation).  NEVER throws.
+    ///
+    /// This is the single source of truth for the report_gold harvest: distill()
+    /// builds its ToolResult from it, and StandingSelector (DIS-1007) reuses it
+    /// to read follow_up_ok / confidence for the confirm-after decision on the
+    /// standing path.  The closed and standing paths therefore share ONE gold
+    /// contract, exactly as the header anticipated ("report_gold contract shared
+    /// by both paths").
+    [[nodiscard]] std::optional<ReportGold> extract_gold(std::string_view  tool_name,
+                                                         const Json&       args,
+                                                         const ToolResult& result,
+                                                         ToolContext&      ctx) const noexcept;
 
 private:
     /// The engulf → one-shot-local-call → harvest-report_gold path.  Returns the
