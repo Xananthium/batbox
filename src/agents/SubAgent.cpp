@@ -15,6 +15,7 @@
 #include <batbox/agents/SubAgent.hpp>
 #include <batbox/conversation/Conversation.hpp>
 #include <batbox/core/CancelToken.hpp>
+#include <batbox/inference/Provider.hpp>   // AC1 (DIS-988): ProviderRegistry seam
 
 #include <string>
 #include <utility>
@@ -178,6 +179,41 @@ void SubAgent::run(std::stop_token /*st*/) {
             batbox::config::resolve_model_alias(spec_.model.value(), cfg_);
     }
 
+    // -------------------------------------------------------------------------
+    // AC1 (DIS-988) — optional endpoint override.
+    //
+    // A standing subagent runs on the local 3090 (free compute), not the single
+    // usually-cloud cfg.api endpoint.  AgentSpec::model overrides only the model
+    // *name*; this moves the *endpoint*.  Mechanism mirrors tools::SubagentDistiller
+    // (DIS-980): overwrite agent_cfg.api.* so the inference client resolves
+    // provider identity / canonical model / usage from a self-consistent Config.
+    // nullopt → agent_cfg keeps cfg.api unchanged (existing behaviour & tests).
+    if (spec_.endpoint.has_value()) {
+        const auto& ep = spec_.endpoint.value();
+        if (ep.use_distill_endpoint) {
+            // "Run on the local distill endpoint" selector — reuse cfg.distill.*.
+            agent_cfg.api.base_url            = cfg_.distill.base_url;
+            agent_cfg.api.api_key             = cfg_.distill.api_key;
+            agent_cfg.api.default_model       = cfg_.distill.model;
+            agent_cfg.api.request_timeout_sec = cfg_.distill.request_timeout_sec;
+        } else {
+            if (!ep.base_url.empty()) agent_cfg.api.base_url      = ep.base_url;
+            agent_cfg.api.api_key                                 = ep.api_key;
+            if (!ep.model.empty())    agent_cfg.api.default_model = ep.model;
+        }
+        // Let the provider auto-detect (ollama/openai) from the new base_url.
+        agent_cfg.api.provider_hint.clear();
+    }
+
+    // Resolve the provider via the S8 ProviderRegistry (not a hand-rolled Client):
+    // this is the single seam that maps Config → provider identity, and supplies
+    // the S9 context-ownership predicate.  Conversation still consumes a Client&
+    // (the Provider abstraction is not yet wired into Conversation — deferred S8
+    // work, out of scope here), so we read the predicate and construct the Client
+    // from the same agent_cfg the registry resolved against.
+    const bool provider_owns_context =
+        batbox::inference::ProviderRegistry::create(agent_cfg)->manages_own_context();
+
     batbox::inference::Client   client{agent_cfg};
     batbox::session::SessionStore store{}; // uses default sessions dir
 
@@ -221,6 +257,11 @@ void SubAgent::run(std::stop_token /*st*/) {
         /*working_dir=*/{},
         on_delta
     };
+
+    // S9 (DIS-988 AC1): if the resolved provider owns its own context window,
+    // batbox stands down its compaction for this agent's conversation.  Default
+    // false for every current OpenAI-compatible endpoint — no behaviour change.
+    conv.set_manages_own_context(provider_owns_context);
 
     // -------------------------------------------------------------------------
     // Deliver the initial user prompt.
