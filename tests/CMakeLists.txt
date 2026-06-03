@@ -637,7 +637,10 @@ batbox_add_unit_test(test_tool_search
     unit/test_tool_search.cpp  batbox_core)
 target_sources(test_tool_search PRIVATE
     ${PROJECT_SOURCE_DIR}/src/tools/ToolSearchTool.cpp
-    ${PROJECT_SOURCE_DIR}/src/tools/ToolRegistry.cpp)
+    ${PROJECT_SOURCE_DIR}/src/tools/ToolRegistry.cpp
+    # DIS-1045: clean-build link-list rot repair — ToolRegistry.cpp now references
+    # ToolSubagentEnvelope (wired by DIS-979) but it was missing from this source list.
+    ${PROJECT_SOURCE_DIR}/src/tools/ToolSubagentEnvelope.cpp)
 target_link_libraries(test_tool_search PRIVATE
     batbox_permissions
     batbox_config
@@ -1823,7 +1826,10 @@ batbox_add_unit_test(test_openai_client_tools
     unit/test_openai_client_tools.cpp  batbox_core)
 target_sources(test_openai_client_tools PRIVATE
     ${PROJECT_SOURCE_DIR}/src/tools/ToolRegistry.cpp
-    ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp)
+    ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
+    # DIS-1045: clean-build link-list rot repair — ToolRegistry.cpp now references
+    # ToolSubagentEnvelope (wired by DIS-979) but it was missing from this source list.
+    ${PROJECT_SOURCE_DIR}/src/tools/ToolSubagentEnvelope.cpp)
 target_link_libraries(test_openai_client_tools PRIVATE
     batbox_permissions
     batbox_config
