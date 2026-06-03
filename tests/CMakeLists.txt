@@ -1468,6 +1468,49 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_standing_registry.cpp)
 endif()
 
 # ---------------------------------------------------------------------------
+# DIS-1017 — REAL-MODEL (ollama) re-proof of the DIS-1007 AC2/AC3 selection
+# behaviour.  Drives the SAME StandingSelector organ against a real local model
+# (default qwen2.5:7b) via the existing EndpointOverride path, through the
+# counting tests/fixtures/ollama_proxy.py reverse-proxy (temp-0 + token usage +
+# request counting for the no-re-engulf assertion).  Links the same agents +
+# conversation + inference + cpr stack as test_standing_registry.
+#
+# This is the `requires_ollama` tier: the test's own main() probes ollama and the
+# pinned model and returns 77 when either is absent, so SKIP_RETURN_CODE 77 makes
+# the DEFAULT `ctest` run report it SKIPPED (never failed) on a CI box with no
+# GPU/ollama.  The hermetic fake-server suite is the unchanged green bar.  Run the
+# tier explicitly with:  ctest -L requires_ollama
+# A manual add_test (NOT doctest_discover_tests) is used on purpose: discovery
+# would run the binary's ollama-probing main() at configure time.
+# ---------------------------------------------------------------------------
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_selection_heuristic_ollama.cpp)
+    add_executable(test_selection_heuristic_ollama
+        ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_selection_heuristic_ollama.cpp)
+    set_target_properties(test_selection_heuristic_ollama PROPERTIES
+        CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+    target_include_directories(test_selection_heuristic_ollama PRIVATE
+        ${PROJECT_SOURCE_DIR}/include)
+    target_compile_definitions(test_selection_heuristic_ollama PRIVATE
+        BATBOX_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+    target_link_libraries(test_selection_heuristic_ollama PRIVATE
+        doctest::doctest
+        batbox_agents
+        batbox_conversation
+        batbox_inference
+        batbox_tools
+        batbox_config
+        batbox_core
+        cpr::cpr
+        simdjson::simdjson)
+    add_test(NAME test_selection_heuristic_ollama
+             COMMAND test_selection_heuristic_ollama)
+    set_tests_properties(test_selection_heuristic_ollama PROPERTIES
+        LABELS requires_ollama
+        SKIP_RETURN_CODE 77
+        TIMEOUT 600)
+endif()
+
+# ---------------------------------------------------------------------------
 # DIS-983 S5 — Compactor::compact_to_notepad: the notepad-sink prune.
 #   AC2 structural prune · AC3 gold-preservation · AC4 gate-holds · AC6 re-inject.
 # Network-free at runtime (the cpr chain is linked only because Compactor.cpp's
