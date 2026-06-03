@@ -36,7 +36,15 @@
 #include <sys/wait.h>
 #include <termios.h>
 #include <unistd.h>
-#include <util.h>       // forkpty() — macOS <util.h>; Linux <pty.h>
+
+// forkpty() lives in different headers per platform:
+//   Linux (glibc)   → <pty.h>
+//   macOS / *BSD    → <util.h>
+#if defined(__linux__)
+#  include <pty.h>
+#else
+#  include <util.h>
+#endif
 
 #include <atomic>
 #include <chrono>

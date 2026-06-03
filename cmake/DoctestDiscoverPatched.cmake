@@ -22,8 +22,37 @@
 # vcpkg reinstall because the cmake reconfigure that follows reinstall will
 # re-apply the patch before any build step runs.
 
-set(_upstream_script
-    "${CMAKE_BINARY_DIR}/vcpkg_installed/arm64-osx/share/doctest/doctestAddTests.cmake")
+# Locate the vcpkg-installed doctestAddTests.cmake. The installed tree lives
+# under a triplet-named subdir (x64-linux, arm64-osx, x64-windows, …), so the
+# triplet must NOT be hardcoded or the patch silently no-ops off-macOS and CTest
+# discovery breaks on any test whose name carries a '[' ']' or ';' (CSI-u
+# escapes). Derive the path from vcpkg's own variables; fall back to a glob.
+set(_vcpkg_installed_root "${CMAKE_BINARY_DIR}/vcpkg_installed")
+if(DEFINED VCPKG_INSTALLED_DIR)
+  set(_vcpkg_installed_root "${VCPKG_INSTALLED_DIR}")
+endif()
+
+set(_upstream_script "")
+if(DEFINED VCPKG_TARGET_TRIPLET)
+  set(_candidate
+      "${_vcpkg_installed_root}/${VCPKG_TARGET_TRIPLET}/share/doctest/doctestAddTests.cmake")
+  if(EXISTS "${_candidate}")
+    set(_upstream_script "${_candidate}")
+  endif()
+endif()
+if(NOT _upstream_script)
+  file(GLOB _doctest_add_tests
+       "${_vcpkg_installed_root}/*/share/doctest/doctestAddTests.cmake")
+  if(_doctest_add_tests)
+    list(GET _doctest_add_tests 0 _upstream_script)
+  endif()
+endif()
+if(NOT _upstream_script)
+  # Nothing on disk yet — keep a sensible path so the not-found warning below
+  # points somewhere real for the operator.
+  set(_upstream_script
+      "${_vcpkg_installed_root}/${VCPKG_TARGET_TRIPLET}/share/doctest/doctestAddTests.cmake")
+endif()
 set(_patched_script
     "${CMAKE_SOURCE_DIR}/cmake/DoctestAddTestsPatched.cmake")
 
