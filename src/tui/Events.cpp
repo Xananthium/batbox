@@ -8,6 +8,9 @@
 
 #include <any>
 #include <atomic>
+#include <cstring>       // std::strlen (has_prefix) — explicit; a clean GCC-13
+                         // build does not pull it in transitively (pre-existing
+                         // build-rot, unrelated to DIS-1044; see handoff note)
 #include <mutex>
 #include <string>
 #include <unordered_map>
