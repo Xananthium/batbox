@@ -88,6 +88,20 @@ struct SessionFile {
     std::chrono::system_clock::time_point updated_at;
     std::string model_at_start;
     std::filesystem::path                  working_dir;
+
+    // DIS-1020 — subagent journaling.
+    // Empty for the main chat session; set to the SubAgent id for a subagent's
+    // durable log.  Tags the log by lineage and lets the supervisor locate a
+    // subagent's session for the resume child (DIS-941 next step).
+    std::string                            agent_id;
+
+    // DIS-1020 — the resolved inference endpoint this session ran against, as a
+    // REFERENCE blob: { base_url, model, use_distill_endpoint, api_key_ref }.
+    // The raw api_key is deliberately NOT persisted (Paulina refinement b): the
+    // credential is re-resolved from config at resume time via the reference.
+    // Null/absent for legacy sessions and the default cfg.api main session.
+    Json                                   endpoint;  // object or null
+
     std::vector<Json>                      messages;
     Json                                   tool_calls_summary;  // object
     UsageTotal                             usage_total;

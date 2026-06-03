@@ -25,6 +25,8 @@
 #include <batbox/config/Config.hpp>
 #include <batbox/core/CancelToken.hpp>
 #include <batbox/core/Uuid.hpp>
+#include <batbox/session/SessionFile.hpp>   // DIS-1020: assert the durable log
+#include <batbox/session/SessionStore.hpp>  // DIS-1020: locate the subagent's log
 
 #include <atomic>
 #include <chrono>
@@ -497,6 +499,82 @@ TEST_SUITE("SubAgent integration") {
         CHECK(final_snap.last_5_lines.size() <= 5);
         CHECK(final_snap.id == agent_id);
         CHECK(final_snap.name == "snapshot-agent");
+    }
+
+    // -----------------------------------------------------------------------
+    // DIS-1020: a subagent run produces a DURABLE session log on disk recording
+    // the full message history, the resolved endpoint reference, and agent_id —
+    // the journal that used to no-op for subagents is now ON.
+    // -----------------------------------------------------------------------
+    TEST_CASE("DIS-1020: subagent run journals a session log with endpoint + agent_id") {
+        std::string script = find_fixture_script();
+        REQUIRE_FALSE(script.empty());
+
+        // Isolate the sessions dir: SubAgent's SessionStore{} resolves
+        // paths::config_dir() / "sessions", and config_dir() honours
+        // $BATBOX_CONFIG_DIR.  Point it at a throwaway dir for this case.
+        fs::path cfg_dir = fs::temp_directory_path()
+                           / ("batbox_subagent_journal_" + batbox::Uuid::v4().to_string());
+        fs::create_directories(cfg_dir);
+        ::setenv("BATBOX_CONFIG_DIR", cfg_dir.c_str(), /*overwrite=*/1);
+
+        FakeServer srv;
+        REQUIRE(srv.start(script));
+
+        auto cfg = make_test_config(srv.base_url());
+        AgentEventQueue q;
+        auto [src, tok] = CancelToken::make_root();
+        const std::string agent_id = batbox::Uuid::v4().to_string();
+
+        {
+            SubAgent agent{
+                agent_id,
+                make_test_spec("journal-agent"),
+                "Say hello in one sentence.",
+                std::move(tok),
+                q,
+                cfg,
+                []{}
+            };
+            agent.start();
+            collect_until_terminal(q, 8000ms);
+            // Let the jthread fully unwind so the final append has flushed.
+            std::this_thread::sleep_for(150ms);
+        }
+
+        // Locate this subagent's log among the session files via a fresh store.
+        batbox::session::SessionStore store{cfg_dir / "sessions"};
+        auto recents = store.list_recent(64);
+        REQUIRE(recents.has_value());
+
+        bool found = false;
+        for (const auto& rec : recents.value()) {
+            if (rec.agent_id != agent_id) continue;
+            found = true;
+
+            // The session_id_ was non-empty inside SubAgent → the append path
+            // wrote.  The log must carry the conversation and the identity.
+            auto loaded = store.load(rec.id.to_string());
+            REQUIRE(loaded.has_value());
+            const auto& sf = loaded.value();
+
+            CHECK(sf.agent_id == agent_id);
+            CHECK_FALSE(sf.messages.empty());            // the turn was recorded
+            REQUIRE(sf.endpoint.is_object());
+            // Default cfg.api path: base_url is the live endpoint, no override.
+            CHECK(sf.endpoint.at("base_url").get<std::string>() == srv.base_url());
+            CHECK(sf.endpoint.at("use_distill_endpoint").get<bool>() == false);
+            CHECK(sf.endpoint.at("api_key_ref").get<std::string>() == "cfg.api");
+            // The raw credential is never journalled.
+            CHECK_FALSE(sf.endpoint.contains("api_key"));
+            break;
+        }
+        CHECK(found);
+
+        // Clean up the isolated config dir + env so later cases use the default.
+        ::unsetenv("BATBOX_CONFIG_DIR");
+        std::error_code ec;
+        fs::remove_all(cfg_dir, ec);
     }
 
 } // TEST_SUITE("SubAgent integration")

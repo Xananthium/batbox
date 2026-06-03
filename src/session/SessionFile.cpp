@@ -208,6 +208,9 @@ static std::string render_canonical(const SessionFile& sf) {
     header["updated_at"]           = tp_to_iso8601(sf.updated_at);
     header["model_at_start"]       = sf.model_at_start;
     header["working_dir"]          = sf.working_dir.string();
+    // DIS-1020 — only emitted when set, so main-session files are unchanged.
+    if (!sf.agent_id.empty())      header["agent_id"] = sf.agent_id;
+    if (sf.endpoint.is_object())   header["endpoint"] = sf.endpoint;
     header["tool_calls_summary"]   = sf.tool_calls_summary.is_null()
                                          ? Json::object()
                                          : sf.tool_calls_summary;
@@ -335,6 +338,9 @@ Json SessionFile::to_json() const {
     j["updated_at"]           = tp_to_iso8601(updated_at);
     j["model_at_start"]       = model_at_start;
     j["working_dir"]          = working_dir.string();
+    // DIS-1020 — only emitted when set (main session leaves them absent).
+    if (!agent_id.empty())    j["agent_id"] = agent_id;
+    if (endpoint.is_object()) j["endpoint"] = endpoint;
     j["messages"]             = messages;
     j["tool_calls_summary"]   = tool_calls_summary.is_null()
                                     ? Json::object()
@@ -372,6 +378,13 @@ Result<SessionFile> SessionFile::from_json(const Json& j) {
 
     if (auto it = j.find("working_dir"); it != j.end() && it->is_string())
         sf.working_dir = it->get<std::string>();
+
+    // DIS-1020 — soft reads (absent in legacy files → defaults stay empty/null).
+    if (auto it = j.find("agent_id"); it != j.end() && it->is_string())
+        sf.agent_id = it->get<std::string>();
+
+    if (auto it = j.find("endpoint"); it != j.end() && it->is_object())
+        sf.endpoint = *it;
 
     if (auto it = j.find("messages"); it != j.end() && it->is_array())
         sf.messages = it->get<std::vector<Json>>();

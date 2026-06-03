@@ -2304,11 +2304,24 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_subagent.cpp)
         ${PROJECT_SOURCE_DIR}/src/conversation/ContextWindow.cpp
         ${PROJECT_SOURCE_DIR}/src/conversation/Compactor.cpp
         ${PROJECT_SOURCE_DIR}/src/conversation/SystemPrompt.cpp
+        # DIS-1020: link-list rot repair — sources added by DIS-975/983/1006/1007
+        # that Conversation.cpp / Client.cpp now reference but were never added to
+        # this target's explicit source list (test_subagent was unbuildable at HEAD).
+        ${PROJECT_SOURCE_DIR}/src/conversation/PlanMode.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/NotepadReminder.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/StandingReminder.cpp
         ${PROJECT_SOURCE_DIR}/src/tools/ToolRegistry.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/NotepadStore.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/ToolSubagentEnvelope.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ToolCallAccumulator.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningAccumulator.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ThinkSplitter.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningTagProfile.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/Provider.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ProviderHint.cpp
         ${PROJECT_SOURCE_DIR}/src/session/SessionStore.cpp
         ${PROJECT_SOURCE_DIR}/src/session/SessionFile.cpp
         ${PROJECT_SOURCE_DIR}/src/session/SessionIndex.cpp

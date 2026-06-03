@@ -275,6 +275,22 @@ public:
     [[nodiscard]] Result<void> start_session();
 
     // -------------------------------------------------------------------------
+    // set_session_identity()  — DIS-1020 subagent journaling
+    //
+    // Attach an agent id and a resolved endpoint REFERENCE blob to the session
+    // that will be created by the next ensure_session_started()/start_session()/
+    // user_message().  A SubAgent calls this before start_session() so its
+    // durable log records which agent ran and on which endpoint (base_url, model,
+    // use_distill_endpoint, api_key_ref) — never the raw api_key.
+    //
+    // No-op effect on the main chat session, which never calls this (agent_id
+    // stays empty, endpoint stays null → on-disk shape unchanged).  Must be
+    // called BEFORE the session is started; setting it after has no effect on the
+    // already-written session header.  Idempotent; safe before run_turn().
+    // -------------------------------------------------------------------------
+    void set_session_identity(std::string agent_id, batbox::Json endpoint);
+
+    // -------------------------------------------------------------------------
     // set_manages_own_context()  — S9 stand-down wiring (S5, DIS-983, AC5)
     //
     // Tell this Conversation whether the active provider manages its own context
@@ -523,6 +539,12 @@ private:
     // Session state.
     std::filesystem::path working_dir_;
     std::string           session_id_;   ///< Empty until first ensure_session_started().
+
+    // DIS-1020 — subagent-journaling identity carried into new_session() when the
+    // session is lazily/eagerly started.  Empty agent_id + null endpoint (the
+    // default) reproduce the pre-DIS-1020 main-session record exactly.
+    std::string  pending_agent_id_;
+    batbox::Json pending_endpoint_;  ///< object or null
 
     // Conversation history (internal representation).
     std::vector<Message> messages_;

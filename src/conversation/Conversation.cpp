@@ -917,12 +917,25 @@ Result<void> Conversation::ensure_session_started() {
     if (!session_id_.empty()) {
         return {};
     }
-    auto res = store_.new_session(cfg_.api.default_model, working_dir_);
+    // DIS-1020 — carry the subagent identity (agent_id + resolved endpoint
+    // reference) into the session record.  Empty/null for the main session →
+    // identical to the pre-DIS-1020 two-argument call.
+    auto res = store_.new_session(cfg_.api.default_model, working_dir_,
+                                  pending_agent_id_, pending_endpoint_);
     if (!res) {
         return batbox::Err(res.error());
     }
     session_id_ = std::move(res.value());
     return {};
+}
+
+// =============================================================================
+// set_session_identity() — DIS-1020 subagent journaling
+// =============================================================================
+void Conversation::set_session_identity(std::string agent_id,
+                                        batbox::Json endpoint) {
+    pending_agent_id_ = std::move(agent_id);
+    pending_endpoint_ = std::move(endpoint);
 }
 
 // =============================================================================

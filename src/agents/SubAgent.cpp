@@ -367,6 +367,46 @@ void SubAgent::run(std::stop_token /*st*/) {
     conv.set_manages_own_context(provider_owns_context);
 
     // -------------------------------------------------------------------------
+    // DIS-1020 — turn the session journal ON for this subagent.
+    //
+    // The subagent owns the same journaling Conversation as the main chat, but
+    // until now nothing recorded WHO ran or on WHICH endpoint.  We attach the
+    // agent id and a resolved-endpoint REFERENCE blob, then OPEN the session
+    // eagerly (before the first turn) so session_id_ is non-empty and every
+    // append_message inside run_turn() writes to disk — making this subagent's
+    // whole context durable instead of vanishing when the window closes.
+    //
+    // api_key handling (Paulina refinement b): we persist an endpoint REFERENCE,
+    // never the raw key.  `api_key_ref` names where the key is re-resolved from
+    // at resume time (cfg.distill / cfg.api / inline-omitted); base_url + model +
+    // use_distill_endpoint pin the provider so resume targets the right endpoint
+    // (e.g. the local 3090 distill endpoint, not cfg.api).  These logs are
+    // local-only and are never synced off this box.
+    {
+        batbox::Json endpoint_ref = batbox::Json::object();
+        endpoint_ref["base_url"] = agent_cfg.api.base_url;
+        endpoint_ref["model"]    = agent_cfg.api.default_model;
+        if (spec_.endpoint.has_value()) {
+            const auto& ep = spec_.endpoint.value();
+            endpoint_ref["use_distill_endpoint"] = ep.use_distill_endpoint;
+            endpoint_ref["api_key_ref"] =
+                ep.use_distill_endpoint ? "cfg.distill"
+                                        : (ep.api_key.empty() ? "cfg.api" : "inline");
+        } else {
+            endpoint_ref["use_distill_endpoint"] = false;
+            endpoint_ref["api_key_ref"]          = "cfg.api";
+        }
+        conv.set_session_identity(id_, std::move(endpoint_ref));
+
+        if (auto sres = conv.start_session(); !sres) {
+            // Non-fatal: a failed journal must not kill the subagent's actual
+            // work.  Log via an output line so it surfaces in the snapshot, and
+            // continue in RAM-only mode (pre-DIS-1020 behaviour).
+            append_output_line("[journal] session open failed: " + sres.error());
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // Standing-mode interrogation state (S2/S3, DIS-988).
     //   pending_answer — promise to fulfil at the next quiescence when the
     //                    current turn was driven by an interrogation.
