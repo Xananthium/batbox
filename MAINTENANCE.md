@@ -55,6 +55,28 @@ ctest -L requires_ollama --output-on-failure        # (from the build dir)
 # absent, the tier SKIPs (CTest SKIP_RETURN_CODE 77), never fails.
 ```
 
+### Same-model orchestration eval (DIS-1018)
+
+The same `requires_ollama` tier carries `eval_orchestration_ollama` — a
+**batbox-vs-Claude same-model eval**: it runs the same tasks through the batbox
+standing-window organ and through a naive stateless subagent-dispatch arm, both on
+the same pinned ollama model behind the same counting proxy, and reports per-arm
+task outcome + total token usage in a comparable table.
+
+```bash
+ctest -L requires_ollama -R eval_orchestration_ollama -V    # (from the build dir)
+# or directly (writes results.md + results.csv to BATBOX_EVAL_OUT):
+BATBOX_EVAL_OUT=/tmp/batbox-dis1018-eval ./tests/eval_orchestration_ollama
+```
+
+- Token accounting is defined **once** and applied to both arms: an arm's tokens =
+  sum of `usage.total_tokens` over its model calls, read from its proxy `/__stats`.
+- Bounded, human-in-the-loop self-improvement loop: `tools/eval/improve_loop.sh`
+  (bounded iters + board gate before any change + per-iteration artifacts).
+- Writeup + OSS survey: `tools/eval/DIS1018_EVAL_WRITEUP.md`,
+  `tools/eval/SELF_IMPROVEMENT_LOOP.md`. Reference results:
+  `tools/eval/results-reference/`.
+
 ### How it works
 
 - `tests/fixtures/ollama_proxy.py` is a thin **counting reverse-proxy** in front

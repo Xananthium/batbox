@@ -1511,6 +1511,43 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_selection_heuristic_ollam
 endif()
 
 # ---------------------------------------------------------------------------
+# DIS-1018 (DIS-1012 Child B) — Claude-vs-batbox SAME-MODEL orchestration eval.
+#   Two arms on ONE pinned ollama model (default qwen2.5:7b): the batbox
+#   standing-window organ (spawn→promote→interrogate, no source re-distill) vs the
+#   naive subagent-dispatch shape (fresh stateless call per follow-up). Token
+#   accounting is identical for both arms (each runs behind its own counting
+#   ollama_proxy.py; total == proxy /__stats.total_tokens). Emits a comparable
+#   results table (markdown + CSV) to ${BATBOX_EVAL_OUT}.  Same `requires_ollama`
+#   + SKIP_RETURN_CODE 77 discipline as the DIS-1017 substrate; manual add_test so
+#   the ollama-probing main() does not run at configure time.
+# ---------------------------------------------------------------------------
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/integration/eval_orchestration_ollama.cpp)
+    add_executable(eval_orchestration_ollama
+        ${CMAKE_CURRENT_SOURCE_DIR}/integration/eval_orchestration_ollama.cpp)
+    set_target_properties(eval_orchestration_ollama PROPERTIES
+        CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+    target_include_directories(eval_orchestration_ollama PRIVATE
+        ${PROJECT_SOURCE_DIR}/include)
+    target_compile_definitions(eval_orchestration_ollama PRIVATE
+        BATBOX_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+    target_link_libraries(eval_orchestration_ollama PRIVATE
+        batbox_agents
+        batbox_conversation
+        batbox_inference
+        batbox_tools
+        batbox_config
+        batbox_core
+        cpr::cpr
+        simdjson::simdjson)
+    add_test(NAME eval_orchestration_ollama
+             COMMAND eval_orchestration_ollama)
+    set_tests_properties(eval_orchestration_ollama PROPERTIES
+        LABELS requires_ollama
+        SKIP_RETURN_CODE 77
+        TIMEOUT 900)
+endif()
+
+# ---------------------------------------------------------------------------
 # DIS-983 S5 — Compactor::compact_to_notepad: the notepad-sink prune.
 #   AC2 structural prune · AC3 gold-preservation · AC4 gate-holds · AC6 re-inject.
 # Network-free at runtime (the cpr chain is linked only because Compactor.cpp's

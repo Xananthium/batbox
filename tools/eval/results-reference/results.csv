@@ -1,0 +1,7 @@
+task,class,arm,outcome,tokens,model_calls
+lang-choice-2q,investigation,batbox,PASS,2937,3
+lang-choice-2q,investigation,claude,PASS,843,2
+lang-choice-4q-deep,investigation,batbox,PASS,5642,5
+lang-choice-4q-deep,investigation,claude,PASS,1665,4
+config-port-lookup,lookup,batbox,PASS,1507,1
+config-port-lookup,lookup,claude,PASS,1201,1
