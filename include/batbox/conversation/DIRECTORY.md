@@ -11,6 +11,12 @@ LLM-based conversation compaction to reduce token usage.
 - `Compactor::compact(msgs, client, ct) -> Result<vector<Message>>` — sends the full message history to the model for summarization; returns the compacted message list with a summary assistant message prepended; preserves the last keep_last_n messages unchanged
 - `Compactor::keep_last_n() -> size_t` — returns the configured preservation count
 
+### NotepadReminder.hpp  (DIS-981 S6 — per-turn notepad re-injection)
+Surfaces the working notepad each turn as a TAIL reminder, never in the cached system-prompt prefix (cache discipline: only ever mutate the tail).
+
+- `compose_notepad_reminder(pad_slice) -> string` — pure formatter; wraps the slice in `<notepad>…</notepad>`; empty slice → ""
+- `apply_notepad_reminder(req, pad_slice) -> bool` — appends a trailing {role:"system"} reminder message to req.messages (tail-only); empty slice = no-op returns false; cached prefix preserved
+
 ### ContextWindow.hpp
 Token estimation and context limit management.
 

@@ -16,6 +16,7 @@
 
 #include <batbox/conversation/Compactor.hpp>
 #include <batbox/conversation/ContextWindow.hpp>
+#include <batbox/conversation/NotepadReminder.hpp>
 #include <batbox/conversation/Message.hpp>
 #include <batbox/core/CancelToken.hpp>
 #include <batbox/core/Logging.hpp>
@@ -28,6 +29,7 @@
 #include <batbox/permissions/PermissionMode.hpp>
 #include <batbox/tools/ToolContext.hpp>
 #include <batbox/tools/ToolRegistry.hpp>
+#include <batbox/tools/NotepadStore.hpp>
 
 #include <batbox/perf/PerfSnapshot.hpp>
 
@@ -255,6 +257,18 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
     // tool-call loop iteration 0.  This eliminates the second Json::dump() that
     // Client::stream_chat previously performed inside the retry loop.
     // After compaction the post-compact dump is stored instead.
+    // S6 (DIS-981): the working-notepad slice for per-turn TAIL re-injection.
+    // Re-read fresh on each call so notes jotted mid-loop surface next turn.
+    // Keyed identically to how the notepad_* tools key their writes
+    // (session_id else agent_id else "default"); agent_id is empty for the
+    // top-level conversation, matching the dispatch ToolContext below.
+    auto notepad_slice = [this]() -> std::string {
+        batbox::tools::NotepadStore notepad;
+        const std::string key =
+            batbox::tools::NotepadStore::session_key(session_id_, std::string{});
+        return notepad.reinjection_slice(key);
+    };
+
     std::string preflight_body_str;
     {
         // Determine the resolved context length for this turn.
@@ -299,6 +313,11 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
             build_chat_request(messages_, cfg_, registry_, sys_prompt_preflight);
         // PEXT2 3.4: use snapshotted model to avoid race with /model switch.
         preflight_req.model = current_model;
+        // S6 (DIS-981): inject the notepad as a tail reminder BEFORE serializing,
+        // so iteration 0 (which sends this pre-flight body, not `req`) carries the
+        // pad and the token estimate accounts for it. Tail-only: the cached
+        // system-prompt prefix is untouched.
+        batbox::conversation::apply_notepad_reminder(preflight_req, notepad_slice());
         // Serialize the request as JSON for the bytes/4 estimate.
         // PEXT2 4.1 (D-3): use to_wire_string() to skip the intermediate
         // nlohmann tree — avoids ~2000 allocations per preflight call.
@@ -332,6 +351,10 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
                 build_chat_request(messages_, cfg_, registry_, sys_prompt_preflight);
             // PEXT2 3.4: use snapshotted model after compaction rebuild.
             post_compact_req.model = current_model;
+            // S6 (DIS-981): re-inject the notepad tail reminder on the compacted
+            // body too. The pad itself is untouched by compaction (out-of-band) —
+            // this just keeps iteration 0's post-compact body carrying it.
+            batbox::conversation::apply_notepad_reminder(post_compact_req, notepad_slice());
             // Re-serialize after compaction.
             // PEXT2 4.1 (D-3): use to_wire_string() here too — consistent with
             // the pre-compact path above; avoids an extra nlohmann tree build.
@@ -406,6 +429,12 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
             build_chat_request(messages_, cfg_, registry_, sys_prompt);
         // PEXT2 3.4: override req.model with the snapshotted model (race-free).
         req.model = current_model;
+        // S6 (DIS-981): re-inject the working notepad as a TAIL reminder after
+        // the cached prefix. Tool-call follow-up iterations (tool_turn > 0) send
+        // this `req`; iteration 0 sends preflight_body_str (injected above). The
+        // slice is re-read fresh so notes jotted earlier this loop surface now.
+        // compose_system_prompt is NOT touched — cache discipline preserved.
+        batbox::conversation::apply_notepad_reminder(req, notepad_slice());
 
         // Instantiate ToolCallOrchestrator for this streaming turn (only when
         // the registry and gate are configured).
