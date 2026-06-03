@@ -15,7 +15,9 @@
 //   c++ -std=c++20 -I include -I build/vcpkg_installed/x64-linux/include \
 //       tests/unit/test_notepad_reminder.cpp \
 //       src/conversation/NotepadReminder.cpp \
+//       build/vcpkg_installed/x64-linux/lib/libsimdjson.a \
 //       -o /tmp/test_notepad_reminder && /tmp/test_notepad_reminder
+//   (libsimdjson is pulled in transitively via ChatRequest.hpp → Json.hpp.)
 // =============================================================================
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN

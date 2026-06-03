@@ -21,6 +21,7 @@
 //       src/tools/NotepadStore.cpp \
 //       src/conversation/Compactor.cpp src/conversation/Message.cpp \
 //       src/inference/Client.cpp src/inference/ChatRequest.cpp \
+//       src/inference/SseParser.cpp \
 //       src/core/Uuid.cpp src/core/Paths.cpp src/core/Json.cpp \
 //       src/core/CancelToken.cpp src/core/Logging.cpp \
 //       build/vcpkg_installed/x64-linux/lib/libcpr.a \
@@ -28,8 +29,15 @@
 //       build/vcpkg_installed/x64-linux/lib/libsimdjson.a \
 //       build/vcpkg_installed/x64-linux/lib/libspdlog.a \
 //       build/vcpkg_installed/x64-linux/lib/libfmt.a \
+//       build/vcpkg_installed/x64-linux/lib/libssl.a \
+//       build/vcpkg_installed/x64-linux/lib/libcrypto.a \
+//       build/vcpkg_installed/x64-linux/lib/libz.a -lpthread -ldl \
 //       -o /tmp/test_notepad_survives_compaction \
 //       && /tmp/test_notepad_survives_compaction
+//   (SseParser.cpp: Client::stream_chat uses it. vcpkg libssl/libcrypto, NOT
+//    the system pair — vcpkg libcurl wants SSL_get0_group_name. Uuid.cpp must
+//    be the DIS-969-fixed copy: `git show fix/linux-build-breakage-dis969:\
+//    src/core/Uuid.cpp` — scoped build only, do not commit it.)
 // =============================================================================
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
