@@ -471,12 +471,22 @@ void AgentSupervisor::wait_all() {
 void AgentSupervisor::promote(std::string_view agent_id) {
     const std::string id(agent_id);
 
-    // 1. Mark the SubAgent standing.  Safe no-op on an unknown handle (AC5).
+    // 1. Mark the SubAgent standing.  Safe no-op on an unknown handle, AND on an
+    //    already-terminated one (AC5): a closed/errored/cancelled agent has
+    //    exited and released its slot, so promoting its corpse must NOT re-add it
+    //    to the pool or hand its slot back a second time.  A parked-and-warm
+    //    standing agent reports `running` (not done), so it is NOT skipped here.
     {
         std::shared_lock<std::shared_mutex> lk(impl_->agents_mutex);
         auto it = impl_->agents.find(id);
         if (it == impl_->agents.end()) {
             return;
+        }
+        const SubAgentStatus st = it->second->status();
+        if (st == SubAgentStatus::done
+            || st == SubAgentStatus::failed
+            || st == SubAgentStatus::cancelled) {
+            return;  // dead handle → safe no-op (no slot release, no registration)
         }
         it->second->promote();
     }

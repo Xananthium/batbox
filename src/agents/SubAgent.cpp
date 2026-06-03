@@ -456,20 +456,26 @@ void SubAgent::run(std::stop_token /*st*/) {
                 pending_answer.reset();
             }
 
-            set_status(SubAgentStatus::done);
+            // Surface the result either way (the parent / status line reads it).
             event_queue_.push(AgentEvent::make_completed(id_, summary));
 
             // -----------------------------------------------------------------
             // Closed mode (default, every non-promoted agent): collapse the
             // window and exit.  conv is destroyed here — existing behaviour.
+            // Only here do we transition to the terminal `done` status.
             // -----------------------------------------------------------------
             if (!standing) {
+                set_status(SubAgentStatus::done);
                 return;
             }
 
             // -----------------------------------------------------------------
             // Standing mode (S2/S3, DIS-988): PARK with the Conversation still
             // alive on this stack — the window is NOT collapsed to a string.
+            // Status stays `running` (NOT done): the warm window is alive, which
+            // is what lets the supervisor distinguish a parked-and-warm agent
+            // from a truly-exited one (so promote() on a corpse stays a safe
+            // no-op rather than double-releasing its slot — AC5).
             // Wait for the next interrogation (or cancel/eviction).
             // -----------------------------------------------------------------
             std::string next_question;
