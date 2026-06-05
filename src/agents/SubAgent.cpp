@@ -694,13 +694,26 @@ void SubAgent::run(std::stop_token /*st*/) {
                 pending_answer = std::move(pi.answer);
             }
 
-            // Resume the warm window: deliver the follow-up turn against the
-            // still-engulfed context (the source is NOT re-engulfed) and loop.
+            // Resume the warm window: compact accumulated history to the
+            // notepad before the follow-up turn so we don't re-send full raw
+            // tool output over stateless HTTP (DIS-1178: closes the 3.4x
+            // token gap DIS-1018 measured).  The notepad (S6) stores the gold
+            // out-of-band; compaction (S5) prunes raw tool-output bodies to
+            // tombstones.  Context that was NOT engulfed (the parent's source)
+            // is NOT re-engulfed — the warm window stays exactly as wide as
+            // the original run.
+            conv.compact_for_standing_turn();
+
             event_queue_.push(AgentEvent::make_step_began(
                 id_, "interrogate", next_question.substr(0, 80)));
             conv.user_message(next_question);
             continue;
         }
+
+        // Compact before peer-message re-entry for the same reason as the
+        // interrogation path: follow-up turns carry a compacted summary, not
+        // raw accumulated tool output (DIS-1178).
+        conv.compact_for_standing_turn();
 
         // Deliver each injected message as a new user turn and continue the loop.
         for (const auto& msg : pending) {

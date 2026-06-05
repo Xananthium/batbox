@@ -153,6 +153,41 @@ void Conversation::set_standing_handles_provider(
 }
 
 // =============================================================================
+// compact_for_standing_turn()  — S5 in the standing-window send path
+// =============================================================================
+
+void Conversation::compact_for_standing_turn() {
+    // Stand down when the provider manages its own context window (S9 rule).
+    if (manages_own_context_) {
+        return;
+    }
+
+    // Not enough messages to split into head + tail — nothing to compact.
+    if (messages_.size() <= static_cast<std::size_t>(cfg_.compact.keep_last_n_turns_verbatim)) {
+        return;
+    }
+
+    Compactor compactor{cfg_.compact.keep_last_n_turns_verbatim};
+    batbox::tools::NotepadStore notepad;
+    const std::string key =
+        batbox::tools::NotepadStore::session_key(session_id_, std::string{});
+    const std::string ref = notepad.pad_path(key).string();
+
+    auto res = compactor.compact_to_notepad(messages_, ref);
+    if (res.has_value()) {
+        auto logger = batbox::log::get("conversation");
+        logger->debug(
+            "standing-compact: {} msgs -> {} pruned + {} verbatim",
+            messages_.size(), messages_.size() - res.value().size(),
+            res.value().size());
+        messages_ = std::move(res.value());
+    }
+    // Non-fatal on error: interrogation proceeds with full history if compaction
+    // somehow fails (structurally this never happens — compact_to_notepad is
+    // deterministic and network-free).
+}
+
+// =============================================================================
 // user_message()
 // =============================================================================
 

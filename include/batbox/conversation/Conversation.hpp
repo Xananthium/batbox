@@ -311,6 +311,28 @@ public:
     }
 
     // -------------------------------------------------------------------------
+    // compact_for_standing_turn()  — S5 in the standing-window send path
+    //
+    // Force notepad-sink compaction of the conversation history BEFORE a
+    // follow-up turn (interrogation or peer-message) in a standing subagent.
+    //
+    // Unlike the auto-compact gate in run_turn() (which only fires when the
+    // context-window estimate exceeds the threshold), this forces compaction on
+    // every follow-up turn REGARDLESS of the token estimate — the warm window
+    // re-sends full accumulated history over stateless HTTP each turn, so every
+    // turn after the first SHOULD carry a compacted summary, not raw tool output.
+    //
+    // The notepad (S6) stores the gold outside the message array; compaction
+    // (S5) prunes raw tool-output bodies to tombstones before the next turn sends.
+    // Together they close the 3.4x token gap DIS-1018 measured on multi-turn
+    // investigation.
+    //
+    // Thread safety: must be called from the Conversation's owning thread (the
+    // SubAgent jthread), between turns — never concurrently with run_turn().
+    // -------------------------------------------------------------------------
+    void compact_for_standing_turn();
+
+    // -------------------------------------------------------------------------
     // set_on_message_appended_cb()
     //
     // Register a callback invoked from the worker thread each time a tool-call
