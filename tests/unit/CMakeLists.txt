@@ -382,6 +382,19 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_tool_registry.cpp)
     endif()
 endif()
 
+# S7 (DIS-979) — ToolSubagentEnvelope: the universal subagent-dispatch seam
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_tool_subagent_envelope.cpp)
+    if(TARGET batbox_tools)
+        batbox_add_unit_test(test_tool_subagent_envelope
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_tool_subagent_envelope.cpp
+            batbox_tools batbox_core)
+    else()
+        batbox_add_unit_test(test_tool_subagent_envelope
+            ${CMAKE_CURRENT_SOURCE_DIR}/test_tool_subagent_envelope.cpp
+            batbox_core)
+    endif()
+endif()
+
 # CPP 5.11 — PowerShellTool: no-op on macOS/Linux, returns platform error
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_powershell_stub.cpp)
     if(TARGET batbox_tools)

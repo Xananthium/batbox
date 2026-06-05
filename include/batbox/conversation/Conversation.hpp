@@ -89,6 +89,7 @@
 #include <batbox/conversation/ContextWindow.hpp>
 #include <batbox/conversation/Message.hpp>
 #include <batbox/conversation/PlanMode.hpp>
+#include <batbox/conversation/StandingReminder.hpp>
 #include <batbox/conversation/SystemPrompt.hpp>
 #include <batbox/core/CancelToken.hpp>
 #include <batbox/core/Result.hpp>
@@ -274,6 +275,42 @@ public:
     [[nodiscard]] Result<void> start_session();
 
     // -------------------------------------------------------------------------
+    // set_session_identity()  — DIS-1020 subagent journaling
+    //
+    // Attach an agent id and a resolved endpoint REFERENCE blob to the session
+    // that will be created by the next ensure_session_started()/start_session()/
+    // user_message().  A SubAgent calls this before start_session() so its
+    // durable log records which agent ran and on which endpoint (base_url, model,
+    // use_distill_endpoint, api_key_ref) — never the raw api_key.
+    //
+    // No-op effect on the main chat session, which never calls this (agent_id
+    // stays empty, endpoint stays null → on-disk shape unchanged).  Must be
+    // called BEFORE the session is started; setting it after has no effect on the
+    // already-written session header.  Idempotent; safe before run_turn().
+    // -------------------------------------------------------------------------
+    void set_session_identity(std::string agent_id, batbox::Json endpoint);
+
+    // -------------------------------------------------------------------------
+    // set_manages_own_context()  — S9 stand-down wiring (S5, DIS-983, AC5)
+    //
+    // Tell this Conversation whether the active provider manages its own context
+    // window (i.e. Provider::manages_own_context()).  When true, batbox stands
+    // ITS compaction down entirely — both the proactive pre-flight prune and the
+    // reactive overflow-retry prune become no-ops, so batbox does not
+    // double-manage a window the backend already owns.
+    //
+    // Defaults to false (the normal OpenAI-compatible case): batbox owns the
+    // window and runs compaction.  The construction site that builds a Provider
+    // should wire this from provider->manages_own_context().  Additive setter
+    // (no constructor churn); safe to call before run_turn().
+    // -------------------------------------------------------------------------
+    void set_manages_own_context(bool v) noexcept { manages_own_context_ = v; }
+
+    [[nodiscard]] bool manages_own_context() const noexcept {
+        return manages_own_context_;
+    }
+
+    // -------------------------------------------------------------------------
     // set_on_message_appended_cb()
     //
     // Register a callback invoked from the worker thread each time a tool-call
@@ -412,6 +449,47 @@ public:
                                                    double   /*cost_usd*/)> cb);
 
     // -------------------------------------------------------------------------
+    // set_standing_handles_provider()  (S2/S3 — DIS-988, AC4)
+    //
+    // Register a provider that returns the parent's current list of WARM
+    // standing subagents (most-recently-interrogated first).  When set and
+    // non-empty, run_turn() injects a bounded "warm subagents available for
+    // follow-up" reminder as a per-turn TAIL message — the same cache-
+    // disciplined shape as the S6 notepad reminder (NOT a cached system-prompt
+    // prefix).  When unset, or when it returns an empty list, NOTHING is
+    // injected and the prefix cache is never disturbed (default, no behaviour
+    // change).
+    //
+    // The orchestrator (App) wires this from AgentSupervisor::standing_status();
+    // the conversation layer stays decoupled from the agents layer via the
+    // layer-local StandingHandle POD.
+    //
+    // Thread safety: set before any background thread calls run_turn(); the
+    // provider is invoked on the worker thread during request assembly.
+    // -------------------------------------------------------------------------
+    void set_standing_handles_provider(
+        std::function<std::vector<batbox::conversation::StandingHandle>()> provider);
+
+    // -------------------------------------------------------------------------
+    // last_reasoning()  (S10 — DIS-975)
+    //
+    // The isolated reasoning text from the most recent streaming turn, merged
+    // from BOTH wire forms by the unified reasoning channel:
+    //   - the structured delta.reasoning_content field, and
+    //   - inline <think>…</think> text extracted out of delta.content.
+    //
+    // Visible output (accumulated into the assistant message and forwarded via
+    // on_delta_cb_) is guaranteed reasoning-free regardless of which form the
+    // model used; this accessor exposes the isolated reasoning so downstream
+    // consumers (the notepad, future cache-preserving distillation) can read it.
+    // Empty when the turn produced no reasoning.  Last writer (final tool-turn
+    // of run_turn) wins.
+    // -------------------------------------------------------------------------
+    [[nodiscard]] const std::string& last_reasoning() const noexcept {
+        return last_reasoning_;
+    }
+
+    // -------------------------------------------------------------------------
     // compose_system_prompt()
     //
     // Composes the final system prompt for one inference turn by merging:
@@ -462,6 +540,12 @@ private:
     std::filesystem::path working_dir_;
     std::string           session_id_;   ///< Empty until first ensure_session_started().
 
+    // DIS-1020 — subagent-journaling identity carried into new_session() when the
+    // session is lazily/eagerly started.  Empty agent_id + null endpoint (the
+    // default) reproduce the pre-DIS-1020 main-session record exactly.
+    std::string  pending_agent_id_;
+    batbox::Json pending_endpoint_;  ///< object or null
+
     // Conversation history (internal representation).
     std::vector<Message> messages_;
 
@@ -509,6 +593,11 @@ private:
     uint32_t session_tokens_{0};
     double   session_cost_usd_{0.0};
 
+    // S10 (DIS-975): isolated reasoning text from the most recent streaming turn
+    // (structured reasoning_content + inline <think> text, merged).  Exposed via
+    // last_reasoning().  Overwritten each turn (last writer wins).
+    std::string last_reasoning_;
+
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------
@@ -528,6 +617,19 @@ private:
     /// Guards so the first-token latency is only recorded once per tool-call
     /// loop iteration (reset at the top of each iteration, set on first delta).
     bool first_token_recorded_{false};
+
+    /// S9 stand-down flag (S5, DIS-983, AC5).  When true the active provider
+    /// manages its own context window, so batbox skips ALL compaction (proactive
+    /// and reactive).  Defaults false: batbox owns the window.  Set via
+    /// set_manages_own_context() from Provider::manages_own_context().
+    bool manages_own_context_{false};
+
+    /// S2/S3 (DIS-988, AC4): optional provider for the parent's warm standing-
+    /// subagent list.  When set and non-empty, run_turn() injects a bounded
+    /// "warm subagents available for follow-up" TAIL reminder.  Null by default
+    /// → no injection, cache untouched.  Set via set_standing_handles_provider().
+    std::function<std::vector<batbox::conversation::StandingHandle>()>
+        standing_handles_provider_;
 
     /// Convert messages_ to the wire format (WireMessage[]) for ChatRequest.
     /// When registry is non-null, populates req.tools with available schemas.

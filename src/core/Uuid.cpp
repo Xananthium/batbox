@@ -83,6 +83,9 @@ void fill_random(std::array<std::uint8_t, 16>& buf) {
     if (!f) {
         throw std::runtime_error("batbox::Uuid::v4(): cannot open /dev/urandom");
     }
+    // NB: distinct name from the getrandom() `got` above — on Linux without
+    // arc4random BOTH blocks compile into this one scope, so reusing `got` is a
+    // redeclaration (conflicting ssize_t vs size_t).  Incidental Linux-build fix.
     std::size_t n_read = std::fread(buf.data(), 1, buf.size(), f);
     std::fclose(f);
     if (n_read != buf.size()) {

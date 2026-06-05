@@ -20,6 +20,45 @@
 namespace batbox::agents {
 
 // =============================================================================
+// EndpointOverride — optional per-agent inference-endpoint override (AC1, DIS-988)
+// =============================================================================
+
+/// Optional override that points a SubAgent's inference Client at a NON-`cfg.api`
+/// endpoint.
+///
+/// Motivation (DIS-988 / S2+S3): a *standing* subagent is meant to run on the
+/// local 3090 (free compute, like the S1 distiller) rather than the single,
+/// usually-cloud `cfg.api` endpoint.  `AgentSpec::model` can only override the
+/// model *name*; it cannot move the *endpoint*.  This struct adds that.
+///
+/// When an AgentSpec carries `std::nullopt` here (the default), the SubAgent
+/// targets `cfg.api` exactly as before — existing behaviour and tests are
+/// unchanged.  When set, `SubAgent::run()` overrides the per-agent Config's
+/// `api.*` fields the same way `tools::SubagentDistiller` does (DIS-980),
+/// then constructs the Client via the S8 `inference::ProviderRegistry`.
+struct EndpointOverride {
+    /// Convenience selector: when true, ignore the explicit fields below and
+    /// pull the endpoint from `cfg.distill.*` (the same local 3090 endpoint the
+    /// S1 distiller uses).  This is the "run on the local distill endpoint"
+    /// shortcut the AC1 spec calls out.
+    bool use_distill_endpoint = false;
+
+    /// Explicit endpoint base URL, e.g. "http://127.0.0.1:11434/v1".
+    /// Used only when `use_distill_endpoint == false`.  Empty → leave
+    /// `cfg.api.base_url` unchanged.
+    std::string base_url;
+
+    /// API key for the explicit endpoint (usually empty or "ollama" locally).
+    /// Used only when `use_distill_endpoint == false`.
+    std::string api_key;
+
+    /// Model name on the explicit endpoint.  Used only when
+    /// `use_distill_endpoint == false`.  Empty → leave the resolved
+    /// `cfg.api.default_model` unchanged.
+    std::string model;
+};
+
+// =============================================================================
 // AgentSpec — agent configuration loaded from .md frontmatter
 // =============================================================================
 
@@ -62,6 +101,13 @@ struct AgentSpec {
 
     /// Filesystem path to the source .md file (for error messages and reload).
     std::filesystem::path source_path;
+
+    /// Optional inference-endpoint override (AC1, DIS-988).  nullopt (default)
+    /// → target `cfg.api` unchanged.  Set programmatically by the standing-mode
+    /// promote path so a warm subagent can run on the local 3090; not parsed
+    /// from frontmatter (the selection of *which* agent goes standing is the
+    /// step-8 heuristic, not a static .md property).
+    std::optional<EndpointOverride> endpoint;
 
     // -------------------------------------------------------------------------
     // Factories

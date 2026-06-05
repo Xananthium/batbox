@@ -5,7 +5,10 @@ Tool implementations: all 39 ITool subclasses, the ToolRegistry, TaskStore, and 
 ## Files
 
 ### ToolRegistry.cpp
-`register_tool()` implementation: inserts into tools_ map and tracks insertion_order_; throws on null or duplicate. `find_by_name()`: unordered_map lookup. `available_tool_schemas()`: filters by allowed names; wraps each schema_json() in {"type":"function","function":...}. `dispatch()`: finds tool, checks plan-mode and allowed_tools constraints, calls run(), catches exceptions.
+`register_tool()` implementation: inserts into tools_ map and tracks insertion_order_; throws on null or duplicate. `find_by_name()`: unordered_map lookup. `available_tool_schemas()`: filters by allowed names; wraps each schema_json() in {"type":"function","function":...}. `dispatch()`: finds tool, checks plan-mode and allowed_tools constraints, calls run(), catches exceptions; **(S7)** routes the invoked run() result (normal or exception-wrapped) through `envelope_.process()` — the universal subagent-dispatch seam — before returning. Pre-run rejections (unknown/not-allowed/plan-mode) short-circuit before the seam.
+
+### ToolSubagentEnvelope.cpp
+S7 (DIS-979) implementation of the universal subagent-dispatch seam. `process()`: applies the decision hook; if it engulfs, runs the distiller hook, else returns the result unchanged. Default-constructs to `PassThroughDecider` + `IdentityDistiller` (pure pass-through). `set_decider`/`set_distiller` swap hooks, ignoring null to keep the never-null invariant. This is the one place batbox guarantees every tool result becomes a subagent result; S1 fills the decision hook, S4 the distiller hook.
 
 ### TaskStore.cpp
 `create_task()`: generates UUIDv4; sets timestamps; calls save(). `list_tasks()` and `get_task()`: call load() and filter. `update_task()`: loads, finds by id, applies optional fields, saves. `save()`: serialises vector<Task> as JSON array; writes to .tmp; renames atomically.
@@ -46,12 +49,22 @@ Tool implementations: all 39 ITool subclasses, the ToolRegistry, TaskStore, and 
 ### TeamCreateTool.cpp — `run()` calls TeamRegistry::create_team; optionally adds initial member agent_ids.
 ### TeamDeleteTool.cpp — `run()` calls TeamRegistry::delete_team by name.
 ### TodoWriteTool.cpp — `run()` serialises todo JSON into session state metadata.
+### NotepadStore.cpp — (DIS-981 S6) disk-backed, session-keyed working-memory pad: `append()` (with light `## section` header, never overwrite), `read()`/`grep()`/`reinjection_slice()`, `export_pad()`/`archive()`. Out-of-band markdown file per session key → survives compaction by construction. Process-wide write mutex; reads lock-free.
+### NotepadAppendTool.cpp — (DIS-981 S6) `notepad_append` write ITool; jots `note` (+optional `section`) to the session's pad. is_read_only=false, requires_confirmation=false. LEAST_FORCE: jots the nugget, not the transcript.
+### NotepadReadTool.cpp — (DIS-981 S6) `notepad_read` read/grep ITool; `query` greps matching entries, omit for whole pad. is_read_only=true.
 ### ToolSearchTool.cpp — `run()` fuzzy-searches ToolRegistry by name and description; returns ranked results.
 ### VerifyPlanExecutionTool.cpp — `run()` compares PlanMode plan_text against tool call history; reports unexecuted steps.
 ### WebFetchTool.cpp — `run()` calls SidecarManager::request<FetchRequest,FetchResponse>("/fetch",...); returns FetchResponse.markdown.
 ### WebSearchTool.cpp — `run()` calls SidecarManager::request<SearchRequest,SearchResponse>("/search",...); formats results.
 ### WorkflowTool.cpp — `run()` parses step definitions from args; constructs Workflow; calls Workflow::execute(); returns step outputs.
 ### WriteTool.cpp — `run()` validates path; writes content to tmp file; renames atomically; returns byte count.
+
+### ThresholdEngulfDecider.cpp — S1 (DIS-980). `should_engulf()`: engulf iff a non-error result's body strictly exceeds the configured byte threshold; never engulfs errors; size is the trigger not tool identity.
+### ReportGoldTool.cpp — S4 (DIS-980). The `report_gold(answer, confidence?, follow_up_ok?)` structured handoff: `schema_json()`, `parse()` (shared shape parser), `run()` surfaces the parsed result in `structured_payload`. The distiller's internal contract (not in the 39-tool surface).
+### SubagentDistiller.cpp — S4 (DIS-980). `distill()`: one-shot call to the LOCAL distill endpoint (`cfg.distill.*`, not `cfg.api`), forces `report_gold` via tool_choice, harvests the gold, falls back to the original on any failure/cancel (never throws). `extract_gold()` (DIS-1007) is the no-throw single-source-of-truth report_gold harvest distill() builds its result from and StandingSelector reuses for the standing first-turn. `install_subagent_distillation()` wires the decider+distiller into the registry envelope at startup (no-op when disabled; S7 seam untouched).
+
+### SelectionHeuristic.cpp — DIS-1007. The predict-ahead investigation-vs-lookup classifier: `ISelectionHeuristic` interface + `ShapeSelectionHeuristic` returning `DispatchMode{Closed,Standing}`. Investigation iff (broad-search tool: grep/glob/web_search/web_fetch — tool identity IS a legitimate input here, unlike S1's size-not-identity engulf trigger) OR (result shape: large body / many sections). Errors are never investigations. Caller NEVER flags (no `background` boolean — anti-pattern #3); the harness infers from `tool_name` + `args` + `ToolResult`. Pure, cheap, side-effect-free.
+### StandingSelector.cpp — DIS-1007. THE closed-vs-standing selection organ ("predict-ahead, confirm-after"). A new `IResultDistiller` that WRAPS the closed `SubagentDistiller` it owns. CLOSED (default, byte-identical): no investigation signal → delegate verbatim to the closed one-shot. STANDING (investigation predicted): distill the first turn to gold via the shared `report_gold` contract (`extract_gold`), then CONFIRM-AFTER on `follow_up_ok`/`confidence` — keep-warm → spawn a real warm `SubAgent` on the distill endpoint (`EndpointOverride{use_distill_endpoint=true}`) via `AgentSupervisor::spawn`/`promote` (LRU-bounded, lossless eviction); done/trivial-lookup → return the gold closed-equivalent, no window. Fail-closed (AC5): any standing-path failure → closed fallback → original result; never throws/hangs. Four observable paths: CLOSED / PROMOTE / FOLLOW_UP_OK-CANCEL / standing→closed FALLBACK. `install_standing_selection()` wires decider + StandingSelector into the envelope (no-op when disabled; null supervisor → closed-identical; S7 seam untouched).
 
 ### CMakeLists.txt
 Build rules for the tools static library.

@@ -4,12 +4,28 @@ Conversation engine headers: auto-compaction, context window estimation, message
 
 ## Files
 
-### Compactor.hpp
-LLM-based conversation compaction to reduce token usage.
+### Compactor.hpp  (DIS-983 S5 — protected-tail compaction; notepad sink)
+Protected-tail compaction. The DEFAULT sink is the NOTEPAD (S5); the LLM-summary
+path is retained but demoted (no longer on the Conversation auto-compact path).
 
 - `Compactor::Compactor(keep_last_n, on_status=nullptr)` — constructs with the number of recent messages to preserve verbatim after compaction
-- `Compactor::compact(msgs, client, ct) -> Result<vector<Message>>` — sends the full message history to the model for summarization; returns the compacted message list with a summary assistant message prepended; preserves the last keep_last_n messages unchanged
+- `Compactor::compact_to_notepad(msgs, notepad_ref) -> Result<vector<Message>>` — **THE SINK.** Network-free structural prune: replaces each head Role::Tool message body with a small tombstone that cites the working notepad (`notepad_ref`, the pad path) and records the dropped byte count, keeping role + tool_call_id so the wire pairing stays valid; preserves the protected tail and authored (user/assistant) head text verbatim. Gold lives out-of-band in the notepad → nothing is silently lost (AC3). No-op when the head is empty
+- `Compactor::compact(msgs, client, ct) -> Result<vector<Message>>` — LEGACY LLM-summary path; sends the head to the model for a one-paragraph summary and prepends it as a System message. Demoted (not deleted) — kept only so the summariser tests keep proving the head/tail split + status callback
 - `Compactor::keep_last_n() -> size_t` — returns the configured preservation count
+- `compaction_should_run(needs, manages) -> bool` (free fn) — S9 stand-down gate: `needs && !manages`. Compaction runs only when the gate fires AND the provider does not manage its own context window (Provider::manages_own_context()==true → stand down)
+
+### NotepadReminder.hpp  (DIS-981 S6 — per-turn notepad re-injection)
+Surfaces the working notepad each turn as a TAIL reminder, never in the cached system-prompt prefix (cache discipline: only ever mutate the tail).
+
+- `compose_notepad_reminder(pad_slice) -> string` — pure formatter; wraps the slice in `<notepad>…</notepad>`; empty slice → ""
+- `apply_notepad_reminder(req, pad_slice) -> bool` — appends a trailing {role:"system"} reminder message to req.messages (tail-only); empty slice = no-op returns false; cached prefix preserved
+
+### StandingReminder.hpp  (DIS-988 S2/S3 AC4 — per-turn warm-subagent status re-injection)
+Surfaces the parent's warm standing-subagent list each turn as a bounded TAIL reminder, same cache discipline as NotepadReminder (never the cached prefix). Layer-local `StandingHandle{id,name,status_line}` POD keeps the conversation layer decoupled from the agents layer.
+
+- `compose_standing_reminder(handles, max_handles=8) -> string` — pure formatter; wraps up to `max_handles` warm-subagent lines in `<warm_subagents>…</warm_subagents>` with a "(+N more)" bound; empty handles → ""
+- `apply_standing_reminder(req, handles, max_handles=8) -> bool` — appends a trailing {role:"system"} reminder to req.messages (tail-only); empty handles = no-op returns false; cached prefix preserved
+- Wired into `Conversation` via `set_standing_handles_provider(...)`; App supplies the provider from `AgentSupervisor::standing_status()`
 
 ### ContextWindow.hpp
 Token estimation and context limit management.
@@ -29,7 +45,8 @@ Single-session conversation engine: manages messages, tool calls, and inference 
 
 - `Conversation::Conversation(client, store, cfg, working_dir, on_delta_cb, registry, gate, plan_mode)` — constructs; does not start a session
 - `Conversation::user_message(text)` — appends a user-role message to the pending queue
-- `Conversation::run_turn(ct) -> Result<void>` — sends all pending messages to the model, dispatches tool calls, appends assistant/tool messages, auto-compacts when needed
+- `Conversation::run_turn(ct) -> Result<void>` — sends all pending messages to the model, dispatches tool calls, appends assistant/tool messages, auto-compacts when needed. Compaction (S5): proactive pre-flight prune via `Compactor::compact_to_notepad` (gated by `compaction_should_run`); reactive prune+retry-once when the endpoint returns a context-overflow error (`inference::is_overflow_error`); both stand down when `manages_own_context()`
+- `Conversation::set_manages_own_context(v)` / `manages_own_context()` — S9 stand-down wiring (S5, AC5): when true the active provider owns its context window and batbox skips ALL compaction. Defaults false; set from `Provider::manages_own_context()`
 - `Conversation::restore(sf) -> Result<void>` — loads message history from a SessionFile into the live conversation
 - `Conversation::messages() -> vector<Message>` — returns current message list (read-only)
 - `Conversation::session_id() -> string` — returns the UUID of the active session

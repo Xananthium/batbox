@@ -19,6 +19,9 @@
 
 #include <batbox/app/WireTools.hpp>
 
+// S1+S4 (DIS-980): closed tool-subagent distillation install hook.
+#include <batbox/tools/SubagentDistiller.hpp>
+
 // Read-only / zero-dep tools
 #include <batbox/tools/ReadTool.hpp>
 #include <batbox/tools/WriteTool.hpp>
@@ -26,6 +29,8 @@
 #include <batbox/tools/GlobTool.hpp>
 #include <batbox/tools/GrepTool.hpp>
 #include <batbox/tools/TodoWriteTool.hpp>
+#include <batbox/tools/NotepadAppendTool.hpp>
+#include <batbox/tools/NotepadReadTool.hpp>
 #include <batbox/tools/SleepTool.hpp>
 #include <batbox/tools/SnipTool.hpp>
 #include <batbox/tools/PowerShellTool.hpp>
@@ -122,6 +127,13 @@ void wire_tools(
 
     // 6. TodoWrite — append to ./BATBOX.md project memory
     registry.register_tool(std::make_unique<TodoWriteTool>());
+
+    // 6b. Notepad (DIS-981, S6) — the working-memory horizon. notepad_append
+    // jots a nugget (plan/finding/decision) into an out-of-band, per-session
+    // markdown pad that survives compaction and is re-injected each turn;
+    // notepad_read greps it. Separate artifact from TodoWrite (a checklist).
+    registry.register_tool(std::make_unique<NotepadAppendTool>());
+    registry.register_tool(std::make_unique<NotepadReadTool>());
 
     // 7. Sleep — interruptible sleep with CancelToken support
     registry.register_tool(std::make_unique<SleepTool>());
@@ -307,6 +319,18 @@ void wire_tools(
     assert(registry.size() == 39 &&
            "wire_tools: expected exactly 39 tools — "
            "a tool was added or removed without updating this count");
+
+    // -------------------------------------------------------------------------
+    // S1+S4 (DIS-980) — closed tool-subagent distillation.
+    //
+    // Install the threshold engulf decider + the subagent distiller into the
+    // registry's existing ToolSubagentEnvelope (the S7 seam, unmodified).  This
+    // is a no-op unless cfg.distill.enabled is true, so the default tool surface
+    // is byte-identical to S7.  report_gold is the distiller's INTERNAL contract
+    // (the main model never calls it) and is therefore deliberately NOT one of
+    // the 39 curated tools — the count assertion above is unaffected.
+    // -------------------------------------------------------------------------
+    install_subagent_distillation(registry, cfg);
 }
 
 } // namespace batbox::app

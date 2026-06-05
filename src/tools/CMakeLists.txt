@@ -49,6 +49,9 @@ target_link_libraries(batbox_tools
         batbox_mcp
         batbox_tools_bash
         batbox_agents
+        # S4 (DIS-980): SubagentDistiller drives a one-shot OpenAiCompatibleProvider
+        # against the local distill endpoint.
+        batbox_inference
 )
 
 # ---------------------------------------------------------------------------
@@ -93,11 +96,21 @@ target_link_libraries(batbox_tools
 #   ListPeersTool.cpp         (CPP 5.38) — ListPeers tool
 #   WorkflowTool.cpp          (CPP 5.39) — Workflow tool
 #   SnipTool.cpp              (CPP 5.40) — Snip tool
+#   ToolSubagentEnvelope.cpp  (S7, DIS-979) — universal subagent-dispatch seam
 # ---------------------------------------------------------------------------
 target_sources(batbox_tools
     PRIVATE
         .placeholder.cpp
         ToolRegistry.cpp
+        ToolSubagentEnvelope.cpp
+        # S1+S4 (DIS-980) — closed tool-subagent organs
+        ThresholdEngulfDecider.cpp
+        ReportGoldTool.cpp
+        SubagentDistiller.cpp
+        # DIS-1007 — the closed-vs-standing selection heuristic (predict-ahead,
+        # confirm-after).  The ownable-novelty organ of the liberation track.
+        SelectionHeuristic.cpp
+        StandingSelector.cpp
         ReadTool.cpp
         WriteTool.cpp
         EditTool.cpp
@@ -113,6 +126,9 @@ target_sources(batbox_tools
         TaskStopTool.cpp
         SendMessageTool.cpp
         TodoWriteTool.cpp
+        NotepadStore.cpp          # DIS-981 S6 — out-of-band working-memory pad
+        NotepadAppendTool.cpp     # DIS-981 S6 — notepad write tool
+        NotepadReadTool.cpp       # DIS-981 S6 — notepad read/grep tool
         TaskStore.cpp
         TaskCreateTool.cpp
         TaskListTool.cpp

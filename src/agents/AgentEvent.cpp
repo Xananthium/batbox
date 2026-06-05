@@ -127,6 +127,16 @@ AgentEvent AgentEvent::make_queued(std::string agent_id, std::string position_hi
     };
 }
 
+AgentEvent AgentEvent::make_doom_loop_guard(std::string agent_id, int turn_cycles) {
+    return AgentEvent{
+        std::move(agent_id),
+        Kind::DoomLoopGuard,
+        "doom-loop guard tripped after " + std::to_string(turn_cycles) +
+            " turn-cycles",
+        now_ts(),
+    };
+}
+
 const char* AgentEvent::kind_label(Kind k) noexcept {
     switch (k) {
         case Kind::Started:                 return "started";
@@ -139,6 +149,7 @@ const char* AgentEvent::kind_label(Kind k) noexcept {
         case Kind::Cancelled:               return "cancelled";
         case Kind::ParentMessageObserved:   return "parent_message_observed";
         case Kind::Queued:                  return "queued";
+        case Kind::DoomLoopGuard:           return "doom_loop_guard";
     }
     return "unknown";
 }

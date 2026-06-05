@@ -22,7 +22,36 @@ Central name-to-ITool dispatch table.
 - `ToolRegistry::size() -> size_t` — count of registered tools
 - `ToolRegistry::empty() -> bool` — true when no tools registered
 - `ToolRegistry::available_tool_schemas(filter) -> vector<Json>` — returns OpenAI tools array; filter=nullopt includes all; filter=vector limits to named tools
-- `ToolRegistry::dispatch(name, args, ctx) -> Result<ToolResult, string>` — looks up tool by name; calls run(); wraps thrown exceptions as ToolResult::error; returns Err when tool not found or not allowed
+- `ToolRegistry::dispatch(name, args, ctx) -> Result<ToolResult, string>` — looks up tool by name; calls run(); wraps thrown exceptions as ToolResult::error; returns Err when tool not found or not allowed; **(S7)** routes every invoked run() result through `envelope()` — the universal subagent-dispatch seam — before returning
+- `ToolRegistry::envelope() -> ToolSubagentEnvelope&` — **(S7)** the single seam every dispatched result flows through; install decision/distiller hooks here (default = pass-through)
+
+### ToolSubagentEnvelope.hpp
+The universal subagent-dispatch seam (S7, DIS-979). Interposes at `ToolRegistry::dispatch` so every tool result — native and MCP — flows through one unbypassable boundary; default hooks are pure pass-through (byte-identical to pre-S7). S1 fills the decision hook, S4 the distiller hook, without re-touching the seam.
+
+- `IEngulfDecider::should_engulf(tool_name, args, result, ctx) -> bool` — decision hook: "engulf this result into a subagent?"; S7 default `PassThroughDecider` returns false
+- `IResultDistiller::distill(tool_name, args, result, ctx) -> ToolResult` — distiller hook: "engulf + distill to the golden line"; S7 default `IdentityDistiller` returns result unchanged
+- `ToolSubagentEnvelope::process(tool_name, args, result, ctx) -> ToolResult` — if decider engulfs → run distiller, else pass through
+- `ToolSubagentEnvelope::set_decider(hook)` / `set_distiller(hook)` — swap hooks at runtime; null is ignored (never-null invariant)
+- `ToolSubagentEnvelope::decider()` / `distiller()` — non-owning const view of the installed hooks
+
+### ThresholdEngulfDecider.hpp
+S1 (DIS-980). Fills the `IEngulfDecider` hook: engulf iff a **non-error** result's `body` size strictly exceeds a configured byte threshold (goose `large_response_handler` / `GOOSE_MAX_TOOL_RESPONSE_SIZE` shape). Cheap + side-effect-free; size is the trigger, not tool identity.
+- `ThresholdEngulfDecider(max_response_bytes)` — ctor takes the byte threshold (from `cfg.distill.max_tool_response_size`)
+- `should_engulf(...) -> bool` — true iff `!result.is_error && result.body.size() > threshold`
+- `threshold() -> size_t` — the configured threshold
+
+### ReportGoldTool.hpp
+S4 (DIS-980). The structured final-output contract a distillation subagent emits through — `report_gold(answer, confidence?, follow_up_ok?)` (goose `FinalOutputTool` shape). The distiller's INTERNAL contract: NOT registered in the curated 39-tool surface.
+- `struct ReportGold { answer; optional<double> confidence; optional<bool> follow_up_ok; }`
+- `ReportGoldTool::schema_json()` — the OpenAI function object (answer required); `is_read_only()==true`, `requires_confirmation()==false`
+- `ReportGoldTool::parse(args) -> optional<ReportGold>` — shared shape parser (nullopt when answer absent/empty/non-string or args non-object); backs both `run()` and the distiller's harvest
+- `ReportGoldTool::run(args, ctx)` — surfaces the parsed result as `ToolResult::ok(answer, {answer, confidence?, follow_up_ok?})`, or error when invalid
+
+### SubagentDistiller.hpp
+S4 (DIS-980). Fills the `IResultDistiller` hook: engulfs a too-big result into a **one-shot** call on a LOCAL OpenAI-compatible endpoint (`cfg.distill.*`, NOT `cfg.api`), forces the local model to emit via `report_gold` (only tool offered + `tool_choice` pinned), and returns the distilled gold. Closed lifecycle (window discarded; `follow_up_ok` captured, not acted upon). Robust: unreachable/5xx/no-call/wrong-tool/cancelled → returns the original result, never throws.
+- `SubagentDistiller(const Config&)` — reads `cfg.distill.*` at distill-time
+- `distill(tool_name, args, result, ctx) -> ToolResult` — the engulf→distill→harvest-or-fallback path
+- `install_subagent_distillation(registry, cfg)` — startup wiring (AC6): installs the decider + distiller into the registry's existing envelope; no-op when `cfg.distill.enabled` is false (S7-identical). The S7 seam is NOT modified.
 
 ### ToolContext.hpp
 Per-dispatch context injected into every ITool::run() call.
@@ -224,6 +253,21 @@ Deletes a named agent team from the TeamRegistry.
 Writes a structured todo/checklist to the conversation session state.
 
 - `TodoWriteTool` — is_read_only=false, requires_confirmation=false; run() serialises the todo JSON and stores it in the session's metadata
+
+### NotepadStore.hpp  (DIS-981 S6 — the working-memory notepad)
+The third memory horizon (ephemeral → WORKING=notepad → durable). Out-of-band, disk-backed, session-keyed markdown pad — NOT a Message, so it survives compaction by construction. Append-with-light-headers (not goose's overwrite-blob, not a checklist).
+
+- `NotepadStore::NotepadStore(root={})` — root defaults to $BATBOX_NOTEPAD_DIR or config_dir()/"notepads"
+- `NotepadStore::default_root() -> path` / `session_key(session_id, agent_id) -> string` (session_id else agent_id else "default")
+- `NotepadStore::append(key, note, section="") -> Result<void>` — append-only; lazy born header on first jot; empty note rejected
+- `NotepadStore::read(key) -> string` / `grep(key, query, max_chars=8192) -> string` (matching entries; empty query = whole pad) / `reinjection_slice(key, max_chars=4096) -> string` (bounded tail; empty when no pad)
+- `NotepadStore::export_pad(key) -> string` / `archive(key) -> Result<void>` (move to archive/; curator ingest out of scope) / `pad_path(key) -> path`
+
+### NotepadAppendTool.hpp  (DIS-981 S6)
+- `NotepadAppendTool` — `notepad_append`; args {note (required), section?}; is_read_only=false, requires_confirmation=false; jots a nugget to the session pad
+
+### NotepadReadTool.hpp  (DIS-981 S6)
+- `NotepadReadTool` — `notepad_read`; args {query?, max_chars?}; is_read_only=true, requires_confirmation=false; greps the pad (or whole pad if no query)
 
 ### ToolSearchTool.hpp
 Fuzzy-searches the ToolRegistry by name and description.

@@ -116,6 +116,8 @@ static nlohmann::json record_to_json(const SessionIndexRecord& rec) {
     j["model"]                 = rec.model;
     j["turn_count"]            = rec.turn_count;
     j["file_path"]             = rec.file_path.string();
+    // DIS-1020 — only emitted when set, so main-session index lines are unchanged.
+    if (!rec.agent_id.empty()) j["agent_id"] = rec.agent_id;
     return j;
 }
 
@@ -133,6 +135,9 @@ static bool json_to_record(const nlohmann::json& j, SessionIndexRecord& out) {
         out.model                 = j.at("model").get<std::string>();
         out.turn_count            = j.at("turn_count").get<uint64_t>();
         out.file_path             = fs::path(j.at("file_path").get<std::string>());
+        // DIS-1020 — soft read: absent in legacy lines, default empty (NOT corrupt).
+        if (auto it = j.find("agent_id"); it != j.end() && it->is_string())
+            out.agent_id = it->get<std::string>();
         return true;
     } catch (...) {
         return false;

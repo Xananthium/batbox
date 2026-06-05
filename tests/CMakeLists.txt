@@ -273,6 +273,27 @@ target_sources(test_tool_call_accumulator PRIVATE
     ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp)
 target_link_libraries(test_tool_call_accumulator PRIVATE simdjson::simdjson)
 
+# S10 (DIS-975) — ThinkSplitter: inline <think>…</think> visible/reasoning split
+# + the provider-profile tag convention.  ThinkSplitter and ReasoningTagProfile
+# are leaf TUs that depend only on ThinkSplitter.hpp + the standard library
+# (no cpr / simdjson), so this test links neither.
+batbox_add_unit_test(test_think_splitter
+    unit/test_think_splitter.cpp  batbox_core)
+target_sources(test_think_splitter PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/inference/ThinkSplitter.cpp
+    ${PROJECT_SOURCE_DIR}/src/inference/ReasoningTagProfile.cpp)
+
+# S10 (DIS-975) — ReasoningAccumulator: the unified isolated reasoning channel.
+# Compiles ReasoningAccumulator.cpp + ThinkSplitter.cpp directly (same pattern as
+# test_tool_call_accumulator).  Links simdjson because ChatResponse.hpp / Json.hpp
+# pull nlohmann in on this path.
+batbox_add_unit_test(test_reasoning_accumulator
+    unit/test_reasoning_accumulator.cpp  batbox_core)
+target_sources(test_reasoning_accumulator PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/inference/ReasoningAccumulator.cpp
+    ${PROJECT_SOURCE_DIR}/src/inference/ThinkSplitter.cpp)
+target_link_libraries(test_reasoning_accumulator PRIVATE simdjson::simdjson)
+
 
 # CPP 9.1 — SessionFile: per-session JSON shape, gzip, crash recovery
 # batbox_session is an OBJECT library; link batbox_core explicitly for Uuid,
@@ -294,6 +315,19 @@ target_link_libraries(test_session_index PRIVATE
     batbox_core
     simdjson::simdjson
     spdlog::spdlog)
+
+# S8 + S9 — Provider abstraction core (Provider interface, OpenAiCompatibleProvider,
+# ProviderRegistry, map_to_canonical_model, should_use_responses_api, manages_own_context).
+# Links batbox_inference (Provider.cpp wraps Client.cpp), batbox_config + batbox_core for
+# Config/Result, cpr for the Client's HTTP backend, and simdjson for Json.hpp (pulled in
+# transitively via the wire types).  Hermetic — no live network in the test body.
+batbox_add_unit_test(test_provider_core
+    unit/test_provider_core.cpp  batbox_inference)
+target_link_libraries(test_provider_core PRIVATE
+    batbox_core
+    batbox_config
+    cpr::cpr
+    simdjson::simdjson)
 
 # ---------------------------------------------------------------------------
 # Integration tests (CPP A.2 and later)
@@ -388,7 +422,10 @@ batbox_add_unit_test(test_usage_tracker
     unit/test_usage_tracker.cpp  batbox_core)
 target_sources(test_usage_tracker PRIVATE
     ${PROJECT_SOURCE_DIR}/src/inference/UsageTracker.cpp
-    ${PROJECT_SOURCE_DIR}/src/inference/ModelPricing.cpp)
+    ${PROJECT_SOURCE_DIR}/src/inference/ModelPricing.cpp
+    # ModelPricing::cost() falls back to map_to_canonical_model on a raw miss;
+    # CanonicalModel.cpp is the leaf TU that defines it (no Provider/cpr deps).
+    ${PROJECT_SOURCE_DIR}/src/inference/CanonicalModel.cpp)
 target_link_libraries(test_usage_tracker PRIVATE simdjson::simdjson)
 
 # CPP 5.15 — TodoWriteTool: per-session todo list management
@@ -400,6 +437,30 @@ batbox_add_unit_test(test_todo_write
 target_sources(test_todo_write PRIVATE
     ${PROJECT_SOURCE_DIR}/src/tools/TodoWriteTool.cpp)
 target_link_libraries(test_todo_write PRIVATE
+    batbox_permissions
+    batbox_config
+    simdjson::simdjson)
+
+# ---------------------------------------------------------------------------
+# DIS-981 S6 — NotepadStore: append/headers/per-key/grep/slice/archive.
+# NotepadStore.cpp pulls Paths from batbox_core only.
+# ---------------------------------------------------------------------------
+batbox_add_unit_test(test_notepad_store
+    unit/test_notepad_store.cpp  batbox_core)
+target_sources(test_notepad_store PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/tools/NotepadStore.cpp)
+
+# ---------------------------------------------------------------------------
+# DIS-981 S6 — notepad ITools: schema, flags, append→read/grep round-trip.
+# Mirrors test_todo_write's link set (ToolContext pulls PermissionMode).
+# ---------------------------------------------------------------------------
+batbox_add_unit_test(test_notepad_tools
+    unit/test_notepad_tools.cpp  batbox_core)
+target_sources(test_notepad_tools PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/tools/NotepadAppendTool.cpp
+    ${PROJECT_SOURCE_DIR}/src/tools/NotepadReadTool.cpp
+    ${PROJECT_SOURCE_DIR}/src/tools/NotepadStore.cpp)
+target_link_libraries(test_notepad_tools PRIVATE
     batbox_permissions
     batbox_config
     simdjson::simdjson)
@@ -418,6 +479,38 @@ target_link_libraries(test_tool_registry PRIVATE
     batbox_tools_bash
     batbox_permissions
     batbox_config
+    simdjson::simdjson)
+
+
+# DIS-980 (S1) — ThresholdEngulfDecider: the threshold-gated engulf trigger.
+# Links batbox_tools (which now includes ThresholdEngulfDecider.cpp) + its OBJECT
+# deps, same shape as test_tool_registry (SubagentDistiller.cpp pulls inference).
+batbox_add_unit_test(test_threshold_decider
+    unit/test_threshold_decider.cpp  batbox_tools batbox_core)
+target_link_libraries(test_threshold_decider PRIVATE
+    batbox_mcp
+    batbox_inference
+    batbox_tools_bash
+    batbox_permissions
+    batbox_config
+    simdjson::simdjson)
+
+# DIS-980 (S4) — ReportGoldTool: the structured final-output contract.
+batbox_add_unit_test(test_report_gold
+    unit/test_report_gold.cpp  batbox_tools batbox_core)
+target_link_libraries(test_report_gold PRIVATE
+    batbox_mcp
+    batbox_inference
+    batbox_tools_bash
+    batbox_permissions
+    batbox_config
+    simdjson::simdjson)
+
+# DIS-980 (S1+S4) — DistillConfig: env-var loading + validate() for the threshold
+# and the local distill endpoint.  Config-only; links batbox_config + batbox_core.
+batbox_add_unit_test(test_distill_config
+    unit/test_distill_config.cpp  batbox_config batbox_core)
+target_link_libraries(test_distill_config PRIVATE
     simdjson::simdjson)
 
 
@@ -544,7 +637,10 @@ batbox_add_unit_test(test_tool_search
     unit/test_tool_search.cpp  batbox_core)
 target_sources(test_tool_search PRIVATE
     ${PROJECT_SOURCE_DIR}/src/tools/ToolSearchTool.cpp
-    ${PROJECT_SOURCE_DIR}/src/tools/ToolRegistry.cpp)
+    ${PROJECT_SOURCE_DIR}/src/tools/ToolRegistry.cpp
+    # DIS-1045: clean-build link-list rot repair — ToolRegistry.cpp now references
+    # ToolSubagentEnvelope (wired by DIS-979) but it was missing from this source list.
+    ${PROJECT_SOURCE_DIR}/src/tools/ToolSubagentEnvelope.cpp)
 target_link_libraries(test_tool_search PRIVATE
     batbox_permissions
     batbox_config
@@ -1220,6 +1316,7 @@ batbox_add_unit_test(test_provider_hint
     unit/test_provider_hint.cpp  batbox_core)
 target_sources(test_provider_hint PRIVATE
     ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
+    ${PROJECT_SOURCE_DIR}/src/inference/ProviderHint.cpp
     ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
     ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp)
 target_link_libraries(test_provider_hint PRIVATE
@@ -1293,6 +1390,233 @@ batbox_add_unit_test(test_system_prompt
     unit/test_system_prompt.cpp  batbox_core)
 target_sources(test_system_prompt PRIVATE
     ${PROJECT_SOURCE_DIR}/src/conversation/SystemPrompt.cpp)
+
+# ---------------------------------------------------------------------------
+# DIS-981 S6 — NotepadReminder: per-turn tail re-injection. AC4 — pad surfaces
+# as the tail message; cached prefix unchanged by pad mutations; empty=no-op.
+# Uses only the ChatRequest/WireMessage header structs.
+# ---------------------------------------------------------------------------
+batbox_add_unit_test(test_notepad_reminder
+    unit/test_notepad_reminder.cpp  batbox_core)
+target_sources(test_notepad_reminder PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/conversation/NotepadReminder.cpp)
+target_link_libraries(test_notepad_reminder PRIVATE
+    batbox_config
+    simdjson::simdjson)
+
+# ---------------------------------------------------------------------------
+# DIS-988 S2/S3 — AC4: the warm-subagent status TAIL reminder (pure formatter).
+# Uses only the ChatRequest/WireMessage header structs (mirrors notepad_reminder).
+# ---------------------------------------------------------------------------
+batbox_add_unit_test(test_standing_reminder
+    unit/test_standing_reminder.cpp  batbox_core)
+target_sources(test_standing_reminder PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/conversation/StandingReminder.cpp)
+target_link_libraries(test_standing_reminder PRIVATE
+    batbox_config
+    simdjson::simdjson)
+
+# ---------------------------------------------------------------------------
+# DIS-981 S6 — AC3 (decisive): the notepad survives a REAL Compactor pass.
+# Spawns the shared fake_openai_server.py fixture (read-only) and links the
+# Compactor + Client stack (cpr/curl/simdjson/spdlog/fmt), mirroring how
+# tests/integration/test_compactor.cpp builds.
+# ---------------------------------------------------------------------------
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_notepad_survives_compaction.cpp)
+    add_executable(test_notepad_survives_compaction
+        ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_notepad_survives_compaction.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/NotepadStore.cpp)
+    set_target_properties(test_notepad_survives_compaction PROPERTIES
+        CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+    target_include_directories(test_notepad_survives_compaction PRIVATE
+        ${PROJECT_SOURCE_DIR}/include)
+    target_compile_definitions(test_notepad_survives_compaction PRIVATE
+        BATBOX_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+    target_link_libraries(test_notepad_survives_compaction PRIVATE
+        doctest::doctest
+        batbox_conversation
+        batbox_inference
+        batbox_config
+        batbox_core
+        cpr::cpr
+        simdjson::simdjson)
+    doctest_discover_tests(test_notepad_survives_compaction)
+endif()
+
+# ---------------------------------------------------------------------------
+# DIS-988 S2/S3 — AC2/AC3/AC5: the standing-subagent registry (warm window +
+# LRU eviction + cancel tokens). Spawns the shared fake_openai_server.py fixture
+# (read-only) and links the full agents + conversation + inference stack.
+# ---------------------------------------------------------------------------
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_standing_registry.cpp)
+    add_executable(test_standing_registry
+        ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_standing_registry.cpp)
+    set_target_properties(test_standing_registry PROPERTIES
+        CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+    target_include_directories(test_standing_registry PRIVATE
+        ${PROJECT_SOURCE_DIR}/include)
+    target_compile_definitions(test_standing_registry PRIVATE
+        BATBOX_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+    target_link_libraries(test_standing_registry PRIVATE
+        doctest::doctest
+        batbox_agents
+        batbox_conversation
+        batbox_inference
+        batbox_tools
+        batbox_config
+        batbox_core
+        cpr::cpr
+        simdjson::simdjson)
+    doctest_discover_tests(test_standing_registry)
+endif()
+
+# ---------------------------------------------------------------------------
+# DIS-1017 — REAL-MODEL (ollama) re-proof of the DIS-1007 AC2/AC3 selection
+# behaviour.  Drives the SAME StandingSelector organ against a real local model
+# (default qwen2.5:7b) via the existing EndpointOverride path, through the
+# counting tests/fixtures/ollama_proxy.py reverse-proxy (temp-0 + token usage +
+# request counting for the no-re-engulf assertion).  Links the same agents +
+# conversation + inference + cpr stack as test_standing_registry.
+#
+# This is the `requires_ollama` tier: the test's own main() probes ollama and the
+# pinned model and returns 77 when either is absent, so SKIP_RETURN_CODE 77 makes
+# the DEFAULT `ctest` run report it SKIPPED (never failed) on a CI box with no
+# GPU/ollama.  The hermetic fake-server suite is the unchanged green bar.  Run the
+# tier explicitly with:  ctest -L requires_ollama
+# A manual add_test (NOT doctest_discover_tests) is used on purpose: discovery
+# would run the binary's ollama-probing main() at configure time.
+# ---------------------------------------------------------------------------
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_selection_heuristic_ollama.cpp)
+    add_executable(test_selection_heuristic_ollama
+        ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_selection_heuristic_ollama.cpp)
+    set_target_properties(test_selection_heuristic_ollama PROPERTIES
+        CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+    target_include_directories(test_selection_heuristic_ollama PRIVATE
+        ${PROJECT_SOURCE_DIR}/include)
+    target_compile_definitions(test_selection_heuristic_ollama PRIVATE
+        BATBOX_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+    target_link_libraries(test_selection_heuristic_ollama PRIVATE
+        doctest::doctest
+        batbox_agents
+        batbox_conversation
+        batbox_inference
+        batbox_tools
+        batbox_config
+        batbox_core
+        cpr::cpr
+        simdjson::simdjson)
+    add_test(NAME test_selection_heuristic_ollama
+             COMMAND test_selection_heuristic_ollama)
+    set_tests_properties(test_selection_heuristic_ollama PROPERTIES
+        LABELS requires_ollama
+        SKIP_RETURN_CODE 77
+        TIMEOUT 600)
+endif()
+
+# ---------------------------------------------------------------------------
+# DIS-1018 (DIS-1012 Child B) — Claude-vs-batbox SAME-MODEL orchestration eval.
+#   Two arms on ONE pinned ollama model (default qwen2.5:7b): the batbox
+#   standing-window organ (spawn→promote→interrogate, no source re-distill) vs the
+#   naive subagent-dispatch shape (fresh stateless call per follow-up). Token
+#   accounting is identical for both arms (each runs behind its own counting
+#   ollama_proxy.py; total == proxy /__stats.total_tokens). Emits a comparable
+#   results table (markdown + CSV) to ${BATBOX_EVAL_OUT}.  Same `requires_ollama`
+#   + SKIP_RETURN_CODE 77 discipline as the DIS-1017 substrate; manual add_test so
+#   the ollama-probing main() does not run at configure time.
+# ---------------------------------------------------------------------------
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/integration/eval_orchestration_ollama.cpp)
+    add_executable(eval_orchestration_ollama
+        ${CMAKE_CURRENT_SOURCE_DIR}/integration/eval_orchestration_ollama.cpp)
+    set_target_properties(eval_orchestration_ollama PROPERTIES
+        CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+    target_include_directories(eval_orchestration_ollama PRIVATE
+        ${PROJECT_SOURCE_DIR}/include)
+    target_compile_definitions(eval_orchestration_ollama PRIVATE
+        BATBOX_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+    target_link_libraries(eval_orchestration_ollama PRIVATE
+        batbox_agents
+        batbox_conversation
+        batbox_inference
+        batbox_tools
+        batbox_config
+        batbox_core
+        cpr::cpr
+        simdjson::simdjson)
+    add_test(NAME eval_orchestration_ollama
+             COMMAND eval_orchestration_ollama)
+    set_tests_properties(eval_orchestration_ollama PROPERTIES
+        LABELS requires_ollama
+        SKIP_RETURN_CODE 77
+        TIMEOUT 900)
+endif()
+
+# ---------------------------------------------------------------------------
+# DIS-983 S5 — Compactor::compact_to_notepad: the notepad-sink prune.
+#   AC2 structural prune · AC3 gold-preservation · AC4 gate-holds · AC6 re-inject.
+# Network-free at runtime (the cpr chain is linked only because Compactor.cpp's
+# legacy compact() shares the TU with Client). NotepadStore.cpp added directly.
+# ---------------------------------------------------------------------------
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_compact_to_notepad.cpp)
+    add_executable(test_compact_to_notepad
+        ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_compact_to_notepad.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/NotepadStore.cpp)
+    set_target_properties(test_compact_to_notepad PROPERTIES
+        CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+    target_include_directories(test_compact_to_notepad PRIVATE
+        ${PROJECT_SOURCE_DIR}/include)
+    target_link_libraries(test_compact_to_notepad PRIVATE
+        doctest::doctest
+        batbox_conversation
+        batbox_inference
+        batbox_config
+        batbox_core
+        cpr::cpr
+        simdjson::simdjson)
+    doctest_discover_tests(test_compact_to_notepad)
+endif()
+
+# ---------------------------------------------------------------------------
+# DIS-983 S5 — AC1: cross-provider context-overflow detection.
+# is_overflow_error() lives in Client.cpp (batbox_inference).
+# ---------------------------------------------------------------------------
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_overflow_detection.cpp)
+    add_executable(test_overflow_detection
+        ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_overflow_detection.cpp)
+    set_target_properties(test_overflow_detection PROPERTIES
+        CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+    target_include_directories(test_overflow_detection PRIVATE
+        ${PROJECT_SOURCE_DIR}/include)
+    target_link_libraries(test_overflow_detection PRIVATE
+        doctest::doctest
+        batbox_inference
+        batbox_config
+        batbox_core
+        cpr::cpr
+        simdjson::simdjson)
+    doctest_discover_tests(test_overflow_detection)
+endif()
+
+# ---------------------------------------------------------------------------
+# DIS-983 S5 — AC5: S9 stand-down. compaction_should_run (Compactor.cpp) tied to
+# the real OpenAiCompatibleProvider::manages_own_context() (Provider.cpp).
+# ---------------------------------------------------------------------------
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_compaction_standdown.cpp)
+    add_executable(test_compaction_standdown
+        ${CMAKE_CURRENT_SOURCE_DIR}/unit/test_compaction_standdown.cpp)
+    set_target_properties(test_compaction_standdown PROPERTIES
+        CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+    target_include_directories(test_compaction_standdown PRIVATE
+        ${PROJECT_SOURCE_DIR}/include)
+    target_link_libraries(test_compaction_standdown PRIVATE
+        doctest::doctest
+        batbox_conversation
+        batbox_inference
+        batbox_config
+        batbox_core
+        cpr::cpr
+        simdjson::simdjson)
+    doctest_discover_tests(test_compaction_standdown)
+endif()
 
 # ---------------------------------------------------------------------------
 # CPP 5.20 — AskUserQuestionTool: single-select, multi-select, headless mode
@@ -1502,7 +1826,10 @@ batbox_add_unit_test(test_openai_client_tools
     unit/test_openai_client_tools.cpp  batbox_core)
 target_sources(test_openai_client_tools PRIVATE
     ${PROJECT_SOURCE_DIR}/src/tools/ToolRegistry.cpp
-    ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp)
+    ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
+    # DIS-1045: clean-build link-list rot repair — ToolRegistry.cpp now references
+    # ToolSubagentEnvelope (wired by DIS-979) but it was missing from this source list.
+    ${PROJECT_SOURCE_DIR}/src/tools/ToolSubagentEnvelope.cpp)
 target_link_libraries(test_openai_client_tools PRIVATE
     batbox_permissions
     batbox_config

@@ -132,6 +132,28 @@ public:
                 const std::filesystem::path& working_dir);
 
     // -------------------------------------------------------------------------
+    // new_session() — DIS-1020 subagent-journaling overload
+    //
+    // Same as the two-argument form, but additionally records:
+    //   agent_id  — the SubAgent id (empty for the main session), persisted to
+    //               the SessionFile and the index record so a closed subagent's
+    //               log is locatable by id (resume child, DIS-941 next step).
+    //   endpoint  — the resolved inference endpoint REFERENCE blob
+    //               { base_url, model, use_distill_endpoint, api_key_ref }.
+    //               The raw api_key is never stored; it is re-resolved from
+    //               config at resume time.  Pass an empty/null Json for the
+    //               default cfg.api case to omit it.
+    //
+    // The two-argument new_session() delegates here with agent_id="" and a null
+    // endpoint, so existing callers and on-disk shape are unchanged.
+    // -------------------------------------------------------------------------
+    [[nodiscard]] Result<std::string>
+    new_session(const std::string& model,
+                const std::filesystem::path& working_dir,
+                const std::string& agent_id,
+                const Json& endpoint);
+
+    // -------------------------------------------------------------------------
     // append_message()
     //
     // Thread-safe per-session message append:
@@ -206,6 +228,39 @@ public:
     resume_for_cwd(const std::filesystem::path& working_dir);
 
     // -------------------------------------------------------------------------
+    // find_session_for_agent() — DIS-1021 subagent resume lookup
+    //
+    // Finds the most recently updated session whose index record carries the
+    // given agent_id (DIS-1020's per-subagent lineage tag).  This is the lookup
+    // the supervisor uses to reload a CLOSED subagent from its durable log.
+    //
+    // Returns std::nullopt if agent_id is empty or no matching session is found.
+    //
+    // Implementation (mirrors resume_for_cwd):
+    //   1. Calls list_recent(256) to get candidates, already most-recent-first.
+    //   2. Returns the first whose SessionIndexRecord::agent_id == agent_id,
+    //      loading the full SessionFile.  Skips files that cannot be read.
+    // -------------------------------------------------------------------------
+    [[nodiscard]] std::optional<SessionFile>
+    find_session_for_agent(const std::string& agent_id);
+
+    // -------------------------------------------------------------------------
+    // adopt_restored() — DIS-1021 re-seed identity for a foreign session
+    //
+    // When a SessionFile was created by a DIFFERENT SessionStore instance (e.g.
+    // a subagent's prior run) and is now being resumed, this store's in-memory
+    // identity maps have no entry for it.  append_message() would then rewrite
+    // the index record from those EMPTY maps, clobbering the agent_id / model /
+    // created_at the on-disk log carries.
+    //
+    // adopt_restored() re-seeds the identity maps for sf.id from the loaded
+    // SessionFile so a subsequent append_message() preserves identity in the
+    // index instead of erasing it.  It does NOT set current_session_id_ (the
+    // adopted session is not "the session this store created").
+    // -------------------------------------------------------------------------
+    void adopt_restored(const SessionFile& sf);
+
+    // -------------------------------------------------------------------------
     // current_session_id()
     //
     // Returns the session id of the most recently created session via
@@ -232,6 +287,34 @@ public:
     // -------------------------------------------------------------------------
     Result<void> touch(const std::string& session_id);
 
+    // -------------------------------------------------------------------------
+    // prune() — DIS-1020 retention policy (Paulina refinement a)
+    //
+    // Always-on subagent journaling means every subagent writes a durable log,
+    // so the session count grows without bound.  prune() enforces an explicit
+    // CAP: it keeps the `max_sessions` most-recently-updated sessions (by the
+    // index) and deletes the on-disk files (.json and .json.gz) for the rest.
+    //
+    // The currently-active session (current_session_id_) is never deleted, even
+    // if it falls outside the cap.  Stale index lines pointing at deleted files
+    // are harmless: load()/resume_for_cwd() skip files that cannot be read, and
+    // the index is rebuildable from the surviving files.
+    //
+    // "Always logged" therefore does NOT mean "logged forever": growth is bounded
+    // at `max_sessions` durable logs.  Called automatically at the end of
+    // new_session(); also callable directly.  Cheap: one buffered index pass
+    // (<50ms for 10k entries) plus a bounded number of unlink()s.
+    //
+    // Returns the number of session files deleted, or Err on a hard index read
+    // failure (individual unlink failures are logged, not fatal).
+    // -------------------------------------------------------------------------
+    [[nodiscard]] Result<size_t> prune(size_t max_sessions = DEFAULT_MAX_SESSIONS);
+
+    /// Default retention cap for prune(): keep at most this many durable session
+    /// logs on disk.  Disk is cheap and the main scarcity is warm RAM slots, so
+    /// this is generous; subagent logs are small.
+    static constexpr size_t DEFAULT_MAX_SESSIONS = 500;
+
 private:
     // Directory where all session files live.
     std::filesystem::path sessions_dir_;
@@ -255,6 +338,10 @@ private:
 
     // Per-session model strings.
     std::unordered_map<std::string, std::string> session_models_;
+
+    // Per-session agent ids (DIS-1020).  Empty for the main session.  Kept so
+    // append_message()/touch() index updates carry the agent_id through.
+    std::unordered_map<std::string, std::string> session_agent_ids_;
 
     // Per-session creation timestamps.
     std::unordered_map<std::string, std::chrono::system_clock::time_point> session_created_at_;

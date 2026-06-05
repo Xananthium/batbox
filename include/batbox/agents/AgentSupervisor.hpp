@@ -32,9 +32,12 @@
 #include <batbox/core/CancelToken.hpp>
 
 #include <cstddef>
+#include <functional>
 #include <string>
 #include <string_view>
 #include <vector>
+
+namespace batbox::config { struct Config; }
 
 namespace batbox::agents {
 
@@ -174,6 +177,124 @@ public:
     /// Intended for orderly shutdown: call cancel() on all agents first,
     /// then wait_all() to join before the supervisor is destroyed.
     void wait_all();
+
+    // -------------------------------------------------------------------------
+    // resume_subagent — DIS-1021: reload a CLOSED subagent and continue it (AC4)
+    // -------------------------------------------------------------------------
+
+    /// Reload a CLOSED subagent from its durable log and continue it forward.
+    ///
+    /// Finds the session by the original agent id (DIS-1020 lineage tag),
+    /// reconstructs a minimal AgentSpec (model + endpoint re-adopted from the
+    /// log), respawns a SubAgent that restore()s the conversation, and runs it.
+    /// The follow_up text, when non-empty, is delivered as an optional follow-up
+    /// user turn against the restored history (empty → just continue forward).
+    ///
+    /// Closed agents are never erased from the registry, so the resumed agent is
+    /// given a FRESH agent id (the return value).
+    ///
+    /// @param target_agent_id  The original (closed) agent's id.
+    /// @param follow_up        Optional follow-up user turn (may be empty).
+    /// @param ct               Parent cancel token; cancelling cascades.
+    ///
+    /// @returns The NEW live agent id, or the empty string if no log was found
+    ///          for target_agent_id.
+    std::string resume_subagent(std::string_view target_agent_id,
+                                std::string_view follow_up,
+                                CancelToken      ct);
+
+    // =========================================================================
+    // Standing-subagent registry — the warm window (S2/S3, DIS-988)
+    //
+    // A *standing* subagent keeps its conversation alive after it produces a
+    // result (it is NOT collapsed to a string), so the parent can interrogate it
+    // with follow-up turns against the still-engulfed context.  The standing set
+    // is a SEPARATE, LRU-bounded pool that lives ALONGSIDE the active-work
+    // parallelism semaphore: promoting an agent hands its active slot back to the
+    // pool, so parked windows never starve new spawns.  Under pressure the
+    // least-recently-interrogated standing subagent is evicted (its window is
+    // discarded and its stop_token fired) — lossless by construction because the
+    // gold is already in the notepad (S6).
+    //
+    // Step 7 exposes the explicit promote + interrogate API.  WHEN to promote
+    // (closed→standing) is the step-8 selection heuristic — NOT decided here.
+    // =========================================================================
+
+    /// One warm subagent's line for the parent's status surface (AC4).
+    struct StandingStatus {
+        std::string id;           ///< Opaque agent handle.
+        std::string name;         ///< Display name (AgentSpec::name).
+        std::string status_line;  ///< One-line status (truncated last result).
+    };
+
+    /// promote — mark a known subagent STANDING and register it in the LRU pool.
+    ///
+    /// The subagent's run loop will park at quiescence instead of exiting, and
+    /// the agent's active-work slot is handed back to the pool.  If promoting
+    /// pushes the pool past max_standing_subagents, the least-recently-
+    /// interrogated standing subagent is evicted.  Idempotent: re-promoting an
+    /// already-standing agent just refreshes its LRU recency.  Safe no-op on an
+    /// unknown handle.
+    void promote(std::string_view agent_id);
+
+    /// interrogate — issue a follow-up user turn against a standing subagent's
+    /// warm window and return its answer (blocking).
+    ///
+    /// Refreshes the agent's LRU recency, then runs the question against the
+    /// still-engulfed context (the source is NOT re-engulfed).  Returns the empty
+    /// string on an unknown / non-standing / evicted handle — never hangs, never
+    /// throws (the warm window always fulfils, AC5).
+    [[nodiscard]] std::string interrogate(std::string_view agent_id,
+                                          std::string_view question);
+
+    /// set_max_standing_subagents — set the LRU bound on the standing pool.
+    /// Clamped to >= 0.  Lowering it below the current pool size evicts the
+    /// least-recently-interrogated agents until the pool fits.
+    void set_max_standing_subagents(int n);
+
+    /// standing_status — the bounded list of warm subagents available for
+    /// follow-up, most-recently-interrogated first.  Source for the AC4 status
+    /// line injected into the parent each turn.
+    [[nodiscard]] std::vector<StandingStatus> standing_status() const;
+
+    /// standing_count — number of subagents currently in the standing pool.
+    [[nodiscard]] std::size_t standing_count() const;
+
+    /// set_agent_config — override the Config handed to subsequently-spawned
+    /// SubAgents.  By default the supervisor builds agents from
+    /// Config::load_default() (pure built-in defaults); this lets a caller (and
+    /// hermetic tests) point spawned agents at a specific endpoint instead.
+    /// Affects only agents spawned AFTER this call — must NOT be called
+    /// concurrently with spawn(); the stored Config must outlive its agents
+    /// (it is copied into the supervisor).
+    void set_agent_config(const batbox::config::Config& cfg);
+
+    // =========================================================================
+    // Test-only introspection / fault-injection (DIS-1001).
+    //
+    // These exist to deterministically exercise the promote() / natural-exit
+    // TOCTOU on the standing slot pool.  They are NOT part of the production
+    // contract: production code never calls them and the hook is null by default
+    // (one predictable null-check per promote()).
+    // =========================================================================
+
+    /// Count currently-available semaphore permits by acquiring all of them and
+    /// immediately releasing them back.  ONLY valid when the supervisor is
+    /// quiescent (no agent acquiring/releasing concurrently) — used to assert the
+    /// slot pool was neither over- nor under-released after a promote/exit race.
+    [[nodiscard]] std::size_t available_slots_for_test();
+
+    /// Install a hook invoked inside promote() AFTER step 1 (mark-standing under
+    /// agents_mutex) and BEFORE step 2 (register in the LRU pool under
+    /// standing_mutex).  A test sets this to drive the promoted agent to a
+    /// terminal exit — so on_exit() runs first — and prove step 2 refuses to
+    /// re-register an already-exited agent.  Pass {} to clear.
+    void set_promote_race_hook_for_test(std::function<void()> hook);
+
+    /// Install a quiescence seam on a spawned agent (by id) — passthrough to
+    /// SubAgent::set_quiescence_hook_for_test.  No-op on an unknown handle.
+    void set_agent_quiescence_hook_for_test(std::string_view        agent_id,
+                                            std::function<void()>   hook);
 
 private:
     struct Impl;

@@ -57,6 +57,7 @@
 #include <batbox/core/Logging.hpp>
 #include <batbox/inference/ChatRequest.hpp>
 #include <batbox/inference/ChatResponse.hpp>
+#include <batbox/inference/ProviderHint.hpp>
 #include <batbox/inference/SseParser.hpp>
 
 #include <cpr/cpr.h>
@@ -104,77 +105,10 @@ bool is_retriable_status(long status) noexcept {
 // Provider quirk handling
 // ---------------------------------------------------------------------------
 
-/// Lowercase-fold a string in-place.
-std::string to_lower(std::string s) {
-    std::transform(s.begin(), s.end(), s.begin(),
-                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    return s;
-}
-
-/// Detect provider from base_url when hint is "auto" or empty.
-/// Priority order: most-specific domains first, local-port heuristics last.
-/// Falls back to "openai" when no pattern matches.
-std::string detect_provider_from_url(const std::string& base_url) {
-    const std::string url = to_lower(base_url);
-    if (url.find("together.ai") != std::string::npos
-            || url.find("together.xyz") != std::string::npos) {
-        return "together";
-    }
-    if (url.find("groq.com") != std::string::npos) {
-        return "groq";
-    }
-    if (url.find("mistral.ai") != std::string::npos) {
-        return "mistral";
-    }
-    if (url.find("anthropic.com") != std::string::npos
-            || url.find("litellm") != std::string::npos) {
-        return "anthropic";
-    }
-    if (url.find("11434") != std::string::npos
-            || url.find("ollama") != std::string::npos) {
-        return "ollama";
-    }
-    if (url.find("lmstudio") != std::string::npos
-            || url.find(":1234/") != std::string::npos
-            || url.find(":1234") == url.size() - 5) {
-        return "lm-studio";
-    }
-    if (url.find("llama") != std::string::npos) {
-        return "llama-cpp";
-    }
-    if (url.find("vllm") != std::string::npos) {
-        return "vllm";
-    }
-    return "openai";
-}
-
-/// Resolve the provider hint string to a canonical lowercase provider name.
-std::string resolve_provider_hint(const std::string& hint,
-                                  const std::string& base_url) {
-    const std::string norm = to_lower(hint);
-
-    if (norm.empty() || norm == "auto") {
-        return detect_provider_from_url(base_url);
-    }
-
-    static const std::string kKnown[] = {
-        "openai", "vllm", "together", "ollama",
-        "anthropic", "groq", "mistral", "lm-studio", "llama-cpp"
-    };
-    for (const auto& known : kKnown) {
-        if (norm == known) {
-            return norm;
-        }
-    }
-
-    auto lg = batbox::log::get("inference.client");
-    lg->warn(
-        "BATBOX_PROVIDER_HINT='{}' is not a recognised provider; "
-        "falling back to openai semantics. "
-        "Valid values: openai|vllm|together|ollama|anthropic|groq|mistral|lm-studio|llama-cpp|auto",
-        hint);
-    return "openai";
-}
+// detect_provider_from_url() / resolve_provider_hint() — the URL→provider
+// detector and the hint resolver — now live in ProviderHint.{hpp,cpp} as the
+// single source of truth shared with Provider.cpp's identity path (DIS-1006).
+// The call sites below resolve them via batbox::inference (unqualified lookup).
 
 /// Apply provider-specific pre-request transformations to the JSON body and
 /// HTTP headers.
@@ -205,6 +139,60 @@ bool provider_needs_quirks(const std::string& provider) noexcept {
 }
 
 } // anonymous namespace
+
+// ---------------------------------------------------------------------------
+// is_overflow_error — cross-provider context-overflow detection (S5, DIS-983)
+// ---------------------------------------------------------------------------
+//
+// Ported in shape from opencode provider/error.ts:isOverflow.  The Client
+// surfaces every non-2xx response as the string "http <code>: <body-excerpt>"
+// (see chat()/stream_chat below), so the overflow signal lives in that excerpt.
+// We lower-fold once and match a curated set of overflow signatures shared
+// across the OpenAI-compatible endpoints batbox targets:
+//
+//   openai / groq / kimi / deepseek : "context_length_exceeded",
+//                                      "maximum context length (is)"
+//   vllm / llama-cpp                 : "maximum context length",
+//                                      "please reduce the length of the messages"
+//   anthropic-shaped gateways        : "prompt is too long",
+//                                      "input length and max_tokens exceed context"
+//   generic                          : "context window", "reduce the length",
+//                                      "exceeds the context", "too many tokens"
+//
+// Deliberately conservative: a 429 rate-limit, a 401 auth error, or a generic
+// 400 validation failure does NOT match, so it stays a normal error (AC1).
+bool is_overflow_error(std::string_view error_message) noexcept {
+    // Lower-fold into a local buffer (string_view → owned, ASCII fold only).
+    std::string m;
+    m.reserve(error_message.size());
+    for (char c : error_message) {
+        m.push_back(static_cast<char>(
+            std::tolower(static_cast<unsigned char>(c))));
+    }
+
+    auto has = [&m](std::string_view needle) noexcept {
+        return m.find(needle) != std::string::npos;
+    };
+
+    // Canonical OpenAI-family error code (most providers echo it verbatim).
+    if (has("context_length_exceeded")) return true;
+    if (has("context_window_exceeded")) return true;
+
+    // Phrasing variants across providers.
+    if (has("maximum context length"))  return true;   // openai/vllm
+    if (has("maximum context"))         return true;   // "exceeds the model's maximum context"
+    if (has("context window"))          return true;   // generic
+    if (has("reduce the length"))       return true;   // openai/vllm "please reduce the length"
+    if (has("exceeds the context"))     return true;
+    if (has("exceed context"))          return true;
+    if (has("exceeds context"))         return true;
+    if (has("prompt is too long"))      return true;   // anthropic-shaped
+    if (has("input is too long"))       return true;
+    if (has("too many tokens"))         return true;
+    if (has("exceed context limit"))    return true;   // anthropic "max_tokens exceed context limit"
+
+    return false;
+}
 
 // ---------------------------------------------------------------------------
 // Construction

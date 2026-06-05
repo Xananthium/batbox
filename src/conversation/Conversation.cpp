@@ -16,16 +16,20 @@
 
 #include <batbox/conversation/Compactor.hpp>
 #include <batbox/conversation/ContextWindow.hpp>
+#include <batbox/conversation/NotepadReminder.hpp>
 #include <batbox/conversation/Message.hpp>
 #include <batbox/core/CancelToken.hpp>
 #include <batbox/core/Logging.hpp>
 #include <batbox/core/Result.hpp>
 #include <batbox/inference/ChatRequest.hpp>
 #include <batbox/inference/ChatResponse.hpp>
+#include <batbox/inference/Provider.hpp>             // reasoning_tags_for_config (S10)
+#include <batbox/inference/ReasoningAccumulator.hpp>  // unified reasoning channel (S10)
 #include <batbox/permissions/PermissionGate.hpp>
 #include <batbox/permissions/PermissionMode.hpp>
 #include <batbox/tools/ToolContext.hpp>
 #include <batbox/tools/ToolRegistry.hpp>
+#include <batbox/tools/NotepadStore.hpp>
 
 #include <batbox/perf/PerfSnapshot.hpp>
 
@@ -44,11 +48,14 @@ namespace batbox::conversation {
 // Constants
 // =============================================================================
 
-/// Maximum number of tool-call loop iterations per run_turn() call.
+/// Default maximum number of tool-call loop iterations per run_turn() call.
 /// Prevents infinite loops when a model repeatedly emits tool_calls.
-/// Matches the acceptance criterion; can be made configurable via Config in
-/// a future task.
-static constexpr int k_max_tool_turns = 20;
+/// S11 (DIS-1044): this is now the FALLBACK only — run_turn() reads the live
+/// value from cfg_.tools.max_tool_turns (defaulting to this same 20, so an
+/// absent config key leaves behaviour byte-identical to before).  Kept as a
+/// named constant so a Config built with a non-positive value still degrades to
+/// the historical cap rather than disabling the guard.
+static constexpr int k_default_max_tool_turns = 20;
 
 // =============================================================================
 // Constructor
@@ -139,6 +146,12 @@ void Conversation::set_on_usage_delta_cb(
     on_usage_delta_cb_ = std::move(cb);
 }
 
+void Conversation::set_standing_handles_provider(
+    std::function<std::vector<batbox::conversation::StandingHandle>()> provider)
+{
+    standing_handles_provider_ = std::move(provider);
+}
+
 // =============================================================================
 // user_message()
 // =============================================================================
@@ -218,6 +231,20 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         return cfg_.api.api_key;
     }();
 
+    // ---- S10 (DIS-975): resolve the provider's inline reasoning-tag convention ----
+    // Sourced from the S8 provider profile (reasoning_tags_for_config → the same
+    // provider identity OpenAiCompatibleProvider::name() resolves).  The provider
+    // identity does not change mid-turn, so resolve once.  Read under cfg_mutex_
+    // for the same data-race reason as the model/api_key snapshots above.
+    const batbox::inference::ReasoningTags reasoning_tags = [&]()
+            -> batbox::inference::ReasoningTags {
+        if (cfg_mutex_ != nullptr) {
+            std::lock_guard<std::mutex> lk(*cfg_mutex_);
+            return batbox::inference::reasoning_tags_for_config(cfg_);
+        }
+        return batbox::inference::reasoning_tags_for_config(cfg_);
+    }();
+
 
     // ---- 1. Auto-compact pre-flight check (bytes/4 estimator, G9) ----
     //
@@ -239,6 +266,38 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
     // tool-call loop iteration 0.  This eliminates the second Json::dump() that
     // Client::stream_chat previously performed inside the retry loop.
     // After compaction the post-compact dump is stored instead.
+    // S6 (DIS-981): the working-notepad slice for per-turn TAIL re-injection.
+    // Re-read fresh on each call so notes jotted mid-loop surface next turn.
+    // Keyed identically to how the notepad_* tools key their writes
+    // (session_id else agent_id else "default"); agent_id is empty for the
+    // top-level conversation, matching the dispatch ToolContext below.
+    auto notepad_slice = [this]() -> std::string {
+        batbox::tools::NotepadStore notepad;
+        const std::string key =
+            batbox::tools::NotepadStore::session_key(session_id_, std::string{});
+        return notepad.reinjection_slice(key);
+    };
+
+    // S5 (DIS-983): the pad reference cited in compaction tombstones — the path
+    // of the SAME pad notepad_slice re-injects, keyed identically (session_id
+    // else agent_id else "default"). Evaluated lazily so it reflects session_id_
+    // at the point of compaction (which may be set later in this run_turn).
+    auto notepad_ref = [this]() -> std::string {
+        batbox::tools::NotepadStore notepad;
+        const std::string key =
+            batbox::tools::NotepadStore::session_key(session_id_, std::string{});
+        return notepad.pad_path(key).string();
+    };
+
+    // S2/S3 (DIS-988, AC4): the parent's warm standing-subagent list for per-turn
+    // TAIL re-injection.  Re-read fresh each call so promote/interrogate/evict
+    // are reflected next turn.  Empty when no provider is wired or the pool is
+    // empty → apply_standing_reminder is a no-op and the cache stays untouched.
+    auto standing_handles = [this]() -> std::vector<StandingHandle> {
+        if (!standing_handles_provider_) return {};
+        return standing_handles_provider_();
+    };
+
     std::string preflight_body_str;
     {
         // Determine the resolved context length for this turn.
@@ -283,6 +342,14 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
             build_chat_request(messages_, cfg_, registry_, sys_prompt_preflight);
         // PEXT2 3.4: use snapshotted model to avoid race with /model switch.
         preflight_req.model = current_model;
+        // S6 (DIS-981): inject the notepad as a tail reminder BEFORE serializing,
+        // so iteration 0 (which sends this pre-flight body, not `req`) carries the
+        // pad and the token estimate accounts for it. Tail-only: the cached
+        // system-prompt prefix is untouched.
+        batbox::conversation::apply_notepad_reminder(preflight_req, notepad_slice());
+        // S2/S3 (DIS-988, AC4): warm standing-subagent status as a further TAIL
+        // reminder (after the pad, still tail-only — cache prefix untouched).
+        batbox::conversation::apply_standing_reminder(preflight_req, standing_handles());
         // Serialize the request as JSON for the bytes/4 estimate.
         // PEXT2 4.1 (D-3): use to_wire_string() to skip the intermediate
         // nlohmann tree — avoids ~2000 allocations per preflight call.
@@ -296,26 +363,40 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         logger_cw->debug("ctx-budget: est={}tok threshold={}tok ctx_len={}tok pct={}%",
                          est, threshold, resolved_ctx_len, pct);
 
-        if (est >= threshold) {
-            // Attempt compaction.
+        // S5 (DIS-983): gate compaction on the S9 stand-down rule — skip
+        // entirely when the active provider manages its own context window.
+        if (batbox::conversation::compaction_should_run(est >= threshold,
+                                                        manages_own_context_)) {
+            // S5: the sink is the NOTEPAD, not an LLM summary. Structurally
+            // prune the raw tool-output bodies in the head to tombstones that
+            // cite the working pad (where the S1 distiller + S6 agent already
+            // wrote the gold); the protected tail stays verbatim. No network
+            // call — deterministic and authored.
             Compactor compactor{cfg_.compact.keep_last_n_turns_verbatim};
-            auto [child_src, child_tok] = ct.child();
-            try {
-                auto compact_res = compactor.compact(messages_, client_,
-                                                      std::move(child_tok));
-                if (!compact_res) {
-                    return batbox::Err(compact_res.error());
-                }
-                messages_ = std::move(compact_res.value());
-            } catch (const batbox::CancelledException&) {
-                return batbox::Err(std::string("cancelled"));
+            const std::size_t before_n = messages_.size();
+            auto compact_res =
+                compactor.compact_to_notepad(messages_, notepad_ref());
+            if (!compact_res) {
+                return batbox::Err(compact_res.error());
             }
+            messages_ = std::move(compact_res.value());
+            logger_cw->warn(
+                "ctx-compact (proactive): est={}tok >= threshold={}tok — "
+                "pruned head tool-output to notepad ({} msgs, last {} verbatim)",
+                est, threshold, before_n,
+                cfg_.compact.keep_last_n_turns_verbatim);
 
             // Rebuild preflight_body_str after compaction so iteration 0 uses the compacted wire body.
             batbox::inference::ChatRequest post_compact_req =
                 build_chat_request(messages_, cfg_, registry_, sys_prompt_preflight);
             // PEXT2 3.4: use snapshotted model after compaction rebuild.
             post_compact_req.model = current_model;
+            // S6 (DIS-981): re-inject the notepad tail reminder on the compacted
+            // body too. The pad itself is untouched by compaction (out-of-band) —
+            // this just keeps iteration 0's post-compact body carrying it.
+            batbox::conversation::apply_notepad_reminder(post_compact_req, notepad_slice());
+            // S2/S3 (DIS-988, AC4): re-inject the warm-subagent status tail too.
+            batbox::conversation::apply_standing_reminder(post_compact_req, standing_handles());
             // Re-serialize after compaction.
             // PEXT2 4.1 (D-3): use to_wire_string() here too — consistent with
             // the pre-compact path above; avoids an extra nlohmann tree build.
@@ -324,6 +405,14 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
             preflight_body_str.clear();
             preflight_body_str.reserve(4096);
             batbox::inference::to_wire_string(post_compact_req, preflight_body_str);
+        } else if (est >= threshold && manages_own_context_) {
+            // S5 (DIS-983) AC5: stand-down. The gate would fire, but the active
+            // provider owns its own context window — batbox does not double-
+            // manage it. Skip compaction; log so the path is observable.
+            logger_cw->warn(
+                "ctx-compact: stand-down — provider manages own context; "
+                "skipping compaction (est={}tok threshold={}tok)",
+                est, threshold);
         }
     }
 
@@ -342,9 +431,23 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
     std::string                   finish_reason;
     batbox::inference::UsageDelta usage;
 
+    // S5 (DIS-983) AC1: one-shot reactive overflow retry guard. If an endpoint
+    // loudly rejects the prompt as too large, we compact and retry the turn
+    // EXACTLY once; a second overflow surfaces as a normal error. The single
+    // shot is what prevents the "compact, resend still-too-big, loop" failure.
+    bool overflow_retry_used = false;
+
+    // S11 (DIS-1044): per-turn tool-call cap is now Config-driven.  Read the live
+    // value once at the top of the turn; a non-positive value degrades to the
+    // historical default (never "unbounded").  Default 20 → byte-identical to the
+    // old constexpr when the knob is absent.
+    const int max_tool_turns =
+        cfg_.tools.max_tool_turns > 0 ? cfg_.tools.max_tool_turns
+                                      : k_default_max_tool_turns;
+
     // ---- Tool-call loop ----
-    // Iterates until finish_reason != "tool_calls", or k_max_tool_turns reached.
-    for (int tool_turn = 0; tool_turn <= k_max_tool_turns; ++tool_turn) {
+    // Iterates until finish_reason != "tool_calls", or max_tool_turns reached.
+    for (int tool_turn = 0; tool_turn <= max_tool_turns; ++tool_turn) {
 
         // -- Cancellation check at top of each iteration --
         if (ct.is_cancelled()) {
@@ -369,6 +472,13 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         bool reasoning_phase_active = false;
         bool reasoning_stopped_fired = false;
 
+        // S10 (DIS-975): per-iteration unified reasoning channel.  Separates the
+        // visible (reasoning-free) text from the reasoning stream, merging the
+        // structured reasoning_content field with inline <think>…</think> text
+        // pulled out of content.  Constructed fresh each iteration because the
+        // ThinkSplitter it owns is stateful and not reusable across streams.
+        batbox::inference::ReasoningAccumulator reasoning_acc(reasoning_tags);
+
         // ---- 2. Build ChatRequest ----
         // Compose the system prompt for this turn.  The plan-mode prefix is
         // included only when the PlanMode state machine is in Planning state.
@@ -383,6 +493,14 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
             build_chat_request(messages_, cfg_, registry_, sys_prompt);
         // PEXT2 3.4: override req.model with the snapshotted model (race-free).
         req.model = current_model;
+        // S6 (DIS-981): re-inject the working notepad as a TAIL reminder after
+        // the cached prefix. Tool-call follow-up iterations (tool_turn > 0) send
+        // this `req`; iteration 0 sends preflight_body_str (injected above). The
+        // slice is re-read fresh so notes jotted earlier this loop surface now.
+        // compose_system_prompt is NOT touched — cache discipline preserved.
+        batbox::conversation::apply_notepad_reminder(req, notepad_slice());
+        // S2/S3 (DIS-988, AC4): warm-subagent status tail for tool_turn>0 too.
+        batbox::conversation::apply_standing_reminder(req, standing_handles());
 
         // Instantiate ToolCallOrchestrator for this streaming turn (only when
         // the registry and gate are configured).
@@ -409,19 +527,31 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         // has grown with tool results; use the ChatRequest overload which rebuilds
         // and serialises the body from the updated req.
         auto on_delta_fn = [&](const batbox::inference::StreamDelta& delta) {
-                // TUI-T15: Detect the start of the reasoning phase.
-                // Fire on_reasoning_started_cb_ the first time reasoning_content
-                // arrives so InputBar can show "· thinking..." in the status row.
-                if (delta.reasoning_content.has_value() && !reasoning_phase_active) {
+                // S10 (DIS-975): route the delta through the unified reasoning
+                // channel.  This isolates reasoning whether the model emitted it
+                // as the structured reasoning_content field OR inline
+                // <think>…</think> inside content, and returns ONLY the
+                // reasoning-free visible text.  The wire layer (Client/SSE/retry)
+                // is untouched — this is a transform over the delta stream.
+                const std::size_t reasoning_before = reasoning_acc.reasoning().size();
+                const std::string visible = reasoning_acc.accumulate(delta);
+                const bool reasoning_grew =
+                    reasoning_acc.reasoning().size() > reasoning_before;
+
+                // TUI-T15: Detect the start of the reasoning phase.  Reasoning now
+                // starts on the first reasoning text from EITHER source (structured
+                // field or an inline think block) so the "· thinking..." indicator
+                // fires for inline-tag models too.
+                if (reasoning_grew && !reasoning_phase_active) {
                     reasoning_phase_active = true;
                     if (on_reasoning_started_cb_) {
                         on_reasoning_started_cb_();
                     }
                 }
 
-                // Accumulate content tokens.
-                if (delta.content.has_value() && !delta.content->empty()) {
-                    // TUI-T15: First content chunk ends the reasoning phase.
+                // Emit the visible (reasoning-free) text.
+                if (!visible.empty()) {
+                    // TUI-T15: First VISIBLE content ends the reasoning phase.
                     // Fire on_reasoning_stopped_cb_ exactly once per iteration.
                     if (reasoning_phase_active && !reasoning_stopped_fired) {
                         reasoning_stopped_fired = true;
@@ -430,7 +560,7 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
                         }
                     }
                     // TUI-FLOW-T3: record first-token latency on the very first
-                    // content delta of each streaming turn.
+                    // visible chunk of each streaming turn.
                     if (accumulated_content.empty() && !first_token_recorded_) {
                         first_token_recorded_ = true;
                         auto now = std::chrono::steady_clock::now();
@@ -440,9 +570,9 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
                         batbox::perf::g_perf.set_first_token_ms(ms);
                         logger->info("[perf] first_token={}ms", ms);
                     }
-                    accumulated_content += *delta.content;
+                    accumulated_content += visible;
                     if (on_delta_cb_) {
-                        on_delta_cb_(*delta.content);
+                        on_delta_cb_(visible);
                     }
                 }
                 // Feed tool_call deltas to the orchestrator.
@@ -502,7 +632,58 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         // stream_src goes out of scope here; streaming is complete.
 
         if (!stream_res) {
+            // S5 (DIS-983) AC1: reactive cross-provider overflow handling.
+            // Normalise the loud "prompt exceeds context window" errors the
+            // OpenAI-compatible endpoints return into one typed signal; on that
+            // signal compact HARD (notepad sink) and retry the turn once. Stands
+            // down (AC5) when the provider owns its own window. Any non-overflow
+            // error — or a second overflow — stays a normal error.
+            if (!overflow_retry_used
+                    && !manages_own_context_
+                    && batbox::inference::is_overflow_error(stream_res.error())) {
+                overflow_retry_used = true;
+                logger->warn(
+                    "ctx-overflow (reactive): provider rejected prompt as too "
+                    "large [{}] — compacting to notepad and retrying once",
+                    stream_res.error());
+                Compactor compactor{cfg_.compact.keep_last_n_turns_verbatim};
+                auto compact_res =
+                    compactor.compact_to_notepad(messages_, notepad_ref());
+                if (compact_res) {
+                    messages_ = std::move(compact_res.value());
+                }
+                // Retry the same logical turn: the for-loop's ++tool_turn moves
+                // us off iteration 0's stale preflight_body_str onto the rebuild
+                // path (top of loop rebuilds `req` from the compacted messages_
+                // and re-applies the notepad reminder).
+                continue;
+            }
             return batbox::Err(stream_res.error());
+        }
+
+        // S10 (DIS-975): flush the reasoning channel at end of stream.  Any
+        // buffered partial-tag tail is drained — an UNCLOSED inline <think> block
+        // becomes reasoning; trailing look-alike text becomes visible.  Emit any
+        // final visible text the splitter was holding back, then expose the
+        // turn's isolated reasoning for downstream consumers (notepad / future
+        // distillation).  Last writer (final tool-turn) wins.
+        {
+            const std::string tail_visible = reasoning_acc.finish();
+            if (!tail_visible.empty()) {
+                if (reasoning_phase_active && !reasoning_stopped_fired) {
+                    reasoning_stopped_fired = true;
+                    if (on_reasoning_stopped_cb_) {
+                        on_reasoning_stopped_cb_();
+                    }
+                }
+                accumulated_content += tail_visible;
+                if (on_delta_cb_) {
+                    on_delta_cb_(tail_visible);
+                }
+            }
+            if (reasoning_acc.has_reasoning()) {
+                last_reasoning_ = reasoning_acc.reasoning();
+            }
         }
 
         // Prefer usage from the streaming return value.
@@ -538,10 +719,10 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
             }
 
             // ---- 4b. Check loop cap ----
-            if (tool_turn >= k_max_tool_turns) {
+            if (tool_turn >= max_tool_turns) {
                 logger->warn("Conversation::run_turn: tool-call loop cap ({}) "
                              "reached; forcing stop after last assistant chunk",
-                             k_max_tool_turns);
+                             max_tool_turns);
                 // Exit loop — will fall through to stop-branch finalisation.
                 break;
             }
@@ -682,7 +863,7 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
 
             logger->debug("Conversation::run_turn: tool-call turn {} / {} "
                           "complete, looping back",
-                          tool_turn + 1, k_max_tool_turns);
+                          tool_turn + 1, max_tool_turns);
 
             // Loop back to the next inference request.
             continue;
@@ -747,12 +928,25 @@ Result<void> Conversation::ensure_session_started() {
     if (!session_id_.empty()) {
         return {};
     }
-    auto res = store_.new_session(cfg_.api.default_model, working_dir_);
+    // DIS-1020 — carry the subagent identity (agent_id + resolved endpoint
+    // reference) into the session record.  Empty/null for the main session →
+    // identical to the pre-DIS-1020 two-argument call.
+    auto res = store_.new_session(cfg_.api.default_model, working_dir_,
+                                  pending_agent_id_, pending_endpoint_);
     if (!res) {
         return batbox::Err(res.error());
     }
     session_id_ = std::move(res.value());
     return {};
+}
+
+// =============================================================================
+// set_session_identity() — DIS-1020 subagent journaling
+// =============================================================================
+void Conversation::set_session_identity(std::string agent_id,
+                                        batbox::Json endpoint) {
+    pending_agent_id_ = std::move(agent_id);
+    pending_endpoint_ = std::move(endpoint);
 }
 
 // =============================================================================

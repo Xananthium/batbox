@@ -8,7 +8,7 @@
 //   rather than a variant so all consumers can dispatch on a single enum
 //   without visitor boilerplate.
 //
-//   Kind values (all 10):
+//   Kind values (all 11):
 //     Started                – agent thread acquired a semaphore slot and began
 //     StepBegan              – entering a named reasoning/tool step
 //     TokenAppended          – streaming token received from inference
@@ -19,6 +19,10 @@
 //     Cancelled              – agent was stopped via stop_token
 //     ParentMessageObserved  – parent conversation turn completed (demon hook)
 //     Queued                 – agent is waiting for a semaphore slot (all 4 in use)
+//     DoomLoopGuard          – S11 (DIS-1044): the per-subagent turn-cycle cap
+//                              was reached; the agent was terminated CLEANLY
+//                              (status done, gold harvested). Annotates WHY a
+//                              Completed terminal was emitted — not an error.
 //
 // payload semantics by Kind:
 //   Started                → agent display name
@@ -31,6 +35,7 @@
 //   Cancelled              → reason string (may be empty)
 //   ParentMessageObserved  → parent turn summary
 //   Queued                 → position hint, e.g. "queued, 1/4"
+//   DoomLoopGuard          → "doom-loop guard tripped after N turn-cycles"
 //
 // AgentEventQueue
 //   Thread-safe MPSC (multi-producer, single-consumer) queue.
@@ -97,6 +102,7 @@ struct AgentEvent {
         Cancelled,
         ParentMessageObserved,
         Queued,
+        DoomLoopGuard,
     } kind;
 
     // Kind-dependent payload string (see file header for semantics).
@@ -140,6 +146,12 @@ struct AgentEvent {
 
     [[nodiscard]] static AgentEvent make_queued(std::string agent_id,
                                                  std::string position_hint = {});
+
+    // S11 (DIS-1044): the per-subagent outer turn-cycle cap was reached.  Carries
+    // the cycle count that tripped the guard in the payload.  Emitted alongside a
+    // Completed terminal (the harvested summary) — the agent's status is `done`.
+    [[nodiscard]] static AgentEvent make_doom_loop_guard(std::string agent_id,
+                                                         int turn_cycles);
 
     // -----------------------------------------------------------------------
     // Utility

@@ -389,6 +389,9 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_inference_smoke_openai_compat.cpp)
         ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp
+        # DIS-1045: clean-build link-list rot repair — sources referenced by this
+        # target's deps (added DIS-975/979/981/988/1006) but missing from its source list.
+        ${PROJECT_SOURCE_DIR}/src/inference/ProviderHint.cpp
     )
 
     set_target_properties(test_inference_smoke_openai_compat PROPERTIES
@@ -521,6 +524,9 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_compactor.cpp)
         ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp
+        # DIS-1045: clean-build link-list rot repair — sources referenced by this
+        # target's deps (added DIS-975/979/981/988/1006) but missing from its source list.
+        ${PROJECT_SOURCE_DIR}/src/inference/ProviderHint.cpp
     )
 
     set_target_properties(test_compactor PROPERTIES
@@ -933,6 +939,25 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_conversation_basic.cpp)
         ${PROJECT_SOURCE_DIR}/src/conversation/SystemPrompt.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ToolCallAccumulator.cpp
         ${PROJECT_SOURCE_DIR}/src/perf/PerfSnapshot.cpp
+        # DIS-1045: clean-build link-list rot repair — sources referenced by this
+        # target's deps (added DIS-975/979/981/988/1006) but missing from its source list.
+        ${PROJECT_SOURCE_DIR}/src/inference/Provider.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/NotepadStore.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningAccumulator.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/NotepadReminder.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/StandingReminder.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/ToolSubagentEnvelope.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ProviderHint.cpp
+        # DIS-1045: complete the transitive link closure (matches the proven
+        # test_subagent source set repaired under DIS-1020).
+        ${PROJECT_SOURCE_DIR}/src/agents/AgentEvent.cpp
+        ${PROJECT_SOURCE_DIR}/src/agents/AgentSpec.cpp
+        ${PROJECT_SOURCE_DIR}/src/agents/AgentSupervisor.cpp
+        ${PROJECT_SOURCE_DIR}/src/agents/SubAgent.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/PlanMode.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningTagProfile.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ThinkSplitter.cpp
+        ${PROJECT_SOURCE_DIR}/src/plugins/FrontmatterParser.cpp
     )
 
     set_target_properties(test_conversation_basic PROPERTIES
@@ -967,6 +992,117 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_conversation_basic.cpp)
 
     include(doctest)
     doctest_discover_tests(test_conversation_basic)
+
+endif()
+
+# ---------------------------------------------------------------------------
+# DIS-980 (S1+S4) — test_subagent_distiller
+#
+# Drives the closed tool-subagent distiller against the LOCAL fake distill
+# endpoint (tests/fixtures/fake_distill_server.py) and through the real
+# ToolRegistry::dispatch envelope.  Hermetic — the fixture is spawned per test
+# in the --mode the case needs; no GPU/network.  Links the feature TUs +
+# component libs (the S7 seam is unmodified — ToolRegistry/ToolSubagentEnvelope
+# come from batbox_tools).
+# ---------------------------------------------------------------------------
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_subagent_distiller.cpp)
+
+    add_executable(test_subagent_distiller
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_subagent_distiller.cpp
+    )
+
+    set_target_properties(test_subagent_distiller PROPERTIES
+        CXX_STANDARD          20
+        CXX_STANDARD_REQUIRED ON
+        CXX_EXTENSIONS        OFF
+    )
+
+    target_include_directories(test_subagent_distiller
+        PRIVATE
+            ${PROJECT_SOURCE_DIR}/include
+    )
+
+    target_compile_definitions(test_subagent_distiller
+        PRIVATE
+            BATBOX_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures"
+    )
+
+    target_link_libraries(test_subagent_distiller
+        PRIVATE
+            doctest::doctest
+            batbox_tools
+            batbox_inference
+            batbox_config
+            batbox_core
+            batbox_permissions
+            batbox_mcp
+            batbox_tools_bash
+            cpr::cpr
+            simdjson::simdjson
+            spdlog::spdlog
+            fmt::fmt
+            ZLIB::ZLIB
+    )
+
+    include(doctest)
+    doctest_discover_tests(test_subagent_distiller)
+
+endif()
+
+# ---------------------------------------------------------------------------
+# DIS-1007 — test_selection_heuristic
+#
+# Drives the closed-vs-standing selection heuristic (ShapeSelectionHeuristic +
+# StandingSelector).  Hermetic: spawns BOTH fake servers per test —
+# fake_distill_server.py (report_gold first-turn extraction, incl. the new
+# --mode goldnofollowup) and fake_openai_server.py (the warm SubAgent's
+# conversation + follow-up interrogations).  Links batbox_agents (AgentSupervisor)
+# on top of the closed-distiller link set; the S7 seam is unmodified.
+# ---------------------------------------------------------------------------
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_selection_heuristic.cpp)
+
+    add_executable(test_selection_heuristic
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_selection_heuristic.cpp
+    )
+
+    set_target_properties(test_selection_heuristic PROPERTIES
+        CXX_STANDARD          20
+        CXX_STANDARD_REQUIRED ON
+        CXX_EXTENSIONS        OFF
+    )
+
+    target_include_directories(test_selection_heuristic
+        PRIVATE
+            ${PROJECT_SOURCE_DIR}/include
+    )
+
+    target_compile_definitions(test_selection_heuristic
+        PRIVATE
+            BATBOX_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures"
+    )
+
+    target_link_libraries(test_selection_heuristic
+        PRIVATE
+            doctest::doctest
+            batbox_agents
+            batbox_conversation
+            batbox_session
+            batbox_tools
+            batbox_inference
+            batbox_config
+            batbox_core
+            batbox_permissions
+            batbox_mcp
+            batbox_tools_bash
+            cpr::cpr
+            simdjson::simdjson
+            spdlog::spdlog
+            fmt::fmt
+            ZLIB::ZLIB
+    )
+
+    include(doctest)
+    doctest_discover_tests(test_selection_heuristic)
 
 endif()
 
@@ -1007,6 +1143,25 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_cfg_snapshot_race.cpp)
         ${PROJECT_SOURCE_DIR}/src/conversation/SystemPrompt.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ToolCallAccumulator.cpp
         ${PROJECT_SOURCE_DIR}/src/perf/PerfSnapshot.cpp
+        # DIS-1045: clean-build link-list rot repair — sources referenced by this
+        # target's deps (added DIS-975/979/981/988/1006) but missing from its source list.
+        ${PROJECT_SOURCE_DIR}/src/inference/Provider.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/NotepadStore.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningAccumulator.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/NotepadReminder.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/StandingReminder.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/ToolSubagentEnvelope.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ProviderHint.cpp
+        # DIS-1045: complete the transitive link closure (matches the proven
+        # test_subagent source set repaired under DIS-1020).
+        ${PROJECT_SOURCE_DIR}/src/agents/AgentEvent.cpp
+        ${PROJECT_SOURCE_DIR}/src/agents/AgentSpec.cpp
+        ${PROJECT_SOURCE_DIR}/src/agents/AgentSupervisor.cpp
+        ${PROJECT_SOURCE_DIR}/src/agents/SubAgent.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/PlanMode.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningTagProfile.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ThinkSplitter.cpp
+        ${PROJECT_SOURCE_DIR}/src/plugins/FrontmatterParser.cpp
     )
 
     set_target_properties(test_cfg_snapshot_race PROPERTIES
@@ -1081,6 +1236,25 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_conversation_tool_loop.cpp)
         ${PROJECT_SOURCE_DIR}/src/conversation/SystemPrompt.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ToolCallAccumulator.cpp
         ${PROJECT_SOURCE_DIR}/src/perf/PerfSnapshot.cpp
+        # DIS-1045: clean-build link-list rot repair — sources referenced by this
+        # target's deps (added DIS-975/979/981/988/1006) but missing from its source list.
+        ${PROJECT_SOURCE_DIR}/src/inference/Provider.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/NotepadStore.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningAccumulator.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/NotepadReminder.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/StandingReminder.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/ToolSubagentEnvelope.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ProviderHint.cpp
+        # DIS-1045: complete the transitive link closure (matches the proven
+        # test_subagent source set repaired under DIS-1020).
+        ${PROJECT_SOURCE_DIR}/src/agents/AgentEvent.cpp
+        ${PROJECT_SOURCE_DIR}/src/agents/AgentSpec.cpp
+        ${PROJECT_SOURCE_DIR}/src/agents/AgentSupervisor.cpp
+        ${PROJECT_SOURCE_DIR}/src/agents/SubAgent.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/PlanMode.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningTagProfile.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ThinkSplitter.cpp
+        ${PROJECT_SOURCE_DIR}/src/plugins/FrontmatterParser.cpp
     )
 
     set_target_properties(test_conversation_tool_loop PROPERTIES
@@ -1439,6 +1613,9 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_session_commands.cpp)
         ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp
+        # DIS-1045: clean-build link-list rot repair — sources referenced by this
+        # target's deps (added DIS-975/979/981/988/1006) but missing from its source list.
+        ${PROJECT_SOURCE_DIR}/src/inference/ProviderHint.cpp
     )
 
     set_target_properties(test_session_commands PROPERTIES
@@ -1751,6 +1928,20 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_task_family.cpp)
         ${PROJECT_SOURCE_DIR}/src/session/SessionIndex.cpp
         ${PROJECT_SOURCE_DIR}/src/session/SessionRecovery.cpp
         ${PROJECT_SOURCE_DIR}/src/perf/PerfSnapshot.cpp
+        # DIS-1045: clean-build link-list rot repair — sources referenced by this
+        # target's deps (added DIS-975/979/981/988/1006) but missing from its source list.
+        ${PROJECT_SOURCE_DIR}/src/inference/Provider.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/NotepadStore.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningAccumulator.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/NotepadReminder.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/StandingReminder.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/ToolSubagentEnvelope.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ProviderHint.cpp
+        # DIS-1045: complete the transitive link closure (matches the proven
+        # test_subagent source set repaired under DIS-1020).
+        ${PROJECT_SOURCE_DIR}/src/conversation/PlanMode.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningTagProfile.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ThinkSplitter.cpp
     )
 
     set_target_properties(test_task_family PROPERTIES
@@ -2041,6 +2232,20 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_demon_command.cpp)
         ${PROJECT_SOURCE_DIR}/src/session/SessionIndex.cpp
         ${PROJECT_SOURCE_DIR}/src/session/SessionRecovery.cpp
         ${PROJECT_SOURCE_DIR}/src/perf/PerfSnapshot.cpp
+        # DIS-1045: clean-build link-list rot repair — sources referenced by this
+        # target's deps (added DIS-975/979/981/988/1006) but missing from its source list.
+        ${PROJECT_SOURCE_DIR}/src/inference/Provider.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/NotepadStore.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningAccumulator.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/NotepadReminder.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/StandingReminder.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/ToolSubagentEnvelope.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ProviderHint.cpp
+        # DIS-1045: complete the transitive link closure (matches the proven
+        # test_subagent source set repaired under DIS-1020).
+        ${PROJECT_SOURCE_DIR}/src/conversation/PlanMode.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningTagProfile.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ThinkSplitter.cpp
     )
 
     set_target_properties(test_demon_command PROPERTIES
@@ -2193,11 +2398,24 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_subagent.cpp)
         ${PROJECT_SOURCE_DIR}/src/conversation/ContextWindow.cpp
         ${PROJECT_SOURCE_DIR}/src/conversation/Compactor.cpp
         ${PROJECT_SOURCE_DIR}/src/conversation/SystemPrompt.cpp
+        # DIS-1020: link-list rot repair — sources added by DIS-975/983/1006/1007
+        # that Conversation.cpp / Client.cpp now reference but were never added to
+        # this target's explicit source list (test_subagent was unbuildable at HEAD).
+        ${PROJECT_SOURCE_DIR}/src/conversation/PlanMode.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/NotepadReminder.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/StandingReminder.cpp
         ${PROJECT_SOURCE_DIR}/src/tools/ToolRegistry.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/NotepadStore.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/ToolSubagentEnvelope.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ToolCallAccumulator.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningAccumulator.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ThinkSplitter.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningTagProfile.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/Provider.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ProviderHint.cpp
         ${PROJECT_SOURCE_DIR}/src/session/SessionStore.cpp
         ${PROJECT_SOURCE_DIR}/src/session/SessionFile.cpp
         ${PROJECT_SOURCE_DIR}/src/session/SessionIndex.cpp
@@ -2339,6 +2557,21 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_status_stats_commands.cpp)
         ${PROJECT_SOURCE_DIR}/src/session/SessionIndex.cpp
         ${PROJECT_SOURCE_DIR}/src/session/SessionRecovery.cpp
         ${PROJECT_SOURCE_DIR}/src/perf/PerfSnapshot.cpp
+        # DIS-1045: clean-build link-list rot repair — sources referenced by this
+        # target's deps (added DIS-975/979/981/988/1006) but missing from its source list.
+        ${PROJECT_SOURCE_DIR}/src/inference/Provider.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/NotepadStore.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningAccumulator.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/NotepadReminder.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/StandingReminder.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/ToolSubagentEnvelope.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ProviderHint.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/CanonicalModel.cpp
+        # DIS-1045: complete the transitive link closure (matches the proven
+        # test_subagent source set repaired under DIS-1020).
+        ${PROJECT_SOURCE_DIR}/src/conversation/PlanMode.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningTagProfile.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ThinkSplitter.cpp
     )
 
     set_target_properties(test_status_stats_commands PROPERTIES
@@ -2463,6 +2696,19 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_agent_planning_commands.cpp)
         ${PROJECT_SOURCE_DIR}/src/session/SessionIndex.cpp
         ${PROJECT_SOURCE_DIR}/src/session/SessionRecovery.cpp
         ${PROJECT_SOURCE_DIR}/src/perf/PerfSnapshot.cpp
+        # DIS-1045: clean-build link-list rot repair — sources referenced by this
+        # target's deps (added DIS-975/979/981/988/1006) but missing from its source list.
+        ${PROJECT_SOURCE_DIR}/src/inference/Provider.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/NotepadStore.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningAccumulator.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/NotepadReminder.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/StandingReminder.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/ToolSubagentEnvelope.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ProviderHint.cpp
+        # DIS-1045: complete the transitive link closure (matches the proven
+        # test_subagent source set repaired under DIS-1020).
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningTagProfile.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ThinkSplitter.cpp
     )
 
     set_target_properties(test_agent_planning_commands PROPERTIES
@@ -2540,6 +2786,20 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_workflow_dag.cpp)
         ${PROJECT_SOURCE_DIR}/src/session/SessionIndex.cpp
         ${PROJECT_SOURCE_DIR}/src/session/SessionRecovery.cpp
         ${PROJECT_SOURCE_DIR}/src/perf/PerfSnapshot.cpp
+        # DIS-1045: clean-build link-list rot repair — sources referenced by this
+        # target's deps (added DIS-975/979/981/988/1006) but missing from its source list.
+        ${PROJECT_SOURCE_DIR}/src/inference/Provider.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/NotepadStore.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningAccumulator.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/NotepadReminder.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/StandingReminder.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/ToolSubagentEnvelope.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ProviderHint.cpp
+        # DIS-1045: complete the transitive link closure (matches the proven
+        # test_subagent source set repaired under DIS-1020).
+        ${PROJECT_SOURCE_DIR}/src/conversation/PlanMode.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningTagProfile.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ThinkSplitter.cpp
     )
 
     set_target_properties(test_workflow_dag PROPERTIES
@@ -2605,6 +2865,20 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_agent_supervision_bounded.cpp)
         ${PROJECT_SOURCE_DIR}/src/session/SessionIndex.cpp
         ${PROJECT_SOURCE_DIR}/src/session/SessionRecovery.cpp
         ${PROJECT_SOURCE_DIR}/src/perf/PerfSnapshot.cpp
+        # DIS-1045: clean-build link-list rot repair — sources referenced by this
+        # target's deps (added DIS-975/979/981/988/1006) but missing from its source list.
+        ${PROJECT_SOURCE_DIR}/src/inference/Provider.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/NotepadStore.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningAccumulator.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/NotepadReminder.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/StandingReminder.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/ToolSubagentEnvelope.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ProviderHint.cpp
+        # DIS-1045: complete the transitive link closure (matches the proven
+        # test_subagent source set repaired under DIS-1020).
+        ${PROJECT_SOURCE_DIR}/src/conversation/PlanMode.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningTagProfile.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ThinkSplitter.cpp
     )
 
     set_target_properties(test_agent_supervision_bounded PROPERTIES
@@ -2677,6 +2951,20 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_agent_supervision_integration.cpp)
         ${PROJECT_SOURCE_DIR}/src/session/SessionIndex.cpp
         ${PROJECT_SOURCE_DIR}/src/session/SessionRecovery.cpp
         ${PROJECT_SOURCE_DIR}/src/perf/PerfSnapshot.cpp
+        # DIS-1045: clean-build link-list rot repair — sources referenced by this
+        # target's deps (added DIS-975/979/981/988/1006) but missing from its source list.
+        ${PROJECT_SOURCE_DIR}/src/inference/Provider.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/NotepadStore.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningAccumulator.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/NotepadReminder.cpp
+        ${PROJECT_SOURCE_DIR}/src/conversation/StandingReminder.cpp
+        ${PROJECT_SOURCE_DIR}/src/tools/ToolSubagentEnvelope.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ProviderHint.cpp
+        # DIS-1045: complete the transitive link closure (matches the proven
+        # test_subagent source set repaired under DIS-1020).
+        ${PROJECT_SOURCE_DIR}/src/conversation/PlanMode.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ReasoningTagProfile.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/ThinkSplitter.cpp
     )
 
     set_target_properties(test_agent_supervision_integration PROPERTIES
@@ -2833,6 +3121,17 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_team_family.cpp)
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSupervisor.cpp
         ${PROJECT_SOURCE_DIR}/src/plugins/FrontmatterParser.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/SubAgentStub.cpp
+        # DIS-1045: clean-build link-list rot repair. AgentSupervisor.cpp now
+        # references SessionStore (added post-DIS-1006) — pull in the real session
+        # persistence closure. SubAgent itself stays stubbed via SubAgentStub.cpp
+        # (this target never spawns a real subagent), so we do NOT add SubAgent.cpp
+        # or the inference closure here; the stub is extended with the methods the
+        # supervisor now calls (set_quiescence_hook_for_test/promote/prepare_resume/
+        # last_result/interrogate) instead.
+        ${PROJECT_SOURCE_DIR}/src/session/SessionStore.cpp
+        ${PROJECT_SOURCE_DIR}/src/session/SessionFile.cpp
+        ${PROJECT_SOURCE_DIR}/src/session/SessionIndex.cpp
+        ${PROJECT_SOURCE_DIR}/src/session/SessionRecovery.cpp
     )
 
     set_target_properties(test_team_family PROPERTIES
@@ -2852,6 +3151,9 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_team_family.cpp)
             batbox_core
             batbox_config
             batbox_permissions
+            # DIS-1045: SessionFile.cpp (added above) compresses with zlib, whose
+            # symbols are provided transitively by cpr::cpr — link it.
+            cpr::cpr
             simdjson::simdjson
     )
 

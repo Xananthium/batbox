@@ -48,8 +48,32 @@
 
 #include <functional>
 #include <string>
+#include <string_view>
 
 namespace batbox::inference {
+
+// ============================================================================
+// is_overflow_error — cross-provider context-overflow detection (S5, DIS-983)
+// ============================================================================
+
+/// Normalise the loud "the prompt exceeds the model's context window" errors
+/// that OpenAI-compatible endpoints return into ONE typed signal.
+///
+/// batbox drives many endpoints (openai/ollama/vllm/groq/kimi/deepseek/local)
+/// and each phrases overflow differently; Client surfaces every non-2xx as the
+/// string `"http <code>: <body-excerpt>"` (and transport failures as
+/// `"transport: …"`), so detection is substring/code matching over that error
+/// text.  Ported in shape from opencode `provider/error.ts:isOverflow`.
+///
+/// Returns true ONLY for genuine context-overflow signatures — a rate limit,
+/// auth failure, or any other 4xx/5xx returns false so it stays a normal error
+/// (AC1: "a non-overflow error stays a normal error").  Matching is
+/// case-insensitive.
+///
+/// Callers (Conversation) react to a true result by compacting hard and
+/// retrying the turn exactly once; the one-shot bound is the caller's
+/// responsibility — this predicate is pure.
+[[nodiscard]] bool is_overflow_error(std::string_view error_message) noexcept;
 
 // ============================================================================
 // Client — cpr-based OpenAI chat completions HTTP client

@@ -6,8 +6,10 @@
 #include <batbox/agents/AgentSpec.hpp>
 #include <batbox/config/Config.hpp>
 #include <batbox/core/CancelToken.hpp>
+#include <batbox/session/SessionFile.hpp>  // DIS-1045: complete type for prepare_resume() param
 
 #include <functional>
+#include <future>
 #include <stdexcept>
 #include <string>
 
@@ -54,6 +56,24 @@ AgentSnapshot SubAgent::snapshot() const {
     snap.name   = spec_.name;
     snap.status = "queued";
     return snap;
+}
+
+// DIS-1045: stub the SubAgent lifecycle methods the supervisor began referencing
+// after this stub was written (DIS-1021 resume, DIS-988 standing/quiescence,
+// interrogation channel). This target never spawns a real subagent — the ctor
+// throws — so these are linker-satisfaction no-ops that are never reached at runtime.
+void SubAgent::set_quiescence_hook_for_test(std::function<void()> /*hook*/) {}
+
+void SubAgent::promote() noexcept {}
+
+void SubAgent::prepare_resume(batbox::session::SessionFile /*sf*/) {}
+
+std::string SubAgent::last_result() const { return {}; }
+
+std::future<std::string> SubAgent::interrogate(std::string /*question*/) {
+    std::promise<std::string> p;
+    p.set_value({});
+    return p.get_future();
 }
 
 } // namespace batbox::agents

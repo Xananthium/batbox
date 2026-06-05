@@ -38,7 +38,11 @@
 #include <batbox/agents/SubAgent.hpp>
 #include <batbox/config/Config.hpp>
 #include <batbox/core/CancelToken.hpp>
+#include <batbox/core/Json.hpp>
+#include <batbox/core/Logging.hpp>
 #include <batbox/core/Uuid.hpp>
+#include <batbox/session/SessionFile.hpp>   // DIS-1021: resume from durable log
+#include <batbox/session/SessionStore.hpp>  // DIS-1021: locate the subagent's log
 
 #include <algorithm>
 #include <atomic>
@@ -47,6 +51,7 @@
 #include <cstdint>
 #include <deque>
 #include <functional>
+#include <list>
 #include <memory>
 #include <mutex>
 #include <semaphore>
@@ -55,6 +60,7 @@
 #include <string_view>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace batbox::agents {
@@ -68,6 +74,62 @@ static constexpr int MAX_SEM_BOUND = 64;
 
 /// Default runtime parallelism limit when no explicit value is given.
 static constexpr int DEFAULT_PARALLEL_LIMIT = 4;
+
+/// Default LRU bound on the standing-subagent pool (S2/S3, DIS-988).
+static constexpr int DEFAULT_STANDING_LIMIT = 4;
+
+namespace {
+/// First line of @p s, trimmed of a trailing '\r', truncated to @p max chars
+/// (with an ellipsis when truncated).  Used for the one-line standing-status.
+std::string first_line_truncated(const std::string& s, std::size_t max) {
+    std::size_t nl = s.find('\n');
+    std::string line = (nl == std::string::npos) ? s : s.substr(0, nl);
+    if (!line.empty() && line.back() == '\r') line.pop_back();
+    if (max == 0) return std::string{};
+    if (line.size() > max) {
+        line.resize(max - 1);
+        line += "…";
+    }
+    return line;
+}
+
+/// DIS-1021 (AC2) — reconstruct an EndpointOverride from a persisted endpoint
+/// REFERENCE blob ({ base_url, model, use_distill_endpoint, api_key_ref }), so a
+/// resumed subagent re-points at the SAME endpoint its prior run used.
+///
+/// Returns std::nullopt when the blob is absent / not an object (legacy or
+/// default cfg.api session) — the resumed agent then targets cfg.api unchanged.
+///
+/// LIMITATION: inline (per-spec) api keys were never persisted by design (only
+/// the reference is stored), so an "inline" reference is resolved best-effort to
+/// cfg.api.api_key here.
+std::optional<EndpointOverride>
+endpoint_from_blob(const batbox::Json& blob, const batbox::config::Config& cfg) {
+    if (!blob.is_object()) {
+        return std::nullopt;
+    }
+
+    const bool use_distill = blob.value("use_distill_endpoint", false);
+    if (use_distill) {
+        // run() will pull base_url / api_key / model from cfg.distill.* — the
+        // re-point to the local distill endpoint.
+        EndpointOverride ep;
+        ep.use_distill_endpoint = true;
+        return ep;
+    }
+
+    EndpointOverride ep;
+    ep.use_distill_endpoint = false;
+    ep.base_url = blob.value("base_url", std::string{});
+    ep.model    = blob.value("model", std::string{});
+
+    const std::string ref = blob.value("api_key_ref", std::string{"cfg.api"});
+    // "inline" keys were never persisted (reference-only design) → best-effort
+    // cfg.api key.  "cfg.distill" / "cfg.api" re-resolve from the live config.
+    ep.api_key = (ref == "cfg.distill") ? cfg.distill.api_key : cfg.api.api_key;
+    return ep;
+}
+} // namespace
 
 // =============================================================================
 // AgentSupervisor::Impl
@@ -121,6 +183,37 @@ struct AgentSupervisor::Impl {
     std::mutex              active_mutex;
     std::condition_variable active_cv;
     int                     active_count{0};
+
+    // -------------------------------------------------------------------------
+    // Standing-subagent pool (S2/S3, DIS-988).
+    //   standing_lru  — order of warm windows, most-recently-interrogated FRONT,
+    //                   least-recently-interrogated BACK (the eviction target).
+    //   slot_released — agents whose active-work semaphore slot was already
+    //                   handed back at promote time, so on_exit() must NOT
+    //                   release a second slot for them.
+    //   max_standing  — hard LRU bound on the pool (no unbounded growth, AC5).
+    // All three are guarded by standing_mutex.  Lock ordering invariant: never
+    // hold standing_mutex while acquiring agents_mutex/pending_mutex (the
+    // standing methods take standing_mutex, release it, THEN touch the others).
+    // -------------------------------------------------------------------------
+    mutable std::mutex                standing_mutex;
+    std::list<std::string>            standing_lru;
+    std::unordered_set<std::string>   slot_released;
+    int                               max_standing{DEFAULT_STANDING_LIMIT};
+
+    // exited — ids whose on_exit() has run (DIS-1001).  Set under standing_mutex
+    // the instant an agent terminates, BEFORE promote() step 2 can register it.
+    // Because on_exit() and promote() step 2 are serialized on standing_mutex,
+    // an id present here means the closed exit already (or will) account for the
+    // slot; promote() step 2 must then REFUSE to register it, else it double-
+    // releases the slot on_exit() already returned and leaves a stale standing_lru
+    // entry.  Monotonic over the supervisor's lifetime (one id per terminated
+    // agent — a handful of UUID strings); cleared in the destructor.
+    std::unordered_set<std::string>   exited;
+
+    // Test-only fault-injection hook fired between promote() step 1 and step 2
+    // (DIS-1001).  Null in production — one predictable null-check per promote().
+    std::function<void()>             promote_race_hook;
 
     // -------------------------------------------------------------------------
     // Default Config — kept alive for the duration of this Impl so that
@@ -202,12 +295,51 @@ struct AgentSupervisor::Impl {
     // -------------------------------------------------------------------------
     // on_exit — callback fired by each SubAgent's jthread on exit.
     //
-    // Dequeues the next pending agent (reusing the slot) or releases the slot.
+    // Dequeues the next pending agent (reusing the slot) or releases the slot,
+    // UNLESS this agent already handed its active slot back at promote time (a
+    // standing subagent) — in that case the slot was reused/released long ago,
+    // so we must only decrement the active counter (no second release).
     // Decrements the active counter and notifies wait_all() waiters.
     // -------------------------------------------------------------------------
-    void on_exit() {
-        start_pending_or_release();
+    void on_exit(const std::string& id) {
+        bool slot_already_released = false;
+        {
+            std::lock_guard<std::mutex> lk(standing_mutex);
+            // DIS-1001: publish the terminal marker under standing_mutex BEFORE
+            // releasing the slot.  A promote() step 2 serialized after us will see
+            // it and refuse to register this now-dead agent (no second release, no
+            // stale standing_lru entry).
+            exited.insert(id);
+            auto it = slot_released.find(id);
+            if (it != slot_released.end()) {
+                slot_already_released = true;
+                slot_released.erase(it);
+            }
+            standing_lru.remove(id);  // no-op if not standing
+        }
+        if (!slot_already_released) {
+            start_pending_or_release();
+        }
         decrement_active();
+    }
+
+    // -------------------------------------------------------------------------
+    // evict_standing — fire a standing subagent's stop_token so its parked run
+    // loop wakes, discards its window, and exits.  Lossless by construction: the
+    // gold is already in the notepad (S6).  Caller must NOT hold standing_mutex.
+    // -------------------------------------------------------------------------
+    void evict_standing(const std::string& id) {
+        std::shared_lock<std::shared_mutex> lk(agents_mutex);
+        auto it = agents.find(id);
+        if (it != agents.end()) {
+            // AC6: the LRU-evict transition, provable by warn-log + the
+            // SubAgent's make_cancelled("evicted") event.
+            BATBOX_LOG_WARN(
+                "StandingRegistry: LRU-evicting warm subagent {} ('{}') — "
+                "window discarded, gold preserved in notepad (S6)",
+                id, it->second->name());
+            it->second->cancel();  // fires child_token → park wait wakes → exit
+        }
     }
 };
 
@@ -250,6 +382,11 @@ AgentSupervisor::~AgentSupervisor() {
             impl_->agents.clear();
             impl_->insertion_order.clear();
         }
+        {
+            // Release the DIS-1001 terminal-marker set (no agent can register now).
+            std::lock_guard<std::mutex> lk(impl_->standing_mutex);
+            impl_->exited.clear();
+        }
         // Destroy each SubAgent (joins its jthread) while impl_ is still alive.
         // The on_exit callbacks may fire here and access impl_->active_mutex.
         dying.clear();
@@ -277,9 +414,11 @@ std::string AgentSupervisor::spawn(const AgentSpec&  spec,
     impl_->increment_active();
 
     // Build the on_exit callback that the SubAgent jthread fires on termination.
+    // Capture agent_id by value so on_exit() can consult the standing-pool
+    // slot_released set (a promoted agent already handed its slot back).
     Impl* pimpl = impl_;
-    auto on_exit_cb = [pimpl]() {
-        pimpl->on_exit();
+    auto on_exit_cb = [pimpl, agent_id]() {
+        pimpl->on_exit(agent_id);
     };
 
     // Construct the SubAgent (status = queued; jthread not yet started).
@@ -322,6 +461,82 @@ std::string AgentSupervisor::spawn(const AgentSpec&  spec,
                 "/" + std::to_string(impl_->slots_limit);
             impl_->event_queue.push(AgentEvent::make_queued(agent_id, hint));
         }
+    }
+
+    return agent_id;
+}
+
+// =============================================================================
+// resume_subagent — DIS-1021 (AC4): reload a CLOSED subagent and continue it
+// =============================================================================
+
+std::string AgentSupervisor::resume_subagent(std::string_view target_agent_id,
+                                             std::string_view follow_up,
+                                             CancelToken      ct)
+{
+    // 1. Locate the durable log written by the original (closed) subagent.
+    //    SessionStore{} resolves paths::config_dir() / "sessions", honouring
+    //    $BATBOX_CONFIG_DIR — the same dir SubAgent's run() store uses.
+    batbox::session::SessionStore lookup_store{};
+    auto sf = lookup_store.find_session_for_agent(std::string(target_agent_id));
+    if (!sf) {
+        return std::string{};   // no log → nothing to resume
+    }
+
+    // 2. Reconstruct a minimal AgentSpec: model + endpoint re-adopted from the
+    //    log so the resumed run re-points at the SAME endpoint (AC2).
+    AgentSpec spec;
+    spec.name        = "resumed:" + std::string(target_agent_id).substr(0, 8);
+    spec.description = "resumed subagent";
+    if (!sf->model_at_start.empty()) {
+        spec.model = sf->model_at_start;
+    }
+    spec.endpoint = endpoint_from_blob(sf->endpoint, impl_->default_cfg_);
+
+    // 3. Mirror spawn() exactly — a FRESH agent id (closed agents are never
+    //    erased from the registry, so the original id is still occupied).
+    const std::string agent_id = batbox::Uuid::v4().to_string();
+
+    impl_->increment_active();
+
+    Impl* pimpl = impl_;
+    auto on_exit_cb = [pimpl, agent_id]() {
+        pimpl->on_exit(agent_id);
+    };
+
+    auto agent = std::make_unique<SubAgent>(
+        agent_id,
+        spec,
+        std::string(follow_up),
+        std::move(ct),
+        impl_->event_queue,
+        impl_->default_cfg_,
+        std::move(on_exit_cb)
+    );
+
+    // Arm the resume BEFORE registering/starting (prepare_resume() must run
+    // before start()): run() will restore() the conversation from this log
+    // instead of delivering a fresh prompt.
+    agent->prepare_resume(*sf);
+
+    // Register in the agents map and preserve insertion order.
+    {
+        std::unique_lock<std::shared_mutex> lk(impl_->agents_mutex);
+        impl_->agents.emplace(agent_id, std::move(agent));
+        impl_->insertion_order.push_back(agent_id);
+    }
+
+    // Attempt a non-blocking slot acquisition.
+    if (impl_->slots.try_acquire()) {
+        std::shared_lock<std::shared_mutex> lk(impl_->agents_mutex);
+        impl_->agents.at(agent_id)->start();
+    } else {
+        std::lock_guard<std::mutex> lk(impl_->pending_mutex);
+        impl_->pending_ids.push_back(agent_id);
+        const std::string hint =
+            "queued, " + std::to_string(impl_->pending_ids.size()) +
+            "/" + std::to_string(impl_->slots_limit);
+        impl_->event_queue.push(AgentEvent::make_queued(agent_id, hint));
     }
 
     return agent_id;
@@ -387,6 +602,215 @@ void AgentSupervisor::wait_all() {
     impl_->active_cv.wait(lk, [this] {
         return impl_->active_count == 0;
     });
+}
+
+// =============================================================================
+// Standing-subagent registry (S2/S3, DIS-988)
+// =============================================================================
+
+void AgentSupervisor::promote(std::string_view agent_id) {
+    const std::string id(agent_id);
+
+    // 1. Mark the SubAgent standing.  Safe no-op on an unknown handle, AND on an
+    //    already-terminated one (AC5): a closed/errored/cancelled agent has
+    //    exited and released its slot, so promoting its corpse must NOT re-add it
+    //    to the pool or hand its slot back a second time.  A parked-and-warm
+    //    standing agent reports `running` (not done), so it is NOT skipped here.
+    {
+        std::shared_lock<std::shared_mutex> lk(impl_->agents_mutex);
+        auto it = impl_->agents.find(id);
+        if (it == impl_->agents.end()) {
+            return;
+        }
+        const SubAgentStatus st = it->second->status();
+        if (st == SubAgentStatus::done
+            || st == SubAgentStatus::failed
+            || st == SubAgentStatus::cancelled) {
+            return;  // dead handle → safe no-op (no slot release, no registration)
+        }
+        it->second->promote();
+    }
+
+    // Test-only seam (DIS-1001): between the status-checked step 1 above and the
+    // registration in step 2 below is exactly the window in which the agent's run
+    // loop — having cached standing_=false at quiescence BEFORE our step-1 store —
+    // can exit closed and fire on_exit().  The race test drives that exit here.
+    if (impl_->promote_race_hook) {
+        impl_->promote_race_hook();
+    }
+
+    // 2. Register in the LRU pool.  Decide everything under standing_mutex, then
+    //    act on the slot/eviction OUTSIDE it (lock-ordering invariant: never hold
+    //    standing_mutex while touching agents_mutex/pending_mutex).
+    bool        newly_standing = false;
+    std::string victim;
+    {
+        std::lock_guard<std::mutex> lk(impl_->standing_mutex);
+        // DIS-1001 TOCTOU guard.  Step 1 read `running` under agents_mutex, but
+        // between that read and this critical section the agent's loop may have
+        // cached standing_=false at quiescence, exited closed, and run on_exit()
+        // — which is serialized with us on standing_mutex and marks `exited`.
+        // If it already ran, on_exit() has ALREADY accounted for the slot; adding
+        // the agent now would double-release that slot and leave a stale
+        // standing_lru entry that surfaces a `done` agent.  Refuse to register.
+        if (impl_->exited.count(id)) {
+            // Already terminal — leave the slot/LRU exactly as on_exit() left it.
+            // newly_standing stays false; no slot release, no registration.
+        } else {
+        auto existing = std::find(impl_->standing_lru.begin(),
+                                  impl_->standing_lru.end(), id);
+        if (existing != impl_->standing_lru.end()) {
+            // Idempotent re-promote: just refresh LRU recency (move to front).
+            impl_->standing_lru.splice(impl_->standing_lru.begin(),
+                                       impl_->standing_lru, existing);
+        } else {
+            impl_->slot_released.insert(id);
+            impl_->standing_lru.push_front(id);
+            newly_standing = true;
+            // Enforce the hard LRU bound (AC3/AC5): evict the least-recently-
+            // interrogated (back) when the pool exceeds max_standing.
+            if (impl_->max_standing >= 0 &&
+                static_cast<int>(impl_->standing_lru.size()) > impl_->max_standing) {
+                victim = std::move(impl_->standing_lru.back());
+                impl_->standing_lru.pop_back();
+            }
+        }
+        }
+    }
+
+    if (newly_standing) {
+        // Hand this agent's active-work slot back to the pool: it no longer
+        // counts against max_concurrent (it is now bounded by max_standing), so
+        // parked windows never starve new spawns.  start_pending_or_release()
+        // either starts a queued agent on the freed slot or releases it.
+        impl_->start_pending_or_release();
+        // AC6: the promote transition, provable by info-log.
+        BATBOX_LOG_INFO("StandingRegistry: promoted subagent {} to standing "
+                        "(pool now {}/{})",
+                        id, standing_count(), impl_->max_standing);
+    }
+    if (!victim.empty()) {
+        impl_->evict_standing(victim);
+    }
+}
+
+std::string AgentSupervisor::interrogate(std::string_view agent_id,
+                                          std::string_view question) {
+    const std::string id(agent_id);
+
+    // Refresh LRU recency (most-recently-interrogated → front) so this agent is
+    // the LAST to be evicted under pressure.
+    {
+        std::lock_guard<std::mutex> lk(impl_->standing_mutex);
+        auto existing = std::find(impl_->standing_lru.begin(),
+                                  impl_->standing_lru.end(), id);
+        if (existing != impl_->standing_lru.end()) {
+            impl_->standing_lru.splice(impl_->standing_lru.begin(),
+                                       impl_->standing_lru, existing);
+        }
+    }
+
+    // Obtain the answer future WITHOUT holding any lock across the blocking get()
+    // (the warm window runs on its own jthread).  Unknown handle → "" (AC5).
+    std::future<std::string> fut;
+    {
+        std::shared_lock<std::shared_mutex> lk(impl_->agents_mutex);
+        auto it = impl_->agents.find(id);
+        if (it == impl_->agents.end()) {
+            return std::string{};
+        }
+        // AC6: the interrogate transition, provable by debug-log.
+        BATBOX_LOG_DEBUG("StandingRegistry: interrogating warm subagent {} "
+                         "({} chars)", id, question.size());
+        fut = it->second->interrogate(std::string(question));
+    }
+    return fut.get();  // SubAgent always fulfils (reaper) — never hangs.
+}
+
+void AgentSupervisor::set_max_standing_subagents(int n) {
+    std::vector<std::string> victims;
+    {
+        std::lock_guard<std::mutex> lk(impl_->standing_mutex);
+        impl_->max_standing = (n < 0) ? 0 : n;
+        // Shrink the pool to the new bound, evicting least-recently-interrogated.
+        while (static_cast<int>(impl_->standing_lru.size()) > impl_->max_standing) {
+            victims.push_back(std::move(impl_->standing_lru.back()));
+            impl_->standing_lru.pop_back();
+        }
+    }
+    for (const auto& v : victims) {
+        impl_->evict_standing(v);
+    }
+}
+
+std::vector<AgentSupervisor::StandingStatus>
+AgentSupervisor::standing_status() const {
+    // Snapshot the LRU order under standing_mutex, then resolve names/results
+    // under agents_mutex (never both held at once — lock-ordering invariant).
+    std::vector<std::string> ids;
+    {
+        std::lock_guard<std::mutex> lk(impl_->standing_mutex);
+        ids.assign(impl_->standing_lru.begin(), impl_->standing_lru.end());
+    }
+
+    std::vector<StandingStatus> out;
+    out.reserve(ids.size());
+    std::shared_lock<std::shared_mutex> lk(impl_->agents_mutex);
+    for (const auto& id : ids) {
+        auto it = impl_->agents.find(id);
+        if (it == impl_->agents.end()) {
+            continue;
+        }
+        StandingStatus s;
+        s.id          = id;
+        s.name        = it->second->name();
+        s.status_line = first_line_truncated(it->second->last_result(), 80);
+        out.push_back(std::move(s));
+    }
+    return out;
+}
+
+std::size_t AgentSupervisor::standing_count() const {
+    std::lock_guard<std::mutex> lk(impl_->standing_mutex);
+    return impl_->standing_lru.size();
+}
+
+void AgentSupervisor::set_agent_config(const batbox::config::Config& cfg) {
+    // Copy-assign into the long-lived member SubAgents reference by const&.
+    // Caller contract: not called concurrently with spawn() (no live agent is
+    // reading default_cfg_ at this point).
+    impl_->default_cfg_ = cfg;
+}
+
+// =============================================================================
+// Test-only introspection / fault-injection (DIS-1001)
+// =============================================================================
+
+std::size_t AgentSupervisor::available_slots_for_test() {
+    // Drain every available permit, then hand them all straight back.  Safe only
+    // in a quiescent supervisor (no agent acquiring/releasing concurrently): the
+    // caller guarantees that by draining all agents first.
+    std::size_t n = 0;
+    while (impl_->slots.try_acquire()) {
+        ++n;
+    }
+    for (std::size_t i = 0; i < n; ++i) {
+        impl_->slots.release();
+    }
+    return n;
+}
+
+void AgentSupervisor::set_promote_race_hook_for_test(std::function<void()> hook) {
+    impl_->promote_race_hook = std::move(hook);
+}
+
+void AgentSupervisor::set_agent_quiescence_hook_for_test(
+    std::string_view agent_id, std::function<void()> hook) {
+    std::shared_lock<std::shared_mutex> lk(impl_->agents_mutex);
+    auto it = impl_->agents.find(std::string(agent_id));
+    if (it != impl_->agents.end()) {
+        it->second->set_quiescence_hook_for_test(std::move(hook));
+    }
 }
 
 } // namespace batbox::agents

@@ -11,6 +11,8 @@
 
 #include <chrono>
 #include <filesystem>
+#include <initializer_list>
+#include <optional>
 #include <string>
 
 namespace fs = std::filesystem;
@@ -66,6 +68,18 @@ Result<std::string>
 SessionStore::new_session(const std::string& model,
                           const fs::path& working_dir)
 {
+    // Delegate to the DIS-1020 overload with no agent id and a null endpoint:
+    // identical behaviour and on-disk shape to the pre-DIS-1020 main session.
+    return new_session(model, working_dir, /*agent_id=*/std::string{},
+                       /*endpoint=*/Json());
+}
+
+Result<std::string>
+SessionStore::new_session(const std::string& model,
+                          const fs::path& working_dir,
+                          const std::string& agent_id,
+                          const Json& endpoint)
+{
     // 1. Generate a UUID v4 session id.
     const Uuid uuid      = Uuid::v4();
     const std::string id = uuid.to_string();
@@ -79,6 +93,8 @@ SessionStore::new_session(const std::string& model,
     sf.updated_at     = now;
     sf.model_at_start = model;
     sf.working_dir    = working_dir;
+    sf.agent_id       = agent_id;                       // DIS-1020
+    if (endpoint.is_object()) sf.endpoint = endpoint;   // DIS-1020 (omit when null)
     sf.messages       = {};
     sf.tool_calls_summary    = Json::object();
     sf.usage_total           = {};
@@ -100,6 +116,7 @@ SessionStore::new_session(const std::string& model,
     rec.model                 = model;
     rec.turn_count            = 0;
     rec.file_path             = path;
+    rec.agent_id              = agent_id;               // DIS-1020
 
     auto idx_res = append_index_record(index_path_, rec);
     if (!idx_res) {
@@ -114,6 +131,7 @@ SessionStore::new_session(const std::string& model,
         session_turn_counts_[id] = 0;
         session_previews_[id]   = "";
         session_models_[id]     = model;
+        session_agent_ids_[id]  = agent_id;             // DIS-1020
         session_created_at_[id] = now;
         // Lazily create per-session mutex.
         if (session_mutexes_.find(id) == session_mutexes_.end()) {
@@ -122,7 +140,16 @@ SessionStore::new_session(const std::string& model,
         current_session_id_ = id;
     }
 
-    BATBOX_LOG_DEBUG("SessionStore: created session {} model={}", id, model);
+    BATBOX_LOG_DEBUG("SessionStore: created session {} model={} agent_id={}",
+                     id, model, agent_id.empty() ? "(main)" : agent_id);
+
+    // 6. DIS-1020 retention (Paulina refinement a): always-on journaling must not
+    // mean logged-forever.  Bound the on-disk session count.  Best-effort: a
+    // prune failure never blocks session creation.
+    if (auto pr = prune(); !pr) {
+        BATBOX_LOG_WARN("SessionStore::new_session: prune failed: {}", pr.error());
+    }
+
     return id;
 }
 
@@ -191,6 +218,7 @@ SessionStore::append_message(const std::string& session_id, const Json& message)
     std::string preview;
     uint64_t    new_turn_count = 0;
     std::string model;
+    std::string agent_id;
     std::chrono::system_clock::time_point created_at = now;
 
     {
@@ -218,6 +246,9 @@ SessionStore::append_message(const std::string& session_id, const Json& message)
         auto mit = session_models_.find(session_id);
         if (mit != session_models_.end()) model = mit->second;
 
+        auto ait = session_agent_ids_.find(session_id);
+        if (ait != session_agent_ids_.end()) agent_id = ait->second;
+
         auto cit = session_created_at_.find(session_id);
         if (cit != session_created_at_.end()) created_at = cit->second;
     }
@@ -233,6 +264,7 @@ SessionStore::append_message(const std::string& session_id, const Json& message)
     rec.model                 = model;
     rec.turn_count            = new_turn_count;
     rec.file_path             = path_out;
+    rec.agent_id              = agent_id;               // DIS-1020
 
     auto idx_res = append_index_record(index_path_, rec);
     if (!idx_res) {
@@ -333,6 +365,83 @@ SessionStore::resume_for_cwd(const fs::path& working_dir)
 }
 
 // =============================================================================
+// find_session_for_agent() — DIS-1021
+// =============================================================================
+std::optional<SessionFile>
+SessionStore::find_session_for_agent(const std::string& agent_id)
+{
+    if (agent_id.empty()) {
+        return std::nullopt;
+    }
+
+    // Get up to 256 recent sessions (already sorted most-recent-first).
+    auto recs_res = list_recent(256);
+    if (!recs_res) {
+        BATBOX_LOG_WARN("SessionStore::find_session_for_agent: list_recent failed: {}",
+                        recs_res.error());
+        return std::nullopt;
+    }
+
+    for (const auto& rec : recs_res.value()) {
+        if (rec.agent_id != agent_id) continue;
+
+        auto sf_res = load(rec.id.to_string());
+        if (!sf_res) continue;          // skip files that cannot be read
+
+        return sf_res.value();
+    }
+
+    return std::nullopt;
+}
+
+// =============================================================================
+// adopt_restored() — DIS-1021
+// =============================================================================
+void
+SessionStore::adopt_restored(const SessionFile& sf)
+{
+    const std::string id = sf.id.to_string();
+
+    // Compute the first-user-message preview (truncated to 120 chars) outside
+    // the lock — it is a cheap O(messages) scan over already-parsed Json.
+    std::string preview;
+    for (const auto& m : sf.messages) {
+        if (m.contains("role") && m["role"].is_string() &&
+            m["role"].get<std::string>() == "user" &&
+            m.contains("content") && m["content"].is_string()) {
+            std::string c = m["content"].get<std::string>();
+            if (c.size() > 120) c = c.substr(0, 120);
+            preview = std::move(c);
+            break;
+        }
+    }
+
+    std::lock_guard<std::mutex> lock(maps_mutex_);
+
+    session_agent_ids_[id]   = sf.agent_id;
+    session_models_[id]      = sf.model_at_start;
+    session_created_at_[id]  = sf.created_at;
+    session_turn_counts_[id] = sf.messages.size();
+    session_previews_[id]    = std::move(preview);
+
+    // Ensure a per-session mutex exists (mirror new_session step 5).
+    if (session_mutexes_.find(id) == session_mutexes_.end()) {
+        session_mutexes_[id] = std::make_unique<std::mutex>();
+    }
+
+    // Best-effort path seed: probe the canonical on-disk forms.  If neither
+    // exists, leave session_paths_ unset — append_message() falls back to
+    // index path resolution, which is fine.
+    auto try_json    = sessions_dir_ / (id + ".json");
+    auto try_json_gz = sessions_dir_ / (id + ".json.gz");
+    if (fs::exists(try_json))         session_paths_[id] = try_json;
+    else if (fs::exists(try_json_gz)) session_paths_[id] = try_json_gz;
+
+    // NOTE: deliberately does NOT set current_session_id_ — an adopted session
+    // is not one this store created.
+}
+
+// =============================================================================
 // current_session_id()
 // =============================================================================
 std::optional<std::string>
@@ -415,7 +524,81 @@ SessionStore::build_index_record(const std::string& session_id,
         rec.file_path = it_path->second;
     }
 
+    auto it_a = session_agent_ids_.find(session_id);
+    rec.agent_id = (it_a != session_agent_ids_.end()) ? it_a->second : "";
+
     return rec;
+}
+
+// =============================================================================
+// prune() — DIS-1020 retention cap (Paulina refinement a)
+// =============================================================================
+Result<size_t>
+SessionStore::prune(size_t max_sessions)
+{
+    // Read the index newest-first.  Ask for cap + a generous overflow so we see
+    // the sessions beyond the cap that are candidates for deletion.  Records are
+    // sorted by updated_at descending (most-recent first) by read_latest_per_id.
+    auto recs_res = read_latest_per_id(index_path_, max_sessions + 4096);
+    if (!recs_res) {
+        return batbox::Err("SessionStore::prune: index unreadable: " +
+                           recs_res.error());
+    }
+    const auto& recs = recs_res.value();
+    if (recs.size() <= max_sessions) {
+        return size_t{0};  // within cap — nothing to delete
+    }
+
+    // Never delete the currently-active session, even if it fell outside the cap.
+    std::optional<std::string> active;
+    {
+        std::lock_guard<std::mutex> lock(maps_mutex_);
+        active = current_session_id_;
+    }
+
+    size_t deleted = 0;
+    // Everything from index `max_sessions` onward is older than the cap → delete.
+    for (size_t i = max_sessions; i < recs.size(); ++i) {
+        const auto& rec = recs[i];
+        const std::string sid = rec.id.to_string();
+        if (active && sid == *active) {
+            continue;  // protect the live session
+        }
+
+        // Remove both possible on-disk forms (.json and .json.gz).  The index
+        // line stays (append-only); load()/resume skip files that vanish.
+        bool removed_any = false;
+        for (const fs::path& p : { rec.file_path,
+                                   sessions_dir_ / (sid + ".json"),
+                                   sessions_dir_ / (sid + ".json.gz") }) {
+            if (p.empty()) continue;
+            std::error_code ec;
+            if (fs::remove(p, ec)) {
+                removed_any = true;
+            } else if (ec) {
+                BATBOX_LOG_WARN("SessionStore::prune: failed to remove '{}': {}",
+                                p.string(), ec.message());
+            }
+        }
+        if (removed_any) ++deleted;
+
+        // Drop any in-memory bookkeeping for the pruned session.
+        {
+            std::lock_guard<std::mutex> lock(maps_mutex_);
+            session_paths_.erase(sid);
+            session_turn_counts_.erase(sid);
+            session_previews_.erase(sid);
+            session_models_.erase(sid);
+            session_agent_ids_.erase(sid);
+            session_created_at_.erase(sid);
+        }
+    }
+
+    if (deleted > 0) {
+        BATBOX_LOG_INFO("SessionStore::prune: cap={} deleted {} old session file(s)",
+                        max_sessions, deleted);
+    }
+    return deleted;
 }
 
 } // namespace batbox::session

@@ -296,7 +296,7 @@ std::string Config::to_string(PermissionMode v) {
 Config::Config(const Config& o)
     : api(o.api), general(o.general), ui(o.ui), search(o.search),
       sidecar(o.sidecar), tools(o.tools), mcp(o.mcp), agents(o.agents),
-      security(o.security), compact(o.compact),
+      security(o.security), compact(o.compact), distill(o.distill),
       version_seq(o.version_seq.load(std::memory_order_relaxed))
 {}
 
@@ -305,6 +305,7 @@ Config::Config(Config&& o) noexcept
       search(std::move(o.search)), sidecar(std::move(o.sidecar)),
       tools(std::move(o.tools)), mcp(std::move(o.mcp)), agents(std::move(o.agents)),
       security(std::move(o.security)), compact(std::move(o.compact)),
+      distill(std::move(o.distill)),
       version_seq(o.version_seq.load(std::memory_order_relaxed))
 {}
 
@@ -320,6 +321,7 @@ Config& Config::operator=(const Config& o) {
     agents   = o.agents;
     security = o.security;
     compact  = o.compact;
+    distill  = o.distill;
     version_seq.store(o.version_seq.load(std::memory_order_relaxed),
                       std::memory_order_relaxed);
     return *this;
@@ -337,6 +339,7 @@ Config& Config::operator=(Config&& o) noexcept {
     agents   = std::move(o.agents);
     security = std::move(o.security);
     compact  = std::move(o.compact);
+    distill  = std::move(o.distill);
     version_seq.store(o.version_seq.load(std::memory_order_relaxed),
                       std::memory_order_relaxed);
     return *this;
@@ -550,6 +553,11 @@ static Result<void, std::string> apply_env(Config& cfg, const EnvMap& env) {
         if (!r) return Err(r.error());
         cfg.tools.task_parallel_limit = *r;
     }
+    if (auto it = env.find("BATBOX_MAX_TOOL_TURNS"); it != env.end()) {
+        auto r = parse_int("BATBOX_MAX_TOOL_TURNS", it->second);
+        if (!r) return Err(r.error());
+        cfg.tools.max_tool_turns = *r;
+    }
 
     // --- MCP group -----------------------------------------------------------
     if (auto it = env.find("BATBOX_MCP_CONFIG"); it != env.end()) {
@@ -572,6 +580,11 @@ static Result<void, std::string> apply_env(Config& cfg, const EnvMap& env) {
         auto r = parse_bool("BATBOX_DEMON_ENABLED", it->second);
         if (!r) return Err(r.error());
         cfg.agents.demon_enabled = *r;
+    }
+    if (auto it = env.find("BATBOX_MAX_SUBAGENT_TURN_CYCLES"); it != env.end()) {
+        auto r = parse_int("BATBOX_MAX_SUBAGENT_TURN_CYCLES", it->second);
+        if (!r) return Err(r.error());
+        cfg.agents.max_subagent_turn_cycles = *r;
     }
 
     // --- Security group ------------------------------------------------------
@@ -596,6 +609,41 @@ static Result<void, std::string> apply_env(Config& cfg, const EnvMap& env) {
         auto r = parse_int("BATBOX_KEEP_LAST_N_TURNS_VERBATIM", it->second);
         if (!r) return Err(r.error());
         cfg.compact.keep_last_n_turns_verbatim = *r;
+    }
+
+    // --- Distill group (S1+S4, DIS-980) --------------------------------------
+    if (auto it = env.find("BATBOX_DISTILL_ENABLED"); it != env.end()) {
+        auto r = parse_bool("BATBOX_DISTILL_ENABLED", it->second);
+        if (!r) return Err(r.error());
+        cfg.distill.enabled = *r;
+    }
+    if (auto it = env.find("BATBOX_DISTILL_BASE_URL"); it != env.end()) {
+        cfg.distill.base_url = it->second;
+    }
+    if (auto it = env.find("BATBOX_DISTILL_API_KEY"); it != env.end()) {
+        cfg.distill.api_key = it->second;
+    }
+    if (auto it = env.find("BATBOX_DISTILL_MODEL"); it != env.end()) {
+        cfg.distill.model = it->second;
+    }
+    if (auto it = env.find("BATBOX_MAX_TOOL_RESPONSE_SIZE"); it != env.end()) {
+        auto r = parse_int("BATBOX_MAX_TOOL_RESPONSE_SIZE", it->second);
+        if (!r) return Err(r.error());
+        if (*r <= 0) {
+            return Err("BATBOX_MAX_TOOL_RESPONSE_SIZE: must be > 0 (got " +
+                       std::to_string(*r) + ")");
+        }
+        cfg.distill.max_tool_response_size = static_cast<std::size_t>(*r);
+    }
+    if (auto it = env.find("BATBOX_DISTILL_TIMEOUT_SEC"); it != env.end()) {
+        auto r = parse_int("BATBOX_DISTILL_TIMEOUT_SEC", it->second);
+        if (!r) return Err(r.error());
+        cfg.distill.request_timeout_sec = *r;
+    }
+    if (auto it = env.find("BATBOX_DISTILL_MAX_TOKENS"); it != env.end()) {
+        auto r = parse_int("BATBOX_DISTILL_MAX_TOKENS", it->second);
+        if (!r) return Err(r.error());
+        cfg.distill.max_tokens = *r;
     }
 
     // --- Idle stream timeout -------------------------------------------------
@@ -752,6 +800,7 @@ static void apply_settings_json(Config& cfg, const Json& j) {
     cfg.tools.bash_timeout_sec     = ji("tools", "bash_timeout_sec",     cfg.tools.bash_timeout_sec);
     cfg.tools.bash_max_output_bytes= ji("tools", "bash_max_output_bytes", cfg.tools.bash_max_output_bytes);
     cfg.tools.task_parallel_limit  = ji("tools", "task_parallel_limit",  cfg.tools.task_parallel_limit);
+    cfg.tools.max_tool_turns       = ji("tools", "max_tool_turns",       cfg.tools.max_tool_turns);
 
     // MCP
     if (const auto v = js("mcp", "config_path"); !v.empty()) cfg.mcp.config_path = resolve_path(v);
@@ -761,6 +810,8 @@ static void apply_settings_json(Config& cfg, const Json& j) {
     if (const auto v = js("agents", "agents_config"); !v.empty()) cfg.agents.agents_config = resolve_path(v);
     if (const auto v = js("agents", "agents_dir");    !v.empty()) cfg.agents.agents_dir    = resolve_path(v);
     cfg.agents.demon_enabled = jb("agents", "demon_enabled", cfg.agents.demon_enabled);
+    cfg.agents.max_subagent_turn_cycles =
+        ji("agents", "max_subagent_turn_cycles", cfg.agents.max_subagent_turn_cycles);
 
     // Security
     if (const auto v = js("security", "permission_mode"); !v.empty()) {
@@ -772,6 +823,17 @@ static void apply_settings_json(Config& cfg, const Json& j) {
     // Compact
     cfg.compact.auto_compact_at_pct       = ji("compact", "auto_compact_at_pct",       cfg.compact.auto_compact_at_pct);
     cfg.compact.keep_last_n_turns_verbatim= ji("compact", "keep_last_n_turns_verbatim", cfg.compact.keep_last_n_turns_verbatim);
+
+    // Distill (S1+S4, DIS-980)
+    cfg.distill.enabled = jb("distill", "enabled", cfg.distill.enabled);
+    if (const auto v = js("distill", "base_url"); !v.empty()) cfg.distill.base_url = v;
+    if (const auto v = js("distill", "api_key");  !v.empty()) cfg.distill.api_key  = v;
+    if (const auto v = js("distill", "model");    !v.empty()) cfg.distill.model    = v;
+    cfg.distill.max_tool_response_size = static_cast<std::size_t>(
+        ji("distill", "max_tool_response_size",
+           static_cast<int>(cfg.distill.max_tool_response_size)));
+    cfg.distill.request_timeout_sec = ji("distill", "request_timeout_sec", cfg.distill.request_timeout_sec);
+    cfg.distill.max_tokens          = ji("distill", "max_tokens",          cfg.distill.max_tokens);
 }
 
 // ============================================================================
@@ -909,6 +971,17 @@ Result<void, std::string> Config::validate() const {
         return Err("BATBOX_TASK_PARALLEL_LIMIT: must be in [1, 64] (got " +
                    std::to_string(tools.task_parallel_limit) + ")");
     }
+    // max_tool_turns must be a positive per-turn ceiling (S11, DIS-1044).
+    if (tools.max_tool_turns < 1) {
+        return Err("BATBOX_MAX_TOOL_TURNS: must be >= 1 (got " +
+                   std::to_string(tools.max_tool_turns) + ")");
+    }
+    // max_subagent_turn_cycles must be a positive lifetime ceiling (S11 doom-loop
+    // guard, DIS-1044).
+    if (agents.max_subagent_turn_cycles < 1) {
+        return Err("BATBOX_MAX_SUBAGENT_TURN_CYCLES: must be >= 1 (got " +
+                   std::to_string(agents.max_subagent_turn_cycles) + ")");
+    }
     // sidecar startup timeout positive.
     if (sidecar.startup_timeout_sec <= 0) {
         return Err("BATBOX_SIDECAR_STARTUP_TIMEOUT_SEC: must be > 0 (got " +
@@ -948,6 +1021,32 @@ Result<void, std::string> Config::validate() const {
         !is_url_shaped(search.searxng_url)) {
         return Err("BATBOX_SEARXNG_URL: must start with http:// or https:// (got '" +
                    search.searxng_url + "')");
+    }
+
+    // --- Distill (S1+S4, DIS-980) -------------------------------------------
+    if (distill.max_tool_response_size == 0) {
+        return Err("BATBOX_MAX_TOOL_RESPONSE_SIZE: must be > 0");
+    }
+    if (distill.request_timeout_sec <= 0) {
+        return Err("BATBOX_DISTILL_TIMEOUT_SEC: must be > 0 (got " +
+                   std::to_string(distill.request_timeout_sec) + ")");
+    }
+    if (distill.max_tokens <= 0) {
+        return Err("BATBOX_DISTILL_MAX_TOKENS: must be > 0 (got " +
+                   std::to_string(distill.max_tokens) + ")");
+    }
+    // The local endpoint is only required when distillation is actually enabled.
+    if (distill.enabled) {
+        if (distill.base_url.empty()) {
+            return Err("BATBOX_DISTILL_BASE_URL: required when BATBOX_DISTILL_ENABLED=true");
+        }
+        if (!is_url_shaped(distill.base_url)) {
+            return Err("BATBOX_DISTILL_BASE_URL: must start with http:// or https:// (got '" +
+                       distill.base_url + "')");
+        }
+        if (distill.model.empty()) {
+            return Err("BATBOX_DISTILL_MODEL: required when BATBOX_DISTILL_ENABLED=true");
+        }
     }
     return {};
 }
@@ -994,6 +1093,7 @@ Json Config::to_json() const {
     j["tools"]["bash_timeout_sec"]      = tools.bash_timeout_sec;
     j["tools"]["bash_max_output_bytes"] = tools.bash_max_output_bytes;
     j["tools"]["task_parallel_limit"]   = tools.task_parallel_limit;
+    j["tools"]["max_tool_turns"]        = tools.max_tool_turns;
 
     j["mcp"]["config_path"]         = mcp.config_path.string();
     j["mcp"]["startup_timeout_sec"] = mcp.startup_timeout_sec;
@@ -1001,12 +1101,21 @@ Json Config::to_json() const {
     j["agents"]["agents_config"]  = agents.agents_config.string();
     j["agents"]["agents_dir"]     = agents.agents_dir.string();
     j["agents"]["demon_enabled"]  = agents.demon_enabled;
+    j["agents"]["max_subagent_turn_cycles"] = agents.max_subagent_turn_cycles;
 
     j["security"]["permission_mode"]   = to_string(security.permission_mode);
     j["security"]["auto_approve_reads"]= security.auto_approve_reads;
 
     j["compact"]["auto_compact_at_pct"]        = compact.auto_compact_at_pct;
     j["compact"]["keep_last_n_turns_verbatim"] = compact.keep_last_n_turns_verbatim;
+
+    j["distill"]["enabled"]                = distill.enabled;
+    j["distill"]["base_url"]               = distill.base_url;
+    j["distill"]["api_key"]                = distill.api_key;
+    j["distill"]["model"]                  = distill.model;
+    j["distill"]["max_tool_response_size"] = distill.max_tool_response_size;
+    j["distill"]["request_timeout_sec"]    = distill.request_timeout_sec;
+    j["distill"]["max_tokens"]             = distill.max_tokens;
 
     return j;
 }
@@ -1017,7 +1126,8 @@ Json Config::to_json() const {
 
 Json Config::redacted_for_display() const {
     Json j = to_json();
-    j["api"]["api_key"] = "****";
+    j["api"]["api_key"]     = "****";
+    j["distill"]["api_key"] = "****";
     return j;
 }
 

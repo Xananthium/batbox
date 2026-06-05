@@ -398,3 +398,170 @@ TEST_SUITE("SessionStore — recovery") {
         REQUIRE(r2.has_value());
     }
 }
+
+// =============================================================================
+// Suite 8: DIS-1020 — subagent journaling (agent_id + endpoint reference + retention)
+//
+// These cover the durability surface this child turns ON: a subagent's session
+// log records WHO ran (agent_id) and on WHICH endpoint (a reference blob, never
+// the raw api_key), the index carries the agent_id lookup key for the resume
+// child, and the retention cap bounds always-on growth.  The SubAgent glue
+// (set_session_identity + start_session before the loop) funnels through exactly
+// this SessionStore path; test_subagent itself is unbuildable at HEAD due to
+// pre-existing integration-test link-list rot unrelated to this change.
+// =============================================================================
+
+/// Build a tool-result message JSON object (mirrors Conversation's tool turns).
+static Json tool_msg(const std::string& text) {
+    return Json{{"role", "tool"}, {"content", text}, {"is_error", false}};
+}
+
+/// Build the endpoint REFERENCE blob exactly as SubAgent::run() does for a
+/// subagent that ran on the local distill endpoint — note: NO api_key field.
+static Json distill_endpoint_ref() {
+    return Json{
+        {"base_url", "http://127.0.0.1:11434/v1"},
+        {"model", "qwen2.5-coder:7b"},
+        {"use_distill_endpoint", true},
+        {"api_key_ref", "cfg.distill"},
+    };
+}
+
+/// Count session files (*.json / *.json.gz) in a sessions dir, excluding index.json.
+static size_t count_session_files(const fs::path& dir) {
+    size_t n = 0;
+    for (const auto& e : fs::directory_iterator(dir)) {
+        if (!e.is_regular_file()) continue;
+        const auto name = e.path().filename().string();
+        if (name == "index.json") continue;
+        if (name.size() >= 5 && name.substr(name.size() - 5) == ".json") ++n;
+        else if (name.size() >= 8 && name.substr(name.size() - 8) == ".json.gz") ++n;
+    }
+    return n;
+}
+
+TEST_SUITE("SessionStore — DIS-1020 subagent journaling") {
+
+    TEST_CASE("subagent session records agent_id and endpoint reference, no raw api_key") {
+        TmpDir tmp;
+        SessionStore store(tmp.path);
+
+        const std::string agent_id = "agent-" + Uuid::v4().to_string();
+        auto res = store.new_session("qwen2.5-coder:7b", "/tmp/work",
+                                     agent_id, distill_endpoint_ref());
+        REQUIRE(res.has_value());
+        const std::string sid = res.value();
+
+        // A real subagent turn: user prompt → assistant → tool result.
+        REQUIRE(store.append_message(sid, user_msg("engulf this source")).has_value());
+        REQUIRE(store.append_message(sid, assistant_msg("calling a tool")).has_value());
+        REQUIRE(store.append_message(sid, tool_msg("tool output 42")).has_value());
+
+        // The on-disk log round-trips everything needed to resume.
+        auto loaded = store.load(sid);
+        REQUIRE(loaded.has_value());
+        const SessionFile& sf = loaded.value();
+
+        CHECK(sf.agent_id == agent_id);
+        CHECK(sf.messages.size() == 3);
+        // Tool *results* are persisted (not just calls) — required for safe resume.
+        CHECK(sf.messages.back().at("role").get<std::string>() == "tool");
+
+        // Endpoint reference round-trips with the resume-critical fields.
+        REQUIRE(sf.endpoint.is_object());
+        CHECK(sf.endpoint.at("base_url").get<std::string>() == "http://127.0.0.1:11434/v1");
+        CHECK(sf.endpoint.at("model").get<std::string>() == "qwen2.5-coder:7b");
+        CHECK(sf.endpoint.at("use_distill_endpoint").get<bool>() == true);
+        CHECK(sf.endpoint.at("api_key_ref").get<std::string>() == "cfg.distill");
+
+        // AC3 (Paulina refinement b): the raw credential is NEVER journalled.
+        CHECK_FALSE(sf.endpoint.contains("api_key"));
+    }
+
+    TEST_CASE("index record carries agent_id (lookup key for the resume child)") {
+        TmpDir tmp;
+        SessionStore store(tmp.path);
+
+        const std::string agent_id = "agent-lookup-1";
+        auto res = store.new_session("m", "/tmp/work", agent_id, distill_endpoint_ref());
+        REQUIRE(res.has_value());
+        (void)store.append_message(res.value(), user_msg("hi"));
+
+        auto recents = store.list_recent(16);
+        REQUIRE(recents.has_value());
+        bool found = false;
+        for (const auto& rec : recents.value()) {
+            if (rec.id.to_string() == res.value()) {
+                CHECK(rec.agent_id == agent_id);
+                found = true;
+            }
+        }
+        CHECK(found);
+    }
+
+    TEST_CASE("main session is unchanged: empty agent_id, absent endpoint") {
+        TmpDir tmp;
+        SessionStore store(tmp.path);
+
+        // Two-argument new_session (the main chat path) must be byte-compatible.
+        auto res = store.new_session("gpt-4o", "/tmp/main");
+        REQUIRE(res.has_value());
+        (void)store.append_message(res.value(), user_msg("hello"));
+
+        auto loaded = store.load(res.value());
+        REQUIRE(loaded.has_value());
+        CHECK(loaded->agent_id.empty());
+        CHECK_FALSE(loaded->endpoint.is_object());  // null → omitted on disk
+
+        auto recents = store.list_recent(8);
+        REQUIRE(recents.has_value());
+        for (const auto& rec : recents.value()) {
+            if (rec.id.to_string() == res.value()) CHECK(rec.agent_id.empty());
+        }
+    }
+
+    TEST_CASE("prune bounds growth at the cap and never deletes the active session") {
+        TmpDir tmp;
+        SessionStore store(tmp.path);
+
+        constexpr size_t kCap   = 4;
+        constexpr size_t kTotal = 12;
+
+        std::string last_sid;
+        for (size_t i = 0; i < kTotal; ++i) {
+            auto r = store.new_session("m", "/tmp/p" + std::to_string(i),
+                                       "agent-" + std::to_string(i),
+                                       distill_endpoint_ref());
+            REQUIRE(r.has_value());
+            last_sid = r.value();
+            (void)store.append_message(last_sid, user_msg("msg"));
+        }
+        REQUIRE(count_session_files(tmp.path) == kTotal);
+
+        auto pruned = store.prune(kCap);
+        REQUIRE(pruned.has_value());
+        CHECK(pruned.value() > 0);  // it actually deleted something
+
+        // Growth is bounded: at most the cap, plus the force-kept active session
+        // if it happened to sort beyond the cap (timestamps are second-resolution).
+        const size_t survivors = count_session_files(tmp.path);
+        CHECK(survivors <= kCap + 1);
+        CHECK(survivors < kTotal);
+
+        // The active session is always recoverable after a prune.
+        auto active = store.load(last_sid);
+        CHECK(active.has_value());
+    }
+
+    TEST_CASE("prune is a no-op when under the cap") {
+        TmpDir tmp;
+        SessionStore store(tmp.path);
+        for (int i = 0; i < 3; ++i) {
+            REQUIRE(store.new_session("m", "/tmp/p").has_value());
+        }
+        auto pruned = store.prune(50);
+        REQUIRE(pruned.has_value());
+        CHECK(pruned.value() == 0);
+        CHECK(count_session_files(tmp.path) == 3);
+    }
+}

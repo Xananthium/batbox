@@ -184,6 +184,16 @@ struct ToolsConfig {
     int  bash_timeout_sec    = 120;     ///< BATBOX_BASH_TIMEOUT_SEC
     int  bash_max_output_bytes = 1'048'576; ///< BATBOX_BASH_MAX_OUTPUT_BYTES (1 MB)
     int  task_parallel_limit = 4;       ///< BATBOX_TASK_PARALLEL_LIMIT
+
+    /// Max tool-call loop iterations inside a SINGLE Conversation::run_turn()
+    /// (S11, DIS-1044).  Bounds a model that repeatedly emits tool_calls within
+    /// one inference turn.  Default 20 makes the per-turn cap byte-identical to
+    /// the historical `k_max_tool_turns` constexpr — this knob only surfaces it;
+    /// an absent key leaves the loop unchanged.  Applies to the main conversation
+    /// AND every subagent's conversation.  Paired with the outer-loop cap below
+    /// (max_subagent_turn_cycles): this bounds tool-calls WITHIN a turn, that
+    /// bounds the NUMBER of turns a subagent runs across its life.
+    int  max_tool_turns      = 20;      ///< BATBOX_MAX_TOOL_TURNS
 };
 
 /// MCP server / transport settings.
@@ -197,6 +207,30 @@ struct AgentsConfig {
     std::filesystem::path agents_config = "~/.batbox/agents.json"; ///< BATBOX_AGENTS_CONFIG
     std::filesystem::path agents_dir    = "~/.batbox/agents";      ///< BATBOX_AGENTS_DIR
     bool                  demon_enabled = false;                   ///< BATBOX_DEMON_ENABLED
+
+    /// S11 doom-loop guard (DIS-1044).  Hard ceiling on the number of OUTER
+    /// turn-cycles a single SubAgent runs across its entire life — the count of
+    /// Conversation::run_turn() invocations driven by its outer lifecycle loop:
+    /// the initial prompt turn, every peer-message turn, AND every interrogation
+    /// turn all count toward this ONE shared cap.  Each individual turn is
+    /// already bounded to max_tool_turns tool-calls; this bounds how MANY turns
+    /// can run, so a closed subagent under repeated interrogation, two standing
+    /// subagents ping-ponging peer-messages, or a self-perpetuating investigation
+    /// cannot doom-loop at the turn granularity (local-model loops are *more*
+    /// prone to this than frontier models — the regime batbox runs in).
+    ///
+    /// On reaching the cap the subagent terminates CLEANLY (terminal `done`,
+    /// gold already in the notepad/journal is preserved, a DoomLoopGuard event is
+    /// emitted) — never an error spiral — and is resumable via the DIS-1021 log,
+    /// so a legitimately long-lived busy agent that trips the cap is recycled
+    /// losslessly, not killed.  That clean-and-resumable property is why a single
+    /// generous ceiling is safe even for the peer/interrogation paths.
+    ///
+    /// Default 100: far beyond any focused closed task (typically <10 turns) and
+    /// a normal standing window's interrogation load, but a firm stop well before
+    /// a runaway ping-pong burns meaningful local GPU.  Tune up for genuinely
+    /// long-lived standing agents.  Must be >= 1 (a positive ceiling).
+    int                   max_subagent_turn_cycles = 100;          ///< BATBOX_MAX_SUBAGENT_TURN_CYCLES
 };
 
 /// Permission / safety mode settings (Decision of Record #6).
@@ -209,6 +243,41 @@ struct SecurityConfig {
 struct CompactConfig {
     int  auto_compact_at_pct        = 80; ///< BATBOX_AUTO_COMPACT_AT_PCT
     int  keep_last_n_turns_verbatim = 10; ///< BATBOX_KEEP_LAST_N_TURNS_VERBATIM
+};
+
+/// Closed tool-subagent distillation settings (S1+S4, DIS-980).
+///
+/// When a tool result exceeds max_tool_response_size bytes, the subagent
+/// dispatch envelope engulfs it into a ONE-SHOT distillation call on a LOCAL
+/// OpenAI-compatible endpoint (the 3090s) and returns only the golden line.
+/// The local endpoint is deliberately SEPARATE from ApiConfig (the main, often
+/// cloud, model) — distillation is free local compute.
+struct DistillConfig {
+    /// Install the threshold decider + distiller at startup.  When false the
+    /// dispatch envelope stays pure pass-through (byte-identical to S7).
+    bool        enabled = false;                  ///< BATBOX_DISTILL_ENABLED
+
+    /// Local OpenAI-compatible endpoint, e.g. "http://127.0.0.1:11434/v1".
+    /// Required when enabled.
+    std::string base_url;                         ///< BATBOX_DISTILL_BASE_URL
+
+    /// API key for the local endpoint (usually empty or "ollama" locally).
+    std::string api_key;                          ///< BATBOX_DISTILL_API_KEY
+
+    /// The small local model that reads the big output.  Required when enabled.
+    std::string model;                            ///< BATBOX_DISTILL_MODEL
+
+    /// Engulf threshold in bytes.  Default 200k matches goose's
+    /// GOOSE_MAX_TOOL_RESPONSE_SIZE (200k chars) — the same "too big to inline"
+    /// ballpark, ported as a byte count.
+    std::size_t max_tool_response_size = 200'000; ///< BATBOX_MAX_TOOL_RESPONSE_SIZE
+
+    /// Per-distill request timeout.  Bounds a hung local endpoint so distill()
+    /// never blocks the parent turn forever.
+    int         request_timeout_sec = 60;         ///< BATBOX_DISTILL_TIMEOUT_SEC
+
+    /// Cap on the distilled golden line length (the local model's max_tokens).
+    int         max_tokens = 512;                 ///< BATBOX_DISTILL_MAX_TOKENS
 };
 
 // ============================================================================
@@ -232,6 +301,7 @@ struct Config {
     AgentsConfig   agents;
     SecurityConfig security;
     CompactConfig  compact;
+    DistillConfig  distill;
 
     /// Incremented on every reload so components can detect a change cheaply.
     /// Not serialised to/from JSON — purely an in-process epoch counter.

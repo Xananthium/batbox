@@ -25,5 +25,8 @@ Configuration subsystem implementations: env loading, settings parsing, config s
 ### SettingsLoader.cpp
 `load_settings()` and `write_settings()` implementations: reads/writes settings.json; atomic write via tmp+rename; extracts permissions, theme, plugins.disabled, output_style.
 
+### Config.cpp — DistillConfig (S1+S4, DIS-980)
+`Config.cpp` gained the `distill` group: env parse (`BATBOX_DISTILL_*` + `BATBOX_MAX_TOOL_RESPONSE_SIZE`), settings.json merge, `to_json()`/`redacted_for_display()` (distill `api_key` masked), and `validate()` rules (enabled requires URL-shaped base_url + model; thresholds/timeouts > 0). The explicit copy/move ctors + assignments were updated to carry the new `distill` member (else env-parsed distill settings drop on the value-return).
+
 ### CMakeLists.txt
 Build rules for the config static library.

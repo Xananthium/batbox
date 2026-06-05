@@ -1179,6 +1179,21 @@ int App::run(const AppArgs& args) {
                 batbox::tui::make_status_update_event_with_usage(tokens, cost_usd));
         });
 
+    // S2/S3 (DIS-988, AC4): surface the parent's warm standing-subagent list to
+    // the model each turn as a bounded TAIL reminder.  The provider converts the
+    // supervisor's in-memory standing_status() into the layer-local StandingHandle
+    // POD; when the pool is empty (the default until step 8's selection heuristic
+    // promotes anything) it returns {} → no injection, prefix cache untouched.
+    tui_conversation->set_standing_handles_provider(
+        [&supervisor]() -> std::vector<batbox::conversation::StandingHandle> {
+            std::vector<batbox::conversation::StandingHandle> handles;
+            for (auto& s : supervisor.standing_status()) {
+                handles.push_back(batbox::conversation::StandingHandle{
+                    std::move(s.id), std::move(s.name), std::move(s.status_line)});
+            }
+            return handles;
+        });
+
     BATBOX_LOG_INFO("TUI conversation ready (model={})", config.api.default_model);
 
     // ------------------------------------------------------------------

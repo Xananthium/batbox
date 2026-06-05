@@ -81,6 +81,12 @@ struct SessionIndexRecord {
 
     /// Absolute path to the session .json (or .json.gz) file on disk.
     std::filesystem::path file_path;
+
+    /// DIS-1020 — subagent journaling.  Empty for the main chat session; set to
+    /// the SubAgent id for a subagent's log.  This is the lookup key the resume
+    /// child (DIS-941 next step) uses to find a closed subagent's session by id.
+    /// Soft field: absent in legacy index lines (read as empty, not corrupt).
+    std::string agent_id;
 };
 
 // =============================================================================
