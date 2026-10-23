@@ -1,0 +1,84 @@
+{
+  "utc": "2026-10-23T18:18:13.348815+00:00",
+  "status": "passed",
+  "scope": "Native SSE reasoning-field compatibility; CPU tests with an isolated localhost fake backend",
+  "build": {
+    "passed": true,
+    "targets": [
+      "batbox",
+      "test_client_reasoning",
+      "test_chat_wire_model",
+      "test_sse_parser"
+    ],
+    "binary_sha256": "8a4dee96a585489f3c1dcc0090572a736d78e36e96ed007c9e85eec766d767cb",
+    "source_base_commit": "ff94a8f6c85f4d4962a8284a2ee0ae6035990743",
+    "modified_source_sha256": {
+      "src/inference/ChatRequest.cpp": "f0111ae7a981269ea12d37f54c09f99e6e2a1ca4e614cb8d0eeb21efc5d23ad5",
+      "include/batbox/inference/ChatResponse.hpp": "39ba9ae9a56007812ad4e3ce0c59358f495e305e943d783d85e6d3eafbdd051a",
+      "tests/unit/test_client_reasoning.cpp": "1a4e09c0664ee6b7776b7d3b7cc22b1a2e9a504129e1a988685ec3523b7ed586",
+      "tests/integration/test_native_workers.py": "8c37c51180c1780f56cd358134b8b19e85f65e6cc1bd623f3c60d814b54432f6"
+    }
+  },
+  "installed_vllm_protocol": {
+    "verification": "Read installed source without importing vLLM or CUDA",
+    "observation": "DeltaMessage.reasoning and ChatMessage.reasoning; serving serializes chunk.model_dump_json(exclude_unset=True) as SSE. No output alias renames reasoning_content.",
+    "source_sha256": {
+      "entrypoints/generate/base/protocol.py": "0c07e689fdbbb59929fc8599f714b8041eec0dcd7fb16d87bb59bc80c5874803",
+      "entrypoints/openai/chat_completion/protocol.py": "8744d5e2004b2d376e34cf17de51c919bca6d81b0cc8392da138db1ef05a7c61",
+      "entrypoints/openai/chat_completion/serving.py": "5e619c0a6866758a247c76e7b8c472f6e008ddbc720f7efe47cc6776cb986d4f"
+    },
+    "source_line_references": {
+      "entrypoints/generate/base/protocol.py": 356,
+      "entrypoints/openai/chat_completion/protocol.py": 69,
+      "entrypoints/openai/chat_completion/serving.py": 829
+    }
+  },
+  "parser_rule": "A valid modern reasoning string wins, including empty string. Otherwise a valid legacy reasoning_content string is used. Neither valid means absent. Visible content remains separate; aliases are never concatenated.",
+  "baseline": {
+    "binary_sha256": "500fc1120de216b337315501b4b1409d8d0a06934118f87260caa74ce71e95ac",
+    "modern_only_native_case_passed": false,
+    "elapsed_seconds": 15.467,
+    "observed_failure": "Timed out waiting for actual native running marker reasoning_delta",
+    "log_sha256": "6b346a4ea479f3ab15b9ffc32e9f1f70bed415c9d1f577a6b566d5de42df13ec"
+  },
+  "tests": {
+    "client_reasoning": {
+      "passed": true,
+      "cases": 50,
+      "assertions": 115,
+      "log_sha256": "478a3bc6f987f70cd0f0b4cbfac46a271c55715abcdcaff55aee026f94e5b9ab"
+    },
+    "chat_wire_model": {
+      "passed": true,
+      "cases": 49,
+      "assertions": 203,
+      "log_sha256": "aa284dfcb45e70b867da954fac05d7d7e4b46194d1e123835035eea0dee28092"
+    },
+    "sse_parser": {
+      "passed": true,
+      "cases": 41,
+      "assertions": 169,
+      "log_sha256": "6090dff3444b5da97680fb0da16347bb1e768db0a83b1bdd5542dfe21950627d"
+    },
+    "native_workers": {
+      "passed": true,
+      "cases": 2,
+      "elapsed_seconds": 11.758,
+      "log_sha256": "146c76c57ab1f41e3d95d59df94f2d12ceb8bac5ce5dc2e25f83207b979375ee",
+      "coverage": [
+        "modern-only reasoning SSE refreshes actual native running marker",
+        "2.1 second silent stream leaves coordinator marker unchanged",
+        "second real reasoning SSE advances marker",
+        "worker retries recover while coordinator stream remains active",
+        "durable worker identity and recorded tools survive recovery without replay",
+        "four concurrent native requests and stable system/tool prefix",
+        "durable inbox and sessions survive restart"
+      ]
+    }
+  },
+  "git_diff_check": "passed",
+  "production_backend_calls": 0,
+  "gpu_calls": 0,
+  "production_service_changes": 0,
+  "limitations": "This establishes the parser/heartbeat integration defect and its fix. It does not test live-model latency or establish causes of separate historical generation loops."
+}

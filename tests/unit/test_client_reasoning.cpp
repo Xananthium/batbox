@@ -54,6 +54,44 @@ static StreamDelta make_delta(const Json& delta_obj) {
 // =============================================================================
 TEST_SUITE("StreamDelta reasoning_content — from_json") {
 
+    TEST_CASE("modern reasoning field is normalized without visible-content leakage") {
+        const auto sd = make_delta({{"reasoning", "modern fragment"}});
+        REQUIRE(sd.reasoning_content.has_value());
+        CHECK(*sd.reasoning_content == "modern fragment");
+        CHECK_FALSE(sd.content.has_value());
+        const auto mixed = make_delta({{"reasoning", "private fragment"}, {"content", "visible answer"}});
+        REQUIRE(mixed.reasoning_content.has_value());
+        REQUIRE(mixed.content.has_value());
+        CHECK(*mixed.reasoning_content == "private fragment");
+        CHECK(*mixed.content == "visible answer");
+    }
+
+    TEST_CASE("modern reasoning takes precedence over legacy without double counting") {
+        const auto sd = make_delta({{"reasoning", "modern"}, {"reasoning_content", "legacy"}});
+        REQUIRE(sd.reasoning_content.has_value());
+        CHECK(*sd.reasoning_content == "modern");
+        const Json normalized = sd;
+        CHECK(normalized["reasoning_content"] == "modern");
+        CHECK_FALSE(normalized.contains("reasoning"));
+        CHECK(normalized.get<StreamDelta>().reasoning_content == sd.reasoning_content);
+    }
+
+    TEST_CASE("null or malformed modern reasoning falls back to a valid legacy field") {
+        for (const Json value : {Json(nullptr), Json(17), Json::array()}) {
+            const auto sd = make_delta({{"reasoning", value}, {"reasoning_content", "legacy"}});
+            REQUIRE(sd.reasoning_content.has_value());
+            CHECK(*sd.reasoning_content == "legacy");
+        }
+        CHECK_FALSE(make_delta({{"reasoning", nullptr}, {"reasoning_content", nullptr}}).reasoning_content.has_value());
+    }
+
+    TEST_CASE("an explicit empty modern reasoning field remains empty") {
+        const auto sd = make_delta({{"reasoning", ""}, {"reasoning_content", "legacy"}});
+        REQUIRE(sd.reasoning_content.has_value());
+        CHECK(sd.reasoning_content->empty());
+        CHECK_FALSE(sd.content.has_value());
+    }
+
     TEST_CASE("reasoning-only chunk: reasoning_content is populated") {
         Json delta = Json{
             {"reasoning_content", "Let me think step by step..."}

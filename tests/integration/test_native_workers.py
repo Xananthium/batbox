@@ -105,11 +105,11 @@ class WorkerBackend:
                             chunk = {"choices": [{"index": 0, "delta": delta, "finish_reason": finish}]}
                             self.wfile.write(("data: " + json.dumps(chunk) + "\n\n").encode())
                             self.wfile.flush()
-                        emit({"role": "assistant", "reasoning_content": "First observed reasoning chunk."})
+                        emit({"role": "assistant", "reasoning": "First observed reasoning chunk."})
                         owner.coordinator_started.set()
                         if not owner.coordinator_pulse.wait(25):
                             raise RuntimeError("Coordinator reasoning pulse was not released")
-                        emit({"reasoning_content": "Second observed reasoning chunk."})
+                        emit({"reasoning": "Second observed reasoning chunk."})
                         owner.coordinator_pulsed.set()
                         if not owner.coordinator_release.wait(25):
                             raise RuntimeError("Blocked coordinator was not released")

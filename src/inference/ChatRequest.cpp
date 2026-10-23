@@ -334,9 +334,13 @@ void from_json(const Json& j, StreamDelta& sd) {
         sd.content = std::nullopt;
     }
 
-    // reasoning_content: chain-of-thought from reasoning models (Magistral,
-    // Qwen3, DeepSeek).  Emitted before any content delta.  Not user-visible.
-    if (j.contains("reasoning_content") && j["reasoning_content"].is_string()) {
+    // Normalize modern vLLM `reasoning` and legacy `reasoning_content` into
+    // one internal channel. A valid modern string wins (even if empty), so
+    // providers emitting both aliases never duplicate a fragment. Keep visible
+    // content independent; malformed/null modern fields may use the legacy one.
+    if (j.contains("reasoning") && j["reasoning"].is_string()) {
+        sd.reasoning_content = j["reasoning"].get<std::string>();
+    } else if (j.contains("reasoning_content") && j["reasoning_content"].is_string()) {
         sd.reasoning_content = j["reasoning_content"].get<std::string>();
     } else {
         sd.reasoning_content = std::nullopt;

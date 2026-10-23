@@ -120,7 +120,8 @@ struct StreamDelta {
     std::optional<std::string> content;
 
     /// Reasoning/chain-of-thought fragment from reasoning models (Magistral,
-    /// Qwen3, DeepSeek).  Emitted under delta.reasoning_content before any
+    /// Qwen3, DeepSeek). Normalized from delta.reasoning (modern vLLM) or
+    /// delta.reasoning_content (legacy providers), before any
     /// delta.content arrives.  Not user-visible; used by the retry gate.
     std::optional<std::string> reasoning_content;
 
