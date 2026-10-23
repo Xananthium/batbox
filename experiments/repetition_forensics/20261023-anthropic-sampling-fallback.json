@@ -1,0 +1,24 @@
+{
+  "description": "CPU test of installed Anthropic request conversion and actual SamplingParams fallback",
+  "omitted_client_fields": {
+    "temperature": 0.6,
+    "top_p": 0.9,
+    "top_k": 64,
+    "min_p": 0.05,
+    "repetition_penalty": 1.1
+  },
+  "explicit_client_fields": {
+    "temperature": 0.2,
+    "top_p": 0.8,
+    "top_k": 32,
+    "min_p": 0.05,
+    "repetition_penalty": 1.1
+  },
+  "source_files": {
+    "/home/isnotreal/vllm-env/lib/python3.12/site-packages/vllm/entrypoints/anthropic/protocol.py": "b3db7f280d57c9723bdc7251394e0c33d47d9202e6e08545cf9c6e93f4d76e69",
+    "/home/isnotreal/vllm-env/lib/python3.12/site-packages/vllm/entrypoints/anthropic/serving.py": "9a12939d6502e54042fc524c175daf5c9f214bf9fb3851a1d98590aede1f7dd9",
+    "/home/isnotreal/vllm-env/lib/python3.12/site-packages/vllm/entrypoints/openai/chat_completion/protocol.py": "8744d5e2004b2d376e34cf17de51c919bca6d81b0cc8392da138db1ef05a7c61"
+  },
+  "historical_request_reconstructed": false,
+  "gpu_used": false
+}

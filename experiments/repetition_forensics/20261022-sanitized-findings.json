@@ -1,0 +1,82 @@
+{
+  "case": "repetition-20261022",
+  "response": {
+    "timestamp": "2026-10-22T22:14:07.495Z",
+    "id": "chatcmpl-b2ad91f48eb13455",
+    "served_model_alias": "qwen3.6-35b-hauhau-w4a16-vision",
+    "stop_reason": "max_tokens",
+    "input_tokens": 32344,
+    "output_tokens": 64000,
+    "thinking_tokens": 0,
+    "text_characters": 255935,
+    "our_word_count": 62784,
+    "text_sha256": "04e53d594b31370ebc0d3bf949464f463859ac08427c88cd5c1bf24e6dae6fa5",
+    "client_version": "2.1.236",
+    "client_effort": "max",
+    "record_sha256": "538c5fc294a7378c3be2d9fd794694c0dfd1c33ee9572fc9f48fd16134f07b0c"
+  },
+  "historical_server": {
+    "verified_startup_utc": "2026-10-22T15:42:24.184724Z",
+    "pid": "10634",
+    "model_directory": "gemma4-31b-qat-hauhau-balanced-native-mixed-w4w8a16",
+    "weights_quantization": "compressed-tensors",
+    "compute_dtype": "bfloat16",
+    "kv_cache_dtype": "turboquant_4bit_nc",
+    "configured_generation_defaults": {
+      "temperature": 0.6,
+      "top_k": 64,
+      "top_p": 0.9,
+      "min_p": 0.05,
+      "repetition_penalty": 1.1
+    },
+    "max_model_len": 200000,
+    "default_chat_template_kwargs": {
+      "enable_thinking": true
+    },
+    "speculation_method": "mtp",
+    "speculative_tokens": 2,
+    "vllm_versions_seen": [
+      "v0.31.0",
+      "v0.32.0"
+    ],
+    "verified_initialization_version": "v0.32.0",
+    "verified_initialization_timestamp": "2026-10-22T15:42:40.072267+00:00"
+  },
+  "current_snapshot": {
+    "timestamp_utc": "2026-10-23T15:19:35.251874+00:00",
+    "pid": "135584",
+    "model_file": "Gemma4-31B-QAT-Uncensored-HauhauCS-Balanced-Q4_K_M.gguf",
+    "weights_quantization": "gguf",
+    "kv_cache_dtype": "turboquant_4bit_nc",
+    "configured_generation_defaults": {
+      "temperature": 0.6,
+      "top_k": 64,
+      "top_p": 0.9,
+      "min_p": 0.05,
+      "repetition_penalty": 1.1
+    },
+    "note": "Transient snapshot during separately coordinated backend experiments; not a final deployment claim."
+  },
+  "capture_search": {
+    "exact_raw_request_found": false,
+    "exact_system_prompt_found": false,
+    "exact_tool_definitions_found": false,
+    "request_level_sampling_found": false,
+    "cli_debug_directory_present": false,
+    "journal_request_id_matches": 0,
+    "request_id_found_only_in_incident_transcript": true,
+    "sources_searched": [
+      "Claude project transcripts",
+      "Claude daemon/session metadata",
+      "Claude CLI cache logs",
+      "systemd qwen-vllm journal",
+      "model-tools deployment artifacts",
+      "engine backup/log paths"
+    ],
+    "historical_api_activity": "PID10634 logged75 POST /v1/messages?beta=true HTTP200 responses plus2 count_tokens responses between21:10 and22:15 UTC; no error/traceback/nan/abort/timeout terms in that unit window."
+  },
+  "sampling_conclusion": "Verified server configured defaults are not the verified effective sampler for this request. Current nativeAnthropic protocol forwards temperature/top_p/top_k and max_tokens from the client, with nullable sampling fields. Exact wire values are unavailable. No client sampling environment overrides were present in the settings file modified17:03Oct22, but this does not prove the process or request had none.",
+  "origin_conclusion": "Repetition is in one persisted assistant text block, so terminal rendering alone cannot explain it.64,000 reported output tokens and max_tokens stop are consistent with genuine length-capped backend generation. Without the raw SSE/token stream, exact backend-versus-client stream assembly origin cannot be proved.",
+  "privacy": "No transcript text, prompt, tool result, system instruction, credential, or raw reasoning is included in this summary. Raw journal matching evidence remains private.",
+  "backend_actions": "None. No HTTP inference calls, GPU tests, service restarts, configuration writes, or model changes were performed."
+}

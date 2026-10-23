@@ -1,0 +1,89 @@
+{
+  "copy_validation": {
+    "recovered_at": "20261023T160107.498849Z",
+    "archive": "/home/isnotreal/.batbox/diagnostics/graph-recovery-20261023T154820Z/offline-repair-validated/graph/recovery/legacy-partial-insert-20261023T160107.498849Z",
+    "graph_index_rows": 90,
+    "committed_chunks": 210,
+    "deferred_uncommitted_chunks": 18,
+    "metadata_mismatches": 0,
+    "pending_source_updates": 3,
+    "unindexed_active_sources": 91,
+    "nodes": 2079,
+    "edges": 10694,
+    "entities": 1869,
+    "extraction_records": 210,
+    "canonical_sqlite_modified": false,
+    "LLM_calls": 0,
+    "initialized_status": {
+      "state": "ready",
+      "backend": "HippoRAG",
+      "nodes": 2079,
+      "edges": 10694,
+      "last_error": null,
+      "passages": 210,
+      "facts": 2292,
+      "entities": 1869
+    },
+    "vectors_unchanged_for_committed_chunks": true,
+    "isolated_real_graph_copy": true,
+    "network_and_encoding_forbidden": true
+  },
+  "canonical_repair": {
+    "recovered_at": "20261023T160205.833269Z",
+    "archive": "/home/isnotreal/.batbox/hipporag/recovery/legacy-partial-insert-20261023T160205.833269Z",
+    "graph_index_rows": 90,
+    "committed_chunks": 210,
+    "deferred_uncommitted_chunks": 18,
+    "metadata_mismatches": 0,
+    "pending_source_updates": 3,
+    "unindexed_active_sources": 91,
+    "nodes": 2079,
+    "edges": 10694,
+    "entities": 1869,
+    "extraction_records": 210,
+    "canonical_sqlite_modified": false,
+    "LLM_calls": 0,
+    "initialized_status": {
+      "state": "ready",
+      "backend": "HippoRAG",
+      "nodes": 2079,
+      "edges": 10694,
+      "last_error": null,
+      "passages": 210,
+      "facts": 2292,
+      "entities": 1869
+    },
+    "preserved_graph_extractions_vectors_llm_cache_and_sqlite_tables": true,
+    "preserved_component_hashes": {
+      "files": {
+        "qwen3.6-35b-hauhau-w4a16-vision_BAAI_bge-small-en-v1.5/graph.pickle": "0a40ab2fa5c2f056034af31770b69356c6fb12e89051fd577c62305677165855",
+        "qwen3.6-35b-hauhau-w4a16-vision_BAAI_bge-small-en-v1.5/openie_state.json": "866f3f8e078e889cfb74973419bbb40f07efaf3b2ce134f45e0525da32197006",
+        "qwen3.6-35b-hauhau-w4a16-vision_BAAI_bge-small-en-v1.5/entity_embeddings/vdb_entity.parquet": "e74e2c931e5d482d098b894ff9a32c15ca3365beeaac432956d844a46b812fc4",
+        "qwen3.6-35b-hauhau-w4a16-vision_BAAI_bge-small-en-v1.5/fact_embeddings/vdb_fact.parquet": "1df39154351e6c9fb98bfb43000f87a5be6ae1724d5a7c4fe5879c1f68b3e576",
+        "llm-cache/qwen3.6-35b-hauhau-w4a16-vision_cache.sqlite": "1a062a57e97415a6025f169d96e3a17d5344e37deceae40c7370d702acf8d7bf"
+      },
+      "tables": {
+        "graph_index": "e356dc1c558564f435230bceaf0b5fd0e6cfc77ac93ce2357aba6779a82939b4",
+        "embedding_cache": "fbeef1848eff77d81a926e306f3d4300afed124696c197dbf1ba67f74389e8e6",
+        "nodes": "30d4ee51f948ed56b065d9afe4d8f196d05a2196fce79c4e2d8bf2baa8cb3940",
+        "memory_provenance": "2cd18f49f6c8d153003fd0600723cc011de3be1c0022d9cc6eb8a10338d189a1",
+        "memory_jobs": "deab10912352af7793dd434299481ad6d7ecf15ab1a218483e59958a779ae769"
+      }
+    },
+    "memory_service_remains_stopped": true
+  },
+  "tests": {
+    "suite": "tests.memory.test_graph_recovery tests.memory.test_memory_store tests.memory.test_web_sessions",
+    "initial_suite_passed": 14,
+    "additional_double_sigkill_recovery_passed": 1,
+    "real_process_kill_boundaries": [
+      "before graph save",
+      "during entity deletion",
+      "during metadata write",
+      "before SQLite commit",
+      "after SQLite commit",
+      "during recovery restore"
+    ],
+    "network_used": false
+  }
+}

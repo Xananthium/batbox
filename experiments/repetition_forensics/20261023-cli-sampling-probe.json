@@ -1,0 +1,56 @@
+{
+  "utc": "2026-10-23T16:31:23.447741+00:00",
+  "cli_version": "2.1.236 (Claude Code)",
+  "cli_sha256": "6c8818fa22187aa555c242be4abbacc44d6b71a32ac9631ee7b2b5d12f51f752",
+  "inference": "local deterministic HTTP stub; no GPU or serving backend",
+  "configuration": "isolated CLI config, no user/project settings, no tools or MCP",
+  "limitations": "Current direct and builtin-agent behavior only; historical request and spawned-subagent overrides remain unknown. Isolated configuration can differ from the user's original configuration.",
+  "requests": [
+    {
+      "case": "main",
+      "path": "/v1/messages?beta=true",
+      "fields": {
+        "model": "qwen3.6-35b-hauhau-w4a16-vision",
+        "max_tokens": 32000,
+        "thinking": {
+          "type": "adaptive",
+          "display": "omitted"
+        },
+        "output_config": {
+          "effort": "max"
+        },
+        "stream": true
+      }
+    },
+    {
+      "case": "builtin_agent",
+      "path": "/v1/messages?beta=true",
+      "fields": {
+        "model": "qwen3.6-35b-hauhau-w4a16-vision",
+        "max_tokens": 32000,
+        "thinking": {
+          "type": "adaptive",
+          "display": "omitted"
+        },
+        "output_config": {
+          "effort": "max"
+        },
+        "stream": true
+      }
+    }
+  ],
+  "outcomes": [
+    {
+      "case": "main",
+      "exit_code": 0,
+      "response_has_READY": true,
+      "stderr_sha256": "872406cc628e3f22b00e9a419ebbd9ad73be755ea9e278b3018c4bf2e2fdf4b1"
+    },
+    {
+      "case": "builtin_agent",
+      "exit_code": 0,
+      "response_has_READY": true,
+      "stderr_sha256": "872406cc628e3f22b00e9a419ebbd9ad73be755ea9e278b3018c4bf2e2fdf4b1"
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "date_utc": "2026-10-23T16:04:07.922919+00:00",
+  "status": "cpu_regressions_passed_not_deployed",
+  "production_observation": {
+    "service_result": "timeout",
+    "exec_main_status": 9,
+    "systemd_stop_timeout_seconds": 45,
+    "stopped_event_preceded_worker_joins": true,
+    "unclean_worker_last_tool_tokens_cpu": 456362,
+    "stack_trace_available": false
+  },
+  "cause_scope": "Code inspection and a reproduced failure establish uncancellable non-streaming summary and autonomous service HTTP paths. Production attribution is consistent with its oversized worker tool result; no killed-process backtrace exists.",
+  "baseline": {
+    "binary_sha256": "ce9b0f6ad19e14f36e59862135ce5c7f57c28156e39c43eace6429060e6e4dae",
+    "source_commit": "f287c2f77004ae5e03ca1022ae731fbefc2e2066",
+    "streaming": "passed",
+    "summary": "failed_to_exit_within_5_seconds",
+    "service": "failed_to_exit_within_5_seconds",
+    "cases": 3,
+    "failures": 2
+  },
+  "patched": {
+    "binary_sha256": "7775ff66c98a9f6ef0b98ca2339059dc9e304013852e9a6dcdc1f0cb19636aa7",
+    "shutdown_cases": 3,
+    "shutdown_failures": 0,
+    "shutdown_upper_bound_seconds_each": 5,
+    "restart_identity_and_prior_transcript_preserved": true,
+    "ctest_groups_passed": [
+      "native_shutdown_lifecycle",
+      "native_worker_lifecycle",
+      "autonomous_engine_lifecycle"
+    ],
+    "ctest_total_wall_seconds": 10.71,
+    "compactor_cases_passed": 6,
+    "inference_smoke_cases_passed": 26,
+    "source_sha256": {
+      "include/batbox/inference/Client.hpp": "553b3c61924087e0ca072b8313e3638e397f44a46cbd0847cb78b2f991f93ad4",
+      "src/inference/Client.cpp": "1772726f678732d47a5bb67550497e21b9f426f1e819141ff0ee990673c06be6",
+      "src/conversation/Compactor.cpp": "1c5ef24ac8ec2eb3ba77dfb210f0b31d86665f2327f10b33bee0966ce003c2db",
+      "src/autonomous/Engine.cpp": "7caee4868f4b4cf630b81bded5b6cf1cdb4522cf504890de1e0c8c58af5eead1",
+      "tests/integration/test_native_shutdown.py": "4559fb0829123e0009349c741a4fbaa3c218904ab15e2d53aeb1e0df8880119f"
+    }
+  },
+  "gpu_calls": 0,
+  "production_service_changes": false,
+  "raw_transcripts_published": false
+}
