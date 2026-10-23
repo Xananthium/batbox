@@ -21,7 +21,8 @@ class Service:
         self.config = config
         self.stop = threading.Event()
         self.store = Store(config["database"], config.get("embedding_model", "BAAI/bge-small-en-v1.5"), config.get("embedding_model_path"))
-        self.graph = Graph(self.store, config["graph_directory"], config["llm_base_url"], config["llm_model"])
+        self.graph = Graph(self.store, config["graph_directory"], config["llm_base_url"], config["llm_model"],
+                           request_timeout_seconds=config.get("llm_request_timeout_seconds", 600))
         self.web = Web(self.store, config["session_directory"], config["scrapling_python"], config.get("searxng", "http://127.0.0.1:8888"))
         self.started_at = timestamp()
         self.threads = []

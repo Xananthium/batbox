@@ -1,6 +1,7 @@
 """Official HippoRAG adapter, sharing the CPU embedding cache and local LLM."""
 import json
 import logging
+import math
 import os
 import threading
 import time
@@ -13,16 +14,20 @@ LOG = logging.getLogger(__name__)
 
 
 class Graph:
-    def __init__(self, store, directory, backend, model):
+    def __init__(self, store, directory, backend, model, *, request_timeout_seconds=600):
         self.store = store
         self.directory = Path(directory)
         self.backend = backend
         self.model = model
+        self.request_timeout_seconds = float(request_timeout_seconds)
+        if not math.isfinite(self.request_timeout_seconds) or self.request_timeout_seconds <= 0:
+            raise ValueError("llm_request_timeout_seconds must be finite and positive")
         self.lock = threading.Lock()
         self.rag = None
         self.llm = None
         self.checkpoint = IndexCheckpoint(self.directory)
-        self.status = {"state": "starting", "backend": "HippoRAG", "nodes": 0, "edges": 0, "last_error": None}
+        self.status = {"state": "starting", "backend": "HippoRAG", "nodes": 0, "edges": 0, "last_error": None,
+                       "llm_request_timeout_seconds": self.request_timeout_seconds}
 
     def initialize(self):
         # This environment installs CPU PyTorch, and the encoder explicitly uses ONNX CPU.
@@ -71,7 +76,7 @@ class Graph:
         )
         llm = LocalJSONLLM(str(self.directory / "llm-cache"), config, max_retries=1)
         llm.llm_config.generate_params["extra_body"] = {"chat_template_kwargs": {"enable_thinking": False}}
-        llm.openai_client = llm.openai_client.with_options(timeout=60, max_retries=1)
+        llm.openai_client = llm.openai_client.with_options(timeout=self.request_timeout_seconds, max_retries=1)
         self.llm = llm
         with self.lock:
             operation = self.checkpoint.read()
