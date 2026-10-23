@@ -52,6 +52,7 @@
 // ---------------------------------------------------------------------------
 
 #include <batbox/inference/Client.hpp>
+#include <batbox/inference/Activity.hpp>
 
 #include <batbox/core/Json.hpp>
 #include <batbox/core/Logging.hpp>
@@ -207,6 +208,7 @@ Client::Client(const batbox::config::Config& cfg)
 Result<std::size_t> Client::count_prompt_tokens(const ChatRequest& req,
                                                const CancelToken& ct) {
     if (ct.is_cancelled()) return batbox::Err(std::string("cancelled"));
+    RequestActivity activity("tokenize", cfg_.api.request_timeout_sec);
     std::string root = cfg_.api.base_url;
     while (!root.empty() && root.back() == '/') root.pop_back();
     if (root.ends_with("/v1")) root.resize(root.size() - 3);
@@ -266,6 +268,7 @@ std::string Client::completions_url() const {
 
 Result<ChatResponse> Client::chat(const ChatRequest& req, const CancelToken& ct) {
     if (ct.is_cancelled()) return batbox::Err(std::string("cancelled"));
+    RequestActivity activity("nonstream_completion", cfg_.api.request_timeout_sec);
     ChatRequest wire_req = req;
     wire_req.stream = false;
     wire_req.stream_options_include_usage = std::nullopt;
@@ -502,6 +505,8 @@ Result<UsageDelta> Client::stream_chat_impl(
     CancelToken                                  ct)
 {
     auto lg = batbox::log::get("inference.client");
+    if (ct.stop_requested()) return batbox::Err(std::string("cancelled"));
+    RequestActivity activity("stream_completion", timeout_ms / 1000);
 
     // Build headers from the caller-supplied api_key.
     //
@@ -522,6 +527,9 @@ Result<UsageDelta> Client::stream_chat_impl(
     constexpr int kMaxRetries = 3;
 
     for (int attempt = 0; attempt <= kMaxRetries; ++attempt) {
+
+        if (ct.stop_requested()) return batbox::Err(std::string("cancelled"));
+        if (attempt > 0) activity.renew(timeout_ms / 1000);
 
         bool token_received = false;
         bool stream_started = false;
@@ -720,6 +728,7 @@ Result<UsageDelta> Client::stream_chat_impl(
                     attempt + 1, kMaxRetries,
                     http.status_code,
                     delay.count());
+                activity.renew(static_cast<int>((delay.count() + 999) / 1000));
                 std::this_thread::sleep_for(delay);
                 continue;
             }

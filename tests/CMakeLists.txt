@@ -63,7 +63,18 @@ endmacro()
 # Unit tests — added as each CPP N.x task lands its test file:
 # ---------------------------------------------------------------------------
 
+batbox_add_unit_test(test_request_activity
+    unit/test_request_activity.cpp batbox_core)
+target_sources(test_request_activity PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/inference/Activity.cpp)
+
 # CPP 0.5 — CancelToken
+batbox_add_unit_test(test_generation_quality
+    unit/test_generation_quality.cpp batbox_core)
+target_sources(test_generation_quality PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/conversation/GenerationQuality.cpp
+    ${PROJECT_SOURCE_DIR}/src/conversation/Message.cpp)
+
 batbox_add_unit_test(test_tool_output_archive
     unit/test_tool_output_archive.cpp batbox_core)
 target_sources(test_tool_output_archive PRIVATE
@@ -1323,6 +1334,7 @@ batbox_add_unit_test(test_provider_hint
     unit/test_provider_hint.cpp  batbox_core)
 target_sources(test_provider_hint PRIVATE
     ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
+    ${PROJECT_SOURCE_DIR}/src/inference/Activity.cpp
     ${PROJECT_SOURCE_DIR}/src/inference/ProviderHint.cpp
     ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
     ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp)
@@ -2070,6 +2082,12 @@ if(Python3_Interpreter_FOUND)
             ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_autonomous_engine.py)
     set_tests_properties(autonomous_engine_lifecycle PROPERTIES
         LABELS "integration;autonomous" TIMEOUT 180)
+    add_test(NAME autonomous_generation_quality
+        COMMAND ${CMAKE_COMMAND} -E env
+            BATBOX_AUTONOMOUS_BIN=$<TARGET_FILE:batbox>
+            ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_generation_quality.py)
+    set_tests_properties(autonomous_generation_quality PROPERTIES
+        LABELS "integration;autonomous" TIMEOUT 90)
     add_test(NAME native_worker_lifecycle
         COMMAND ${CMAKE_COMMAND} -E env
             BATBOX_AUTONOMOUS_BIN=$<TARGET_FILE:batbox>

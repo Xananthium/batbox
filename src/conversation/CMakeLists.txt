@@ -45,6 +45,7 @@ target_sources(batbox_conversation
     PRIVATE
         .placeholder.cpp
         Conversation.cpp   # CPP 3.6 — owns messages_, drives one turn
+        GenerationQuality.cpp
         SystemPrompt.cpp     # CPP 3.8 — system prompt composition (BATBOX.md merge)
         Message.cpp          # CPP 3.1 — Message / ToolCall / UsageDelta structs
         ContextWindow.cpp        # CPP 3.2 — token counting + auto-compact trigger

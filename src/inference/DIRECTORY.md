@@ -4,6 +4,9 @@ OpenAI-compatible inference client implementations: HTTP client, SSE parser, too
 
 ## Files
 
+### Activity.cpp
+Autonomous request lifecycle monitor. `RequestActivity` guards register tokenization, streaming generation and silent nonstreaming summary requests, renew bounded deadlines per retry, and clear on all exits. `ActivityActor` associates coordinator and worker activity with durable session IDs. The process publishes atomic `activity.json` snapshots and accepts a wake only when the command's process/run/revision matches the actual idle state under the same mutex. No prompt content or credentials are published.
+
 ### Client.cpp
 `Client::chat()` implementation: serialises ChatRequest to JSON, POSTs to BATBOX_API_BASE_URL/v1/chat/completions via cpr, parses ChatResponse from response body. `stream_chat()` implementation: POSTs with stream=true, feeds response chunks to SseParser, calls on_delta for each parsed StreamDelta, returns aggregated UsageDelta. The URL→provider detection + hint resolution it applies for quirk handling now live in ProviderHint.cpp (see below); Client consumes `resolve_provider_hint()` rather than carrying its own copy.
 

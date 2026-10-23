@@ -221,6 +221,12 @@ public:
     void set_exact_compaction_tokens(std::size_t threshold) noexcept {
         exact_compact_tokens_ = threshold;
     }
+    // Autonomous callers opt into a narrow prose-loop guard. Rejected finals
+    // remain durable in the transcript; only the model's active view is cleaned.
+    // Set before restore/run_turn. Ordinary length-ended replies remain valid.
+    void set_generation_quality_guard(bool enabled) noexcept {
+        generation_quality_guard_ = enabled;
+    }
     [[nodiscard]] std::size_t last_prompt_tokens() const noexcept { return last_prompt_tokens_; }
     [[nodiscard]] std::size_t compaction_count() const noexcept { return compaction_count_; }
 
@@ -574,6 +580,7 @@ private:
     std::size_t exact_compact_tokens_{0};
     std::size_t last_prompt_tokens_{0};
     std::size_t compaction_count_{0};
+    bool generation_quality_guard_{false};
     [[nodiscard]] Result<void> prepare_exact_context(
         batbox::inference::ChatRequest& req, const batbox::CancelToken& ct);
 

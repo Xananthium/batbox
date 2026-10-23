@@ -4,6 +4,9 @@ OpenAI-compatible inference client headers: request/response types, streaming SS
 
 ## Files
 
+### Activity.hpp
+Opt-in autonomous lifecycle API: `ActivityMonitor::start(path)` enables atomic process snapshots, `ActivityActor` identifies coordinator/worker work, and `RequestActivity` tracks actual native requests with RAII cleanup. `ActivityMonitor::accept_wake()` validates process, run and revision fencing before committing a durable idle wake. Interactive clients perform no activity-file writes. `kWakeMessage` holds the exact authorized wake sentence.
+
 ### ChatRequest.hpp
 Wire format for the /v1/chat/completions request body.
 

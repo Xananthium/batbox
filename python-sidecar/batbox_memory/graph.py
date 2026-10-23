@@ -198,7 +198,7 @@ class Graph:
                 results.append(dict(id=meta.get("source_id"), source=meta.get("source"),
                                     kind=meta.get("kind"), captured_at=meta.get("captured_at"),
                                     content_hash=meta.get("content_hash"), content=doc, score=float(score),
-                                    **{k: v for k, v in meta.items() if k in {"source_author", "historical", "source_date", "imported_at", "local_uri", "source_commit", "import_group", "historical_warning"}}))
+                                    **{k: v for k, v in meta.items() if k in {"source_author", "historical", "source_date", "imported_at", "local_uri", "source_commit", "import_group", "historical_warning", "batbox_generation_quality"}}))
             self.store.count("hipporag_retrievals")
             return {"query": query, "results": results, "backend": "HippoRAG", "graph_seeds": solution.graph_seeds}
         except Exception as exc:

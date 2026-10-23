@@ -1,7 +1,8 @@
 [Unit]
-Description=Check BatBox autonomous engine heartbeat
+Description=Wake idle BatBox work and check engine progress
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/python3 %h/batbox/tools/engine_supervisor.py watchdog
-TimeoutStartSec=60
+ExecStart=/usr/bin/python3 %h/batbox/tools/engine_supervisor.py watchdog --stale-seconds 2100 --wake-after-seconds 30 --wake-cooldown-seconds 300
+TimeoutStartSec=120
+UMask=0077

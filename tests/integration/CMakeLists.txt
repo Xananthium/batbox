@@ -387,6 +387,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_inference_smoke_openai_compat.cpp)
     add_executable(test_inference_smoke_openai_compat
         ${CMAKE_CURRENT_SOURCE_DIR}/test_inference_smoke_openai_compat.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/Activity.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp
         # DIS-1045: clean-build link-list rot repair — sources referenced by this
@@ -522,6 +523,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_compactor.cpp)
         ${PROJECT_SOURCE_DIR}/src/conversation/Compactor.cpp
         ${PROJECT_SOURCE_DIR}/src/conversation/Message.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/Activity.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp
         # DIS-1045: clean-build link-list rot repair — sources referenced by this
@@ -930,6 +932,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_conversation_basic.cpp)
         ${PROJECT_SOURCE_DIR}/src/conversation/ContextWindow.cpp
         ${PROJECT_SOURCE_DIR}/src/conversation/Compactor.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/Activity.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp
         ${PROJECT_SOURCE_DIR}/src/session/SessionStore.cpp
@@ -1135,6 +1138,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_cfg_snapshot_race.cpp)
         ${PROJECT_SOURCE_DIR}/src/conversation/ContextWindow.cpp
         ${PROJECT_SOURCE_DIR}/src/conversation/Compactor.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/Activity.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp
         ${PROJECT_SOURCE_DIR}/src/session/SessionStore.cpp
@@ -1229,6 +1233,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_conversation_tool_loop.cpp)
         ${PROJECT_SOURCE_DIR}/src/conversation/ContextWindow.cpp
         ${PROJECT_SOURCE_DIR}/src/conversation/Compactor.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/Activity.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp
         ${PROJECT_SOURCE_DIR}/src/session/SessionStore.cpp
@@ -1614,6 +1619,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_session_commands.cpp)
         ${PROJECT_SOURCE_DIR}/src/conversation/Compactor.cpp
         ${PROJECT_SOURCE_DIR}/src/conversation/Message.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/Activity.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp
         # DIS-1045: clean-build link-list rot repair — sources referenced by this
@@ -1924,6 +1930,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_task_family.cpp)
         ${PROJECT_SOURCE_DIR}/src/conversation/SystemPrompt.cpp
         ${PROJECT_SOURCE_DIR}/src/tools/ToolRegistry.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/Activity.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ToolCallAccumulator.cpp
@@ -2229,6 +2236,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_demon_command.cpp)
         ${PROJECT_SOURCE_DIR}/src/conversation/SystemPrompt.cpp
         ${PROJECT_SOURCE_DIR}/src/tools/ToolRegistry.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/Activity.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ToolCallAccumulator.cpp
@@ -2414,6 +2422,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_subagent.cpp)
         ${PROJECT_SOURCE_DIR}/src/tools/NotepadStore.cpp
         ${PROJECT_SOURCE_DIR}/src/tools/ToolSubagentEnvelope.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/Activity.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ToolCallAccumulator.cpp
@@ -2557,6 +2566,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_status_stats_commands.cpp)
         ${PROJECT_SOURCE_DIR}/src/conversation/SystemPrompt.cpp
         ${PROJECT_SOURCE_DIR}/src/tools/ToolRegistry.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/Activity.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ToolCallAccumulator.cpp
         ${PROJECT_SOURCE_DIR}/src/session/SessionStore.cpp
@@ -2696,6 +2706,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_agent_planning_commands.cpp)
         ${PROJECT_SOURCE_DIR}/src/conversation/SystemPrompt.cpp
         ${PROJECT_SOURCE_DIR}/src/tools/ToolRegistry.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/Activity.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ToolCallAccumulator.cpp
@@ -2787,6 +2798,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_workflow_dag.cpp)
         ${PROJECT_SOURCE_DIR}/src/conversation/SystemPrompt.cpp
         ${PROJECT_SOURCE_DIR}/src/tools/ToolRegistry.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/Activity.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ToolCallAccumulator.cpp
@@ -2867,6 +2879,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_agent_supervision_bounded.cpp)
         ${PROJECT_SOURCE_DIR}/src/conversation/SystemPrompt.cpp
         ${PROJECT_SOURCE_DIR}/src/tools/ToolRegistry.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/Activity.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ToolCallAccumulator.cpp
@@ -2954,6 +2967,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_agent_supervision_integration.cpp)
         ${PROJECT_SOURCE_DIR}/src/conversation/SystemPrompt.cpp
         ${PROJECT_SOURCE_DIR}/src/tools/ToolRegistry.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/Activity.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ToolCallAccumulator.cpp
@@ -3209,6 +3223,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_repl.cpp)
         ${PROJECT_SOURCE_DIR}/src/session/SessionIndex.cpp
         ${PROJECT_SOURCE_DIR}/src/session/SessionRecovery.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/Client.cpp
+        ${PROJECT_SOURCE_DIR}/src/inference/Activity.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ChatRequest.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/SseParser.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ToolCallAccumulator.cpp
@@ -3933,13 +3948,15 @@ endif()
 
 endif()
 
-# Legacy integration targets compile Conversation.cpp directly. Keep its archive
-# helper and crypto dependency in those targets as well as the component library.
+# Legacy integration targets compile Conversation.cpp directly. Keep its helpers
+# and crypto dependency in those targets as well as the component library.
 get_property(_conversation_test_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
 foreach(_target IN LISTS _conversation_test_targets)
     get_target_property(_sources ${_target} SOURCES)
     if("${PROJECT_SOURCE_DIR}/src/conversation/Conversation.cpp" IN_LIST _sources)
-        target_sources(${_target} PRIVATE ${PROJECT_SOURCE_DIR}/src/conversation/ToolOutputArchive.cpp)
+        target_sources(${_target} PRIVATE
+            ${PROJECT_SOURCE_DIR}/src/conversation/ToolOutputArchive.cpp
+            ${PROJECT_SOURCE_DIR}/src/conversation/GenerationQuality.cpp)
         target_link_libraries(${_target} PRIVATE OpenSSL::Crypto)
     endif()
 endforeach()

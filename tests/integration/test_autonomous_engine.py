@@ -28,6 +28,8 @@ class FakeServices:
         self.fail_memory = False
         self.token_count = None
         self.summary_handler = None
+        self.stream_handler = None
+        self.ingest_handler = None
         self.recall_handler = None
         self.memory_recall_tool = False
         owner = self
@@ -51,6 +53,8 @@ class FakeServices:
                     count = owner.token_count(body) if owner.token_count else 250
                     return self.send_json({"count": count, "max_model_len": 200000, "tokens": []})
                 if self.path == "/ingest":
+                    if owner.ingest_handler:
+                        owner.ingest_handler(body)
                     return self.send_json({"status": "queued"}, 202)
                 if self.path == "/remember":
                     if owner.fail_memory:
@@ -72,6 +76,8 @@ class FakeServices:
                         "message": {"role": "assistant", "content": "Summary of earlier verified work."},
                         "finish_reason": "stop"}],
                         "usage": {"prompt_tokens": 1000, "completion_tokens": 8, "total_tokens": 1008}})
+                if owner.stream_handler:
+                    owner.stream_handler(body)
                 chunks = [
                     {"choices": [{"index": 0, "delta": {"role": "assistant", "content": "A durable verified response."},
                                   "finish_reason": None}]},

@@ -10,6 +10,7 @@
 // =============================================================================
 
 #include <batbox/conversation/Conversation.hpp>
+#include <batbox/conversation/GenerationQuality.hpp>
 #include <batbox/conversation/PlanMode.hpp>
 #include <batbox/conversation/SystemPrompt.hpp>
 #include <batbox/conversation/ToolCallOrchestrator.hpp>
@@ -282,6 +283,8 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         return batbox::Err(std::string("cancelled"));
     }
 
+    if (generation_quality_guard_)
+        (void)sanitize_degenerate_assistant_context(messages_);
     auto recovered = recover_interrupted_tools();
     if (!recovered) return batbox::Err(recovered.error());
 
@@ -996,11 +999,33 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
     }
 
     // ---- 6. Persist assistant message ----
-    auto append_res = store_.append_message(session_id_, to_json(asst));
+    const auto degeneration = generation_quality_guard_
+        ? detect_degenerate_prose(asst.content) : std::nullopt;
+    auto raw = to_json(asst);
+    if (degeneration) {
+        raw["generation_rejected"] = "degenerate_repetition";
+        raw["generation_quality"] = {{"tokens", degeneration->tokens},
+            {"repeated_tokens", degeneration->repeated_tokens},
+            {"phrase_tokens", degeneration->phrase_tokens},
+            {"repetitions", degeneration->repetitions}};
+    }
+    // Persist original bytes before changing the active context or reporting
+    // rejection. No historical session entry is removed or rewritten.
+    auto append_res = store_.append_message(session_id_, raw);
     if (!append_res) {
         return batbox::Err(append_res.error());
     }
 
+    if (degeneration) {
+        replace_with_generation_recovery(asst);
+        // Repeated failed attempts need one recovery reminder, not an ever
+        // growing series of identical reminders. Each raw attempt stays on disk.
+        if (!messages_.empty() && messages_.back().role == Role::User &&
+            messages_.back().content == asst.content) messages_.back() = std::move(asst);
+        else messages_.push_back(std::move(asst));
+        return batbox::Err(std::string("degenerate_generation: extreme repeated prose rejected; "
+            "raw output retained, active context filtered; retry after backoff"));
+    }
     messages_.push_back(std::move(asst));
     return {};  // Ok(void)
 }
@@ -1015,18 +1040,27 @@ Result<void> Conversation::restore(const batbox::session::SessionFile& sf) {
     compaction_count_ = 0;
     last_prompt_tokens_ = 0;
 
+    const auto restore_message = [&](const batbox::Json& json) {
+        auto message = from_json(json);
+        if (generation_quality_guard_ && message.role == Role::Assistant &&
+            !message.tool_calls.has_value() && json.contains("generation_rejected") &&
+            json.at("generation_rejected") == "degenerate_repetition")
+            replace_with_generation_recovery(message);
+        return message;
+    };
+
     for (const auto& j : sf.messages) {
         try {
             if (j.contains("context_checkpoint")) {
                 std::vector<Message> active;
                 for (const auto& item : j.at("context_checkpoint"))
-                    active.push_back(from_json(item));
+                    active.push_back(restore_message(item));
                 messages_ = std::move(active);
                 compaction_count_ = j.value("compaction_count", std::size_t{0});
                 last_prompt_tokens_ = j.value("prompt_tokens_after", std::size_t{0});
                 continue;
             }
-            messages_.push_back(from_json(j));
+            messages_.push_back(restore_message(j));
         } catch (const std::exception& e) {
             return batbox::Err(std::string("restore: failed to parse message: ")
                                + e.what());
@@ -1037,6 +1071,8 @@ Result<void> Conversation::restore(const batbox::session::SessionFile& sf) {
     session_id_  = sf.id.to_string();
     pending_agent_id_ = sf.agent_id;
     pending_endpoint_ = sf.endpoint;
+    if (generation_quality_guard_)
+        (void)sanitize_degenerate_assistant_context(messages_);
     for (auto& message : messages_) archive_large_tool_output(message);
     return {};
 }
@@ -1075,6 +1111,11 @@ Result<void> Conversation::prepare_exact_context(
         // configured context window. Oversized input is reduced in bounded chunks.
         auto compacted = compactor.compact(messages_, client_, ct, req.model, 20000, 90000);
         if (!compacted) return batbox::Err(compacted.error());
+        if (generation_quality_guard_ && !compacted.value().empty() &&
+            compacted.value().front().role == Role::System &&
+            detect_degenerate_prose(compacted.value().front().content))
+            return batbox::Err(std::string("degenerate_generation: repetitive compaction summary rejected; "
+                "original history preserved"));
         if (keep == 0) {
             Message continuation;
             continuation.role = Role::User;

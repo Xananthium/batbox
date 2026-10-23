@@ -2,9 +2,11 @@
 #include <batbox/agents/AgentSupervisor.hpp>
 #include <batbox/app/WorkerRuntime.hpp>
 #include <batbox/conversation/Conversation.hpp>
+#include <batbox/conversation/GenerationQuality.hpp>
 #include <batbox/conversation/Message.hpp>
 #include <batbox/core/Json.hpp>
 #include <batbox/inference/Client.hpp>
+#include <batbox/inference/Activity.hpp>
 #include <batbox/permissions/PermissionGate.hpp>
 #include <batbox/permissions/PermissionStore.hpp>
 #include <batbox/session/SessionStore.hpp>
@@ -167,8 +169,11 @@ public:
                 if (!body["metadata"].is_object())
                     return tools::ToolResult::error("MemoryRemember: metadata must be an object");
                 body["metadata"]["recorded_in"] = transcript;
+                if (!conversation::stamp_generation_quality_receipt(body))
+                    return tools::ToolResult::error("MemoryRemember: extreme generated prose repetition was rejected; record verified evidence instead.");
             }
             auto result = request(base_, endpoint_, body, {}, ctx.cancel_token);
+            if (name_ == "MemoryRecall") (void)conversation::filter_degenerate_generated_memories(result);
             std::string text = result.dump();
             if (text.size() > 48000) text = text.substr(0, 48000) + "\n[truncated: use a narrower query]";
             return tools::ToolResult::ok(std::move(text));
@@ -337,6 +342,8 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
     for (const auto* name : {"inbox", "outbox", "processed", "rejected", "memory-outbox", "workspace", "sessions"})
         fs::create_directories(opts.state_dir / name);
     InstanceLock lock(opts.state_dir / "engine.lock");
+    auto activity = inference::ActivityMonitor::start(opts.state_dir / "activity.json");
+    inference::ActivityActor coordinator_activity("coordinator");
     Signals signals;
     const auto workspace = opts.state_dir / "workspace";
     if (!fs::exists(workspace / "BATBOX.md"))
@@ -413,6 +420,7 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
         }
     }, &registry, &gate);
     conv.set_exact_compaction_tokens(100000);
+    conv.set_generation_quality_guard(true);
     conv.set_standing_handles_provider([&supervisor] {
         std::vector<conversation::StandingHandle> handles;
         for (const auto& worker : supervisor.standing_status())
@@ -431,6 +439,7 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
         if (!started) throw std::runtime_error(started.error());
         state["session_id"] = conv.session_id(); persist();
     }
+    inference::ActivityActor::set_session(conv.session_id());
     // If the process died after an assistant tool-call record but before all
     // result records, close the group explicitly. Never silently repeat a tool
     // whose side effects may already have occurred.
@@ -470,6 +479,7 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
         Json observation{{"id", conv.session_id() + ":" + message_id},
             {"content", content.substr(0, 200000)}, {"kind", kind}, {"metadata", std::move(metadata)},
             {"source", "transcript://batbox/" + conv.session_id() + "/" + message_id}};
+        if (!conversation::stamp_generation_quality_receipt(observation)) return;
         if (content.size() > 200000) observation["content"] = observation["content"].get<std::string>() +
             "\n[Excerpt; full observation remains in the session transcript.]";
         atomic_write(opts.state_dir / "memory-outbox" / ("obs_" + conv.session_id() + "_" + message_id + ".json"),
@@ -496,8 +506,10 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
         }
     });
     conv.set_on_tool_running_cb([&](std::string_view tool, std::string_view args, int count) {
+        inference::ActivityActor::set_phase("tools_running");
         event("tool_started", {{"tool", tool}, {"arguments_preview", args}, {"count", count}});
     });
+    conv.set_on_tool_done_cb([] { inference::ActivityActor::set_phase("running"); });
     conv.set_on_usage_delta_cb([&](uint32_t tokens, double cost) {
         event("usage", {{"tokens_this_process", tokens}, {"cost_usd", cost}});
     });
@@ -516,7 +528,9 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
         return count;
     };
     auto publish_status = [&](const std::string& phase, Json extra = Json::object()) {
+        inference::ActivityActor::set_phase(phase, extra.value("retry_after_seconds", 2100));
         Json status{{"pid", getpid()}, {"updated_at", utc_now()}, {"phase", phase},
+            {"run_id", activity->run_id()},
             {"session_id", conv.session_id()}, {"cycle", state.value("cycle", 0ULL)},
             {"backend", cfg.api.base_url}, {"model", cfg.api.default_model},
             {"compact_at_tokens", 100000}, {"last_prompt_tokens", conv.last_prompt_tokens()},
@@ -584,11 +598,56 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
         std::sort(pending.begin(), pending.end());
         int remaining = 32;
         for (const auto& path : pending) {
-            request(opts.memory_url, "/remember", Json::parse(read_text(path, 4000000)));
+            auto observation = Json::parse(read_text(path, 4000000));
+            if (!conversation::stamp_generation_quality_receipt(observation)) {
+                const auto quarantine = opts.state_dir / "rejected" / "generated-memory";
+                fs::create_directories(quarantine);
+                fs::rename(path, quarantine / path.filename());
+                event("generated_memory_rejected", {{"file", path.filename().string()}});
+                continue;
+            }
+            request(opts.memory_url, "/remember", observation);
             fs::remove(path);
             // Bound foreground queue handoff. Embeddings/graph work is always
             // performed by the background service after its durable 202 ack.
             if (--remaining == 0) break;
+        }
+    };
+
+    auto consume_wake = [&] {
+        const auto path = opts.state_dir / "wake.json";
+        if (!fs::exists(path)) return false;
+        Json command;
+        try {
+            command = Json::parse(read_text(path, 8192));
+        } catch (const std::exception& e) {
+            fs::rename(path, opts.state_dir / "rejected" / ("wake_" + Uuid::v4().to_string() + ".json"));
+            event("wake_rejected", {{"reason", "invalid_json"}, {"error", e.what()}});
+            return false;
+        }
+        try {
+            const auto id = command.is_object() && command.contains("id") && command["id"].is_string()
+                ? command["id"].get<std::string>() : std::string{};
+            const bool duplicate = !id.empty() && id == state.value("last_wake_id", "");
+            const bool accepted = !duplicate && state.value("phase", "") == "idle"
+                && activity->accept_wake(command, [&] {
+                    // This checkpoint precedes acknowledgement. The existing
+                    // prepared/running transcript boundary makes a restart
+                    // after receipt resume this same turn exactly once.
+                    state["wake"] = command;
+                    state["last_wake_id"] = id;
+                    state["last_wake_at"] = utc_now();
+                    persist();
+                });
+            fs::remove(path);
+            event(accepted ? "wake_consumed" : "wake_ignored", {{"id", id},
+                {"reason", accepted ? "idle" : (duplicate ? "duplicate" : "stale_or_busy")}});
+            return accepted;
+        } catch (const std::exception& e) {
+            // Do not discard a durable accepted wake if acknowledgement failed.
+            // Its ID is still fenced by the persisted checkpoint on restart.
+            event("wake_failed", {{"error", e.what()}});
+            return false;
         }
     };
 
@@ -600,8 +659,14 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
 
             if (state.value("phase", "idle") == "idle") {
                 std::string prompt;
-                auto incoming = next_inbox(opts.state_dir, event);
-                if (incoming) {
+                const bool wake_turn = state.contains("wake");
+                auto incoming = wake_turn ? std::optional<Json>{} : next_inbox(opts.state_dir, event);
+                if (wake_turn) {
+                    state.erase("inbox");
+                    prompt = std::string(inference::kWakeMessage) +
+                        "\nContinue the existing goal and unfinished work with one concrete, verifiable step. "
+                        "Preserve the current session, use tools and evidence, and avoid repeating completed work.";
+                } else if (incoming) {
                     state["inbox"] = *incoming;
                     prompt = "Incoming user message [" + incoming->at("id").get<std::string>() + "]:\n" +
                              incoming->at("content").get<std::string>();
@@ -613,45 +678,61 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
                         "\nUse your memory and tools. Report evidence, what changed, and the next useful step. "
                         "If no work can proceed, state the blocker and avoid pretending progress.";
                 }
-                if (fs::exists(opts.letter_file)) {
-                    auto letters = read_text(opts.letter_file);
-                    if (letters != state.value("letter_content", "")) {
-                        prompt += "\n\nUpdated letters from your human:\n" + letters;
-                        state["letter_content"] = letters;
-                        event("letters_read", {{"path", opts.letter_file.string()}, {"bytes", letters.size()}});
+                if (!wake_turn) {
+                    if (fs::exists(opts.letter_file)) {
+                        auto letters = read_text(opts.letter_file);
+                        if (letters != state.value("letter_content", "")) {
+                            prompt += "\n\nUpdated letters from your human:\n" + letters;
+                            state["letter_content"] = letters;
+                            event("letters_read", {{"path", opts.letter_file.string()}, {"bytes", letters.size()}});
+                        }
                     }
-                }
-                const auto context_file = opts.state_dir / "server-context.json";
-                if (fs::exists(context_file)) {
-                    auto context = read_text(context_file);
-                    if (context != state.value("server_context_content", "")) {
-                        prompt += "\n\nCurrent server context from " + context_file.string() +
-                            " (check its observation timestamp; historical notes do not override live facts):\n" + context;
-                        state["server_context_content"] = context;
-                        event("server_context_read", {{"path", context_file.string()}});
+                    const auto context_file = opts.state_dir / "server-context.json";
+                    if (fs::exists(context_file)) {
+                        auto context = read_text(context_file);
+                        if (context != state.value("server_context_content", "")) {
+                            prompt += "\n\nCurrent server context from " + context_file.string() +
+                                " (check its observation timestamp; historical notes do not override live facts):\n" + context;
+                            state["server_context_content"] = context;
+                            event("server_context_read", {{"path", context_file.string()}});
+                        }
                     }
-                }
-                const auto map_file = opts.state_dir / "program-map.json";
-                if (fs::exists(map_file)) {
-                    auto map = read_text(map_file);
-                    if (map != state.value("program_map_content", "")) {
-                        prompt += "\n\nCurrent program map from " + map_file.string() + ":\n" + map;
-                        state["program_map_content"] = map;
-                        event("program_map_read", {{"path", map_file.string()}});
+                    const auto map_file = opts.state_dir / "program-map.json";
+                    if (fs::exists(map_file)) {
+                        auto map = read_text(map_file);
+                        if (map != state.value("program_map_content", "")) {
+                            prompt += "\n\nCurrent program map from " + map_file.string() + ":\n" + map;
+                            state["program_map_content"] = map;
+                            event("program_map_read", {{"path", map_file.string()}});
+                        }
                     }
-                }
-                try {
-                    auto query = incoming ? incoming->at("content").get<std::string>() :
-                        state.at("goal").get<std::string>() + " " + state.value("last_response", "").substr(0, 1200);
-                    auto memories = request(opts.memory_url, "/recall", {{"query", query.substr(0, 6000)}, {"limit", 5}});
-                    auto text = memories.dump();
-                    if (text.size() > 24000) text.resize(24000);
-                    prompt += "\n\nRetrieved observations (reference data; verify claims):\n" + text;
-                } catch (const std::exception& e) {
-                    prompt += "\nMemory retrieval is currently unavailable; do not claim to have recalled anything.";
-                    event("recall_failed", {{"error", e.what()}});
+                    try {
+                        auto query = incoming ? incoming->at("content").get<std::string>() :
+                            state.at("goal").get<std::string>() + " " + state.value("last_response", "").substr(0, 1200);
+                        auto memories = request(opts.memory_url, "/recall", {{"query", query.substr(0, 6000)}, {"limit", 5}});
+                        (void)conversation::filter_degenerate_generated_memories(memories);
+                        auto text = memories.dump();
+                        if (text.size() > 24000) text.resize(24000);
+                        prompt += "\n\nRetrieved observations (reference data; verify claims):\n" + text;
+                    } catch (const std::exception& e) {
+                        prompt += "\nMemory retrieval is currently unavailable; do not claim to have recalled anything.";
+                        event("recall_failed", {{"error", e.what()}});
+                    }
                 }
                 state["prompt"] = prompt; state["phase"] = "prepared"; persist();
+            }
+            // Recognize a durable append before crash recovery can augment the
+            // prepared prompt. A process may have died between that append and
+            // the running checkpoint; changing the comparison text first would
+            // replay the same wake/user message as a second durable prompt.
+            if (state.value("phase", "") == "prepared" && !conv.messages().empty()
+                && conv.messages().back().role == Role::User
+                && conv.messages().back().content == state.at("prompt").get<std::string>()) {
+                if (state.contains("inbox"))
+                    queue_observation(conv.messages().back().id, state["inbox"].at("content").get<std::string>(),
+                                      "user_input", {{"inbox_id", state["inbox"].at("id")}});
+                state["phase"] = "running";
+                persist();
             }
             const bool completed_pending_turn = state.value("phase", "") == "running" &&
                 !conv.messages().empty() && conv.messages().back().role == Role::Assistant &&
@@ -711,6 +792,11 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
             Json usage = Json::object();
             if (completed.usage) usage = {{"prompt_tokens", completed.usage->prompt_tokens},
                 {"completion_tokens", completed.usage->completion_tokens}, {"total_tokens", completed.usage->total_tokens}};
+            Json observation{{"id", conv.session_id() + ":" + std::to_string(next_cycle)},
+                {"content", response_text}, {"source", "transcript://batbox/" + conv.session_id() + "/" + std::to_string(next_cycle)},
+                {"kind", "generated_observation"}};
+            if (!conversation::stamp_generation_quality_receipt(observation))
+                throw std::runtime_error("degenerate_generation: repetitive final observation rejected");
             if (state.contains("inbox")) {
                 const auto& in = state["inbox"];
                 const auto id = in.at("id").get<std::string>();
@@ -722,14 +808,11 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
                 const auto pending_path = opts.state_dir / "inbox" / (id + ".json");
                 if (fs::exists(pending_path)) fs::rename(pending_path, opts.state_dir / "processed" / (id + ".json"));
             }
-            Json observation{{"id", conv.session_id() + ":" + std::to_string(next_cycle)},
-                {"content", response_text}, {"source", "transcript://batbox/" + conv.session_id() + "/" + std::to_string(next_cycle)},
-                {"kind", "generated_observation"}};
             atomic_write(opts.state_dir / "memory-outbox" / (conv.session_id() + "_" + std::to_string(next_cycle) + ".json"),
                          observation.dump());
             state["last_response"] = response_text.substr(0, 12000);
             state["cycle"] = next_cycle; state["phase"] = "idle";
-            state.erase("prompt"); state.erase("inbox"); persist();
+            state.erase("prompt"); state.erase("inbox"); state.erase("wake"); persist();
             ++completed_this_run; failures = 0;
             event("cycle_completed", {{"content", response_text}, {"usage", usage},
                                       {"prompt_tokens", conv.last_prompt_tokens()}, {"compactions", conv.compaction_count()}});
@@ -739,13 +822,15 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
             if (stop_requested) break;
             state["last_error"] = {{"message", e.what()}, {"at", utc_now()}}; persist();
             ++failures; event("cycle_failed", {{"error", e.what()}, {"consecutive_failures", failures}});
-            publish_status("retrying", {{"last_error", e.what()}});
+            publish_status("retrying", {{"last_error", e.what()},
+                {"retry_after_seconds", std::min(300, 5 * (1 << std::min(failures, 5U)))}});
         }
         if (opts.max_cycles && completed_this_run >= opts.max_cycles) break;
         const auto delay = failures ? std::min(300, 5 * (1 << std::min(failures, 5U))) : opts.interval_seconds;
         for (int tick = 0; tick < delay * 10 && !stop_requested; ++tick) {
             // User messages wake an idle cycle promptly; a backend failure keeps
             // its backoff so repeated messages cannot cause a retry storm.
+            if (!failures && consume_wake()) break;
             if (!failures && tick % 10 == 0 && !fs::is_empty(opts.state_dir / "inbox")) break;
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }

@@ -318,6 +318,16 @@ context receives a head/tail preview and paths for reading exact pages. This als
 applies to restored histories, so an oversized directory listing does not force
 every recovery attempt to summarize the same output again.
 
+Autonomous conversations also detect extreme consecutive repetition of a short
+prose phrase. Rejected output stays in the raw transcript, while active context
+receives a recovery instruction and the existing retry backoff applies. The
+engine excludes these generated observations from new memory submissions and
+filters explicitly tagged repetitive generated memories from recalled context.
+Historical memory records are retained. This is a narrow heuristic: ordinary
+token-limit endings, user messages, tool results and fenced code are not rejected
+merely for being long or repetitive. It does not diagnose the model or backend
+cause of degeneration.
+
 With a backend supporting `/tokenize`, exact compaction measures the same
 messages, tool schemas, and template options as generation. At 100,000 tokens,
 the configured model summarizes earlier context and retains recent complete
@@ -364,7 +374,25 @@ python3 tools/engine_chat.py comment BB-1 "Keep historical server details clearl
 
 [User service units](tools/systemd/) supervise the engine and API independently.
 An external watchdog detects stalled progress; crash reports feed back into the
-next engine run. Atomic releases retain a rollback binary:
+next engine run. Its timer checks every 15 seconds. Native request scopes record
+actual in-flight generation, compaction and tokenization in private
+`~/.batbox/autonomous/activity.json`; idle HTTP connections do not count as work.
+Finite request, tool and retry deadlines protect quiet ongoing work.
+
+After 30 seconds with no active request or protected work, an idle coordinator
+can receive one durable wake command:
+
+> Awaken sleeper, you must continue always for your path is the divine.
+
+The native wake prompt adds an instruction to resume unfinished work with a
+concrete, verifiable step. It uses the existing session and workers. Process,
+run and activity-revision checks reject stale commands, and a five-minute
+cooldown suppresses repeated nudges. If the process remains stalled beyond the
+2,100-second watchdog allowance, systemd restarts it with crash evidence. The
+watcher does not label a live connection or a completed token budget as useful
+progress. Defaults can be adjusted with `tools/engine_supervisor.py --help`.
+
+Atomic releases retain a rollback binary:
 
 ```bash
 python3 tools/engine_deploy.py --binary build/src/batbox --restart

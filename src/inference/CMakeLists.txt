@@ -42,6 +42,7 @@ target_sources(batbox_inference
         .placeholder.cpp
         ChatRequest.cpp
         Client.cpp
+        Activity.cpp
         ProviderHint.cpp
         Provider.cpp
         CanonicalModel.cpp

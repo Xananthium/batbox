@@ -19,6 +19,7 @@
 #include <batbox/core/Paths.hpp>
 #include <batbox/tools/ToolRegistry.hpp>
 #include <batbox/inference/Provider.hpp>   // AC1 (DIS-988): ProviderRegistry seam
+#include <batbox/inference/Activity.hpp>
 
 #include <algorithm>
 #include <chrono>
@@ -318,6 +319,7 @@ void SubAgent::close_durably() {
 }
 
 void SubAgent::run(std::stop_token /*st*/) {
+    inference::ActivityActor activity(id_);
     struct ExitGuard {
         SubAgent* self;
         ~ExitGuard() {
@@ -394,6 +396,7 @@ void SubAgent::run(std::stop_token /*st*/) {
         };
         conversation::Conversation conv{client, store, agent_cfg, working_dir_, on_delta,
             runtime.registry, runtime.gate, runtime.plan_mode, runtime.config_mutex};
+        conv.set_generation_quality_guard(continuous_ || inference::ActivityMonitor::current() != nullptr);
         conv.set_allowed_tools(spec_.allowed_tools);
         conv.set_manages_own_context(inference::ProviderRegistry::create(agent_cfg)->manages_own_context());
         conv.set_on_context_progress_cb([&](std::string_view operation) {
@@ -401,8 +404,10 @@ void SubAgent::run(std::stop_token /*st*/) {
                 (operation.starts_with("compaction_") ? "compacting" : "context_prepared"));
         });
         conv.set_on_tool_running_cb([&](std::string_view, std::string_view, int) {
+            inference::ActivityActor::set_phase("tools_running");
             progress("tool_batch_started", "tools_running");
         });
+        conv.set_on_tool_done_cb([] { inference::ActivityActor::set_phase("running"); });
         conv.set_on_message_appended_cb([&](std::string_view role, std::string_view,
                                            std::string_view, bool) {
             progress(role == "tool" ? "tool_result_persisted" :
@@ -438,6 +443,7 @@ void SubAgent::run(std::stop_token /*st*/) {
             j["tool_count"] = runtime.registry ? runtime.registry->size() : 0;
             j["exact_compaction_tokens"] = agent_cfg.compact.exact_token_threshold;
         });
+        inference::ActivityActor::set_session(conv.session_id());
 
         auto deliver = [&](const std::string& message) {
             // An inbox acknowledgement may have been interrupted after its
@@ -478,6 +484,7 @@ void SubAgent::run(std::stop_token /*st*/) {
         int cycles = 0;
         while (!child_token_.is_cancelled()) {
             if (need_turn) {
+                inference::ActivityActor::set_phase("running");
                 if (!continuous_ && agent_cfg.agents.max_subagent_turn_cycles > 0 &&
                     cycles >= agent_cfg.agents.max_subagent_turn_cycles) {
                     event_queue_.push(AgentEvent::make_doom_loop_guard(id_, cycles));
@@ -530,6 +537,7 @@ void SubAgent::run(std::stop_token /*st*/) {
             if (child_token_.is_cancelled()) break;
             peer_messages = drain_pending_messages();
             if (!peer_messages.empty()) {
+                inference::ActivityActor::set_phase("preparing");
                 conv.compact_for_standing_turn();
                 for (const auto& message : peer_messages) deliver(message);
                 need_turn = true;
@@ -554,6 +562,7 @@ void SubAgent::run(std::stop_token /*st*/) {
                 current_step_ = "standing (warm)";
             }
             if (on_park_) on_park_();
+            inference::ActivityActor::set_phase("parked", 0);
             std::string question;
             {
                 std::unique_lock lock(interrogate_mutex_);
@@ -571,6 +580,7 @@ void SubAgent::run(std::stop_token /*st*/) {
                     pending_answer = std::move(pending.answer);
                 }
             }
+            inference::ActivityActor::set_phase("resuming");
             if (on_resume_ && !on_resume_(child_token_)) break;
             conv.compact_for_standing_turn();
             peer_messages = drain_pending_messages();

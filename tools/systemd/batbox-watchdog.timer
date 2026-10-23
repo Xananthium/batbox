@@ -1,10 +1,10 @@
 [Unit]
-Description=Independent BatBox engine watchdog
+Description=Periodic BatBox activity and wake watchdog
 
 [Timer]
-OnBootSec=2min
-OnUnitActiveSec=60s
-AccuracySec=5s
+OnBootSec=30s
+OnUnitActiveSec=15s
+AccuracySec=1s
 
 [Install]
 WantedBy=timers.target

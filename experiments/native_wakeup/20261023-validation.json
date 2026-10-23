@@ -1,0 +1,64 @@
+{
+  "created_at": "2026-10-23T22:54:16.434239+00:00",
+  "binary_sha256": "b47a0cfd0ca6115c48e21cff5947bd631ef2f60987a261f4610bfa041cd8e9d6",
+  "backend_changed": false,
+  "context_window": 200000,
+  "compaction_trigger": 100000,
+  "tests": {
+    "activity_unit": {
+      "cases": 4,
+      "assertions": 47,
+      "passed": true
+    },
+    "generation_quality_unit": {
+      "cases": 6,
+      "assertions": 74,
+      "passed": true
+    },
+    "watcher_python": {
+      "cases": 27,
+      "passed": true
+    },
+    "issue_api_python": {
+      "cases": 6,
+      "passed": true
+    },
+    "deployment_python": {
+      "cases": 2,
+      "passed": true
+    },
+    "memory_receipt_schema": {
+      "cases": 2,
+      "passed": true
+    },
+    "native_wake_lifecycle": {
+      "cases": 10,
+      "passed": true
+    },
+    "native_generation_quality": {
+      "cases": 6,
+      "passed": true
+    },
+    "affected_existing_native_regressions": {
+      "cases": 16,
+      "passed": true,
+      "seconds": 38.319
+    },
+    "earlier_long_recall_regressions": {
+      "cases": 2,
+      "passed": true,
+      "binary_sha256": "61bbf28745843503adb8c770a452fff5acee7a811034936e82d604e0feff7b74"
+    }
+  },
+  "review": {
+    "prepared_tail_crash_duplicate_reproduced_before_fix": true,
+    "independent_retest_passed": true,
+    "wake_prompt_count_after_fix": 1,
+    "same_session_after_recovery": true
+  },
+  "limits": [
+    "Deterministic model and memory HTTP fixtures verify native lifecycle; they do not measure real model generation quality.",
+    "English short-phrase repetition detection is a heuristic; initial model/backend degeneration cause is unresolved.",
+    "Public service activation is recorded separately from fixture results."
+  ]
+}

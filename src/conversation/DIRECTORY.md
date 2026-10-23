@@ -4,6 +4,40 @@ Autonomous exact compaction measures the complete request with the serving token
 
 Conversation engine implementations: message handling, compaction, context estimation, plan mode, system prompt, and tool call orchestration.
 
+Autonomous coordinator and worker conversations opt into `set_generation_quality_guard(true)`.
+The guard rejects an extreme contiguous English prose loop: a phrase of one to
+four whitespace tokens repeated at least 64 times, spanning at least 128 tokens
+and 20% of the response. It excludes fenced/inline code, indented/quoted data,
+numeric/boolean values and syntax; Markdown emphasis and separators around a
+repeating word are recognized. This deliberately narrow heuristic does not
+judge factual correctness, and unmarked intentional prose repetition can still
+look identical to a model loop. A `length` finish alone remains valid.
+
+A rejected final is appended with its exact original content and diagnostic
+metadata before the caller receives a retryable error. Only the active context
+uses a brief recovery user message; raw prior transcript entries remain intact.
+Restore applies the same filter to old finals and the latest compaction suffix,
+so a rejected pending final cannot be mistaken for completed work. Existing
+coordinator/worker backoff bounds retries. Repetitive compaction summaries are
+rejected before checkpoint adoption. The 200,000-token context and 100,000-token
+compaction policies are unchanged.
+
+`GenerationQuality.cpp` also gates explicitly tagged `generated_observation`
+records before memory handoff and filters a caller-owned recall copy. The memory
+service exposes `kind` and `content` at the top level of each result in both
+`python-sidecar/batbox_memory/store.py` (CPU retrieval) and `graph.py` (HippoRAG).
+Untagged, user, tool and verified-source records are preserved. Pending rejected
+generated records are quarantined by the engine; existing stored memories are
+never deleted by this guard.
+
+After checking the complete generated observation, native insertion attaches
+`metadata.batbox_generation_quality = {version: 1, full_content_accepted: true}`.
+Both recall backends preserve this receipt on each chunk. Recall filtering trusts
+that full-content decision so a fenced data block stays recallable when interior
+chunks lose their fences. Insertion and outbox flushing always inspect the full
+content again, regardless of a supplied receipt; historical unmarked generated
+loops still receive the narrow filter.
+
 ## Files
 
 ### Conversation.cpp
