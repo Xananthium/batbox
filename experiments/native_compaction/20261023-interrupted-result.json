@@ -1,0 +1,49 @@
+{
+  "status": "interrupted_by_user_priority",
+  "test_date": "2026-10-23",
+  "reason": "User prioritized GPU kernel/wait profiling; parent instructed isolated test stop before backend handoff.",
+  "binary_sha256": "ce9b0f6ad19e14f36e59862135ce5c7f57c28156e39c43eace6429060e6e4dae",
+  "source_commit": "f287c2f77004ae5e03ca1022ae731fbefc2e2066",
+  "executed_script_sha256": "cb0635b9e96b02bdb38226c53838a6ff6204a408109a158311f79b6508c5b7fb",
+  "tokenizer_sha256": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+  "model_alias": "qwen3.6-35b-hauhau-w4a16-vision",
+  "context_window_reported_by_server": 200000,
+  "compaction_threshold": 100000,
+  "archive_tokens_cpu": 102037,
+  "native_prompt_tokens_server": 110534,
+  "full_native_tool_count": 50,
+  "thinking_override": null,
+  "normal_answer_max_tokens": 4096,
+  "summary_max_tokens": 20000,
+  "summary_temperature": 0.0,
+  "completed_summary_calls": 1,
+  "first_summary": {
+    "index": 4,
+    "usage": {
+      "prompt_tokens": 51290,
+      "total_tokens": 52191,
+      "completion_tokens": 901,
+      "prompt_tokens_details": null,
+      "completion_tokens_details": {
+        "reasoning_tokens": 655
+      }
+    },
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "content_chars": 1072,
+        "reasoning_chars": 2504,
+        "has_fact": true,
+        "has_constraint": true
+      }
+    ]
+  },
+  "first_summary_wall_seconds": 356.86793303489685,
+  "summary_wall_time_limit": "Includes shared-service queue/prefill/decode; no kernel-time attribution.",
+  "original_seed_transcript_preserved": true,
+  "checkpoint_count_at_interruption": 0,
+  "full_compaction_result": null,
+  "restart_result": null,
+  "production_service_modified": false,
+  "raw_artifacts_published": false
+}

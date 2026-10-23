@@ -48,3 +48,15 @@ The controlled MTP-on/off serving comparison is a separate pending experiment,
 deferred to prioritize restoring fast production operation.
 Zero loops in a small sample would establish only failure to reproduce, not
 the absence of a rare failure or its historical cause.
+
+## Separate planning repetition on original GGUF
+
+After promotion of the original GGUF with PR #141 kernels, a native Batbox
+turn produced 4,096 output tokens containing repeated announcements of
+intended tool use. Its edit receipts included two failures and one unchanged
+replacement; no source patch was verified from that turn. This is a different
+pattern from the October 22 repeated-word incident. The local conversion was
+not in this occurrence's serving path, but its cause remains unestablished.
+[The sanitized record](20261023-native-planning-repetition.json) preserves the
+output hash and scope; raw text stays private. The engine received explicit
+issue feedback to base progress claims on actual diffs and test receipts.

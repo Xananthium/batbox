@@ -1,0 +1,25 @@
+{
+  "observed_at": "2026-10-23T17:28:02.441498+00:00",
+  "message_ts_ms": 1792776097045,
+  "served_alias": "qwen3.6-35b-hauhau-w4a16-vision",
+  "active_format": "original GGUF with upstream PR141 kernels",
+  "backend_identity_artifact": "../backend/20261023-qat-format/optimized_gguf/promoted-release-verification.json",
+  "content_sha256": "a89e6862f57fc561d5a07318e4a8e39a8314afb8d3c975ff261aa0054e5ae1ac",
+  "characters": 10471,
+  "usage": {
+    "completion_tokens": 4096,
+    "cost_usd": 0.0,
+    "prompt_tokens": 64563,
+    "total_tokens": 68659
+  },
+  "phenotype": "Repeated plans/announcements of intended tool use; different from Oct22 repeated-word incident",
+  "no_source_patch_verified_from_this_turn": true,
+  "source_edit_receipts": [
+    "old_string not found",
+    "no changes",
+    "malformed file path"
+  ],
+  "raw_transcript_published": false,
+  "exact_wire_request_captured": false,
+  "causal_scope": "This occurrence does not use the local conversion. It does not establish the cause of either repetition incident, or implicate temperature or speculation."
+}

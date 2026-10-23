@@ -38,6 +38,14 @@ def digest(value):
     return hashlib.sha256(value).hexdigest()
 
 
+def archive_row_count(raw):
+    """Count complete fixture records, not summary references to their labels."""
+    text = raw.decode() if isinstance(raw, bytes) else raw
+    return len(re.findall(
+        r"ARCHIVE_ROW_\d{6}: sensor (?:amber|cedar|violet|maple|birch|silver) "
+        r"status nominal; batch \d{2}; no decision or action is needed\.", text))
+
+
 def write_json(path, obj):
     temporary = path.with_name(path.name + "." + uuid.uuid4().hex + ".tmp")
     temporary.write_text(json.dumps(obj, indent=2) + "\n")
@@ -196,6 +204,7 @@ class Recorder:
                     messages = body.get("messages", [])
                     system = messages[0] if messages else {}
                     tools = body.get("tools", [])
+                    archive_rows = archive_row_count(raw)
                     event = {"index": index, "phase": owner.phase, "path": self.path,
                              "kind": "summary" if "precise conversation summariser" in str(system) else "normal",
                              "stream": body.get("stream"), "started_at": time.time(),
@@ -204,7 +213,9 @@ class Recorder:
                              "template_options": body.get("chat_template_kwargs"),
                              "max_tokens": body.get("max_tokens"), "temperature": body.get("temperature"),
                              "request_sha256": digest(raw), "request_bytes": len(raw),
-                             "has_archive_rows": "ARCHIVE_ROW_" in raw.decode(),
+                             "archive_row_count": archive_rows,
+                             "has_archive_rows": archive_rows > 0,
+                             "has_archive_label": "ARCHIVE_ROW_" in raw.decode(),
                              "has_fact": FACT in raw.decode(), "has_constraint": CONSTRAINT in raw.decode()}
                     owner.events.append(event)
                     (owner.directory / "requests" / f"{index:03d}.request.json").write_bytes(raw)
@@ -346,7 +357,7 @@ def run(args):
         assert len({e["system_sha256"] for e in normal}) == 1, "Stable system prefix changed"
         assert len({e["tools_sha256"] for e in normal}) == 1 and min(e["tool_count"] for e in normal) > 10
         assert all(e["template_options"] is None for e in normal), "Provider thinking default was overridden"
-        assert all(not e["has_archive_rows"] for e in normal if e["path"] == "/v1/chat/completions")
+        assert all(not e["has_archive_rows"] for e in normal if e["path"] == "/v1/chat/completions"), "Raw archive records survived compaction"
         assert all(not e["has_archive_rows"] for e in normal if e["phase"] == 2), "Restart rehydrated full raw history"
         assert any(e.get("count", 0) >= 100000 for e in normal)
         assert all(e.get("max_model_len") == 200000 for e in normal if e["path"] == "/tokenize")
