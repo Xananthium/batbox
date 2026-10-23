@@ -72,6 +72,7 @@
 
 #include <functional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace batbox::conversation {
@@ -92,6 +93,11 @@ public:
     // -------------------------------------------------------------------------
     using StatusCallback = std::function<void(const std::string& note)>;
 
+    // Observed backend work, not a timer heartbeat. Invoked on the calling
+    // thread after a successful tokenizer response or a validated complete
+    // summary, including intermediate chunks before compact() returns.
+    using ProgressCallback = std::function<void(std::string_view operation)>;
+
     // -------------------------------------------------------------------------
     // Constructor
     //
@@ -100,8 +106,10 @@ public:
     //               Must be >= 0.  If 0, all turns are summarised and the
     //               result is only the summary message.
     // on_status   — optional callback for the status note; may be nullptr.
+    // on_progress — optional callback for completed backend operations.
     // -------------------------------------------------------------------------
-    explicit Compactor(int keep_last_n, StatusCallback on_status = nullptr);
+    explicit Compactor(int keep_last_n, StatusCallback on_status = nullptr,
+                       ProgressCallback on_progress = nullptr);
 
     // Non-copyable, movable.
     Compactor(const Compactor&)            = delete;
@@ -196,6 +204,7 @@ public:
 private:
     int            keep_last_n_;
     StatusCallback on_status_;
+    ProgressCallback on_progress_;
 
     // Build the wire messages for the summarisation request.
     // Returns the WireMessage list: system prompt + head turns as user/assistant.

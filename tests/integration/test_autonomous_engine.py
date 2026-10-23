@@ -10,6 +10,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 import threading
+import time
 import unittest
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -25,6 +26,8 @@ class FakeServices:
         self.tokenizations = []
         self.memories = []
         self.fail_memory = False
+        self.token_count = None
+        self.summary_handler = None
         owner = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -43,7 +46,8 @@ class FakeServices:
                 body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
                 if self.path == "/tokenize":
                     owner.tokenizations.append(body)
-                    return self.send_json({"count": 250, "max_model_len": 200000, "tokens": []})
+                    count = owner.token_count(body) if owner.token_count else 250
+                    return self.send_json({"count": count, "max_model_len": 200000, "tokens": []})
                 if self.path == "/ingest":
                     return self.send_json({"status": "queued"}, 202)
                 if self.path == "/remember":
@@ -57,6 +61,13 @@ class FakeServices:
                 if self.path != "/v1/chat/completions":
                     return self.send_json({"error": "unknown path"}, 404)
                 owner.requests.append(body)
+                if not body.get("stream"):
+                    if owner.summary_handler:
+                        owner.summary_handler(body)
+                    return self.send_json({"choices": [{"index": 0,
+                        "message": {"role": "assistant", "content": "Summary of earlier verified work."},
+                        "finish_reason": "stop"}],
+                        "usage": {"prompt_tokens": 1000, "completion_tokens": 8, "total_tokens": 1008}})
                 chunks = [
                     {"choices": [{"index": 0, "delta": {"role": "assistant", "content": "A durable verified response."},
                                   "finish_reason": None}]},
@@ -104,18 +115,90 @@ class AutonomousLifecycle(unittest.TestCase):
         self.services.close()
         self.temp.cleanup()
 
-    def run_engine(self):
-        result = subprocess.run([
+    def engine_command(self):
+        return [
             str(BINARY), "--autonomous", "--engine-state-dir", str(self.state),
             "--engine-letter-file", str(self.letters), "--engine-project-root", str(ROOT),
             "--engine-memory-url", self.services.url, "--engine-max-cycles", "1",
             "--engine-interval", "1", "--engine-workers", "0",
-        ], env=self.environment, text=True, capture_output=True, timeout=30, cwd=ROOT)
+        ]
+
+    def run_engine(self):
+        result = subprocess.run(self.engine_command(), env=self.environment,
+                                text=True, capture_output=True, timeout=30, cwd=ROOT)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         return result
 
     def read_state(self):
         return json.loads((self.state / "state.json").read_text())
+
+    def test_completed_compaction_work_refreshes_marker_before_later_chunks_finish(self):
+        self.run_engine()
+        state = self.read_state()
+        session_path = self.state / "sessions" / (state["session_id"] + ".json")
+        session = json.loads(session_path.read_text())
+        session["messages"][0]["content"] = "Long verified evidence: " + "x" * 230000
+        # Keep the native appendable trailing-array layout while enlarging the
+        # restored history enough to require several bounded summary requests.
+        header = {key: value for key, value in session.items() if key != "messages"}
+        session_path.write_text(json.dumps(header)[:-1] + ',\n"messages": [\n' +
+            ",\n".join(json.dumps(message) for message in session["messages"]) + "\n]\n}\n")
+        self.services.token_count = lambda body: sum(len(message.get("content") or "")
+                                                     for message in body["messages"])
+        started = [threading.Event(), threading.Event()]
+        release = [threading.Event(), threading.Event()]
+        calls = []
+
+        def summary(body):
+            index = len(calls)
+            calls.append(body)
+            if index < 2:
+                started[index].set()
+                if not release[index].wait(20):
+                    raise RuntimeError("Test did not release blocked summary")
+
+        self.services.summary_handler = summary
+        events_path = self.state / "events.jsonl"
+        before_events = len(events_path.read_text().splitlines())
+        process = subprocess.Popen(self.engine_command(), env=self.environment,
+                                   text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=ROOT)
+        try:
+            self.assertTrue(started[0].wait(15), "First summary never reached the local fake")
+            marker_path = self.state / "running.json"
+            first_marker = json.loads(marker_path.read_text())
+            self.assertEqual(first_marker["last_activity"], "context_progress")
+            self.assertEqual(first_marker["last_operation"], "compaction_prompt_tokenized")
+            pending_events = events_path.read_text()
+            pending_marker = marker_path.read_text()
+            # No completion has occurred while this HTTP request is blocked.
+            # A timer or start notification must not masquerade as progress.
+            time.sleep(1.1)
+            self.assertEqual(marker_path.read_text(), pending_marker)
+            self.assertEqual(events_path.read_text(), pending_events)
+            current = [json.loads(line) for line in pending_events.splitlines()[before_events:]]
+            self.assertFalse(any(row.get("operation") == "compaction_summary_completed" for row in current))
+
+            release[0].set()
+            self.assertTrue(started[1].wait(15), "Second summary never reached the local fake")
+            second_marker = json.loads(marker_path.read_text())
+            self.assertNotEqual(second_marker["updated_at"], first_marker["updated_at"])
+            self.assertEqual(second_marker["last_activity"], "context_progress")
+            current = [json.loads(line) for line in events_path.read_text().splitlines()[before_events:]]
+            self.assertEqual(sum(row.get("operation") == "compaction_summary_completed" for row in current), 1)
+            self.assertEqual(self.read_state()["phase"], "running")
+        finally:
+            for event in release:
+                event.set()
+            try:
+                stdout, stderr = process.communicate(timeout=30)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                stdout, stderr = process.communicate()
+                self.fail("Native engine did not finish after release: " + stdout + stderr)
+        self.assertEqual(process.returncode, 0, stdout + stderr)
+        current = [json.loads(line) for line in events_path.read_text().splitlines()[before_events:]]
+        self.assertGreaterEqual(sum(row.get("operation") == "compaction_summary_completed" for row in current), 3)
+        self.assertFalse((self.state / "running.json").exists())
 
     def test_thinking_uses_provider_default_or_explicit_matching_tokenizer_setting(self):
         self.environment.pop("BATBOX_ENABLE_THINKING")

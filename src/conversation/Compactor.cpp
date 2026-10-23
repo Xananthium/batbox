@@ -52,9 +52,11 @@ static constexpr std::string_view kSummarisationSystemPrompt =
 // Constructor
 // =============================================================================
 
-Compactor::Compactor(int keep_last_n, StatusCallback on_status)
+Compactor::Compactor(int keep_last_n, StatusCallback on_status,
+                     ProgressCallback on_progress)
     : keep_last_n_(keep_last_n >= 0 ? keep_last_n : 0)
     , on_status_(std::move(on_status))
+    , on_progress_(std::move(on_progress))
 {}
 
 std::size_t Compactor::safe_tail_start(const std::vector<Message>& msgs,
@@ -125,7 +127,15 @@ Compactor::compact(const std::vector<Message>& msgs,
         if (!response.content || response.content->find_first_not_of(" \n\t\r") == std::string::npos
                 || response.finish_reason == "length" || response.finish_reason == "tool_calls")
             return batbox::Err(std::string("compaction: model returned an empty or incomplete summary"));
+        if (on_progress_) on_progress_("compaction_summary_completed");
         return *response.content;
+    };
+
+    auto count_prompt_tokens = [&](const batbox::inference::ChatRequest& request) {
+        auto result = client.count_prompt_tokens(request, ct);
+        if (result && !ct.is_cancelled() && on_progress_)
+            on_progress_("compaction_prompt_tokenized");
+        return result;
     };
 
     // A single completed tool group can itself exceed the serving window.
@@ -138,7 +148,7 @@ Compactor::compact(const std::vector<Message>& msgs,
         auto request = req;
         request.messages[1].content = text;
         if (max_input_tokens == 0) return summarize_one(request);
-        auto count = client.count_prompt_tokens(request, ct);
+        auto count = count_prompt_tokens(request);
         if (!count) return batbox::Err(count.error());
         if (count.value() <= max_input_tokens) return summarize_one(request);
 
@@ -155,7 +165,7 @@ Compactor::compact(const std::vector<Message>& msgs,
                 request.messages[1].content = "Ordered conversation segment " + std::to_string(part + 1) +
                     "; records may continue in adjacent segments. Preserve identifiers and provenance.\n" +
                     text.substr(offset, length);
-                auto measured = client.count_prompt_tokens(request, ct);
+                auto measured = count_prompt_tokens(request);
                 if (!measured) return batbox::Err(measured.error());
                 if (measured.value() <= max_input_tokens) break;
                 length /= 2;
@@ -167,7 +177,7 @@ Compactor::compact(const std::vector<Message>& msgs,
         }
         auto reduced_request = req;
         reduced_request.messages[1].content = combined;
-        auto reduced_count = client.count_prompt_tokens(reduced_request, ct);
+        auto reduced_count = count_prompt_tokens(reduced_request);
         if (!reduced_count) return batbox::Err(reduced_count.error());
         if (reduced_count.value() >= count.value())
             return batbox::Err(std::string("compaction: chunk summaries did not reduce the input"));

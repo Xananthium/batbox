@@ -375,11 +375,13 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
         std::cout << line << '\n' << std::flush;
         // Only observed progress refreshes the watchdog marker. A timer-only
         // heartbeat would conceal a stuck HTTP request or tool.
-        if (type == "message" || type == "tool_started" || type == "usage") {
+        if (type == "message" || type == "tool_started" || type == "usage" || type == "context_progress") {
             if (fs::exists(running_file)) {
                 auto marker = Json::parse(read_text(running_file));
                 marker["updated_at"] = detail["at"];
                 marker["last_activity"] = type;
+                if (type == "context_progress") marker["last_operation"] = detail.at("operation");
+                else marker.erase("last_operation");
                 atomic_write(running_file, marker.dump(2));
             }
         }
@@ -483,6 +485,9 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
     });
     conv.set_on_usage_delta_cb([&](uint32_t tokens, double cost) {
         event("usage", {{"tokens_this_process", tokens}, {"cost_usd", cost}});
+    });
+    conv.set_on_context_progress_cb([&](std::string_view operation) {
+        event("context_progress", {{"operation", operation}});
     });
     event("started", {{"model", cfg.api.default_model}, {"backend", cfg.api.base_url},
                       {"compact_at_tokens", 100000}, {"restored_messages", conv.messages().size()}});

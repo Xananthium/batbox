@@ -30,6 +30,7 @@
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
+#include <algorithm>
 
 #include <batbox/conversation/Conversation.hpp>
 #include <batbox/conversation/Compactor.hpp>
@@ -958,6 +959,10 @@ TEST_SUITE("Autonomous exact compaction") {
         batbox::inference::Client client{cfg};
         batbox::session::SessionStore store{temporary.path};
         Conversation conversation{client, store, cfg, temporary.path};
+        std::vector<std::string> progress;
+        conversation.set_on_context_progress_cb([&](std::string_view operation) {
+            progress.emplace_back(operation);
+        });
         conversation.user_message("A verified original fact and its source.");
         conversation.user_message("Continue.");
         const auto original = conversation.messages();
@@ -972,6 +977,9 @@ TEST_SUITE("Autonomous exact compaction") {
         REQUIRE(loaded.has_value());
         CHECK(loaded.value().messages.size() == original.size());
         CHECK(conversation.compaction_count() == 0);
+        CHECK(std::count(progress.begin(), progress.end(), "prompt_tokenized") == 1);
+        CHECK(std::count(progress.begin(), progress.end(), "compaction_prompt_tokenized") > 0);
+        CHECK(std::count(progress.begin(), progress.end(), "compaction_summary_completed") == 0);
     }
 
     TEST_CASE("protected tail expands across all parallel tool pairs") {
@@ -1011,6 +1019,12 @@ TEST_SUITE("Autonomous exact compaction") {
         batbox::inference::Client client{cfg};
         batbox::session::SessionStore store{temporary.path};
         Conversation conversation{client, store, cfg, temporary.path};
+        std::vector<std::string> progress;
+        conversation.set_on_context_progress_cb([&](std::string_view operation) {
+            // Intermediate work is visible before any checkpoint is adopted.
+            CHECK(conversation.compaction_count() == 0);
+            progress.emplace_back(operation);
+        });
         REQUIRE(conversation.user_message_durable("Inspect the completed evidence and continue.").has_value());
         Message call;
         call.role = Role::Assistant;
@@ -1030,6 +1044,8 @@ TEST_SUITE("Autonomous exact compaction") {
         auto [source, token] = CancelToken::make_root();
         auto result = conversation.run_turn(std::move(token));
         INFO((result ? "success" : result.error()));
+        CHECK(std::count(progress.begin(), progress.end(), "compaction_prompt_tokenized") > 0);
+        CHECK(std::count(progress.begin(), progress.end(), "compaction_summary_completed") > 0);
         if (fail_chunk) {
             REQUIRE_FALSE(result.has_value());
             CHECK(result.error().find("incomplete summary") != std::string::npos);

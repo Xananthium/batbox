@@ -276,9 +276,10 @@ TEST_SUITE("Compactor integration") {
         int keep_n = 10;  // >= 6, so no-op
 
         bool callback_fired = false;
+        bool progress_fired = false;
         Compactor compactor{keep_n, [&](const std::string&) {
             callback_fired = true;
-        }};
+        }, [&](std::string_view) { progress_fired = true; }};
 
         auto [src, ct] = batbox::CancelToken::make_root();
         auto result = compactor.compact(msgs, client, std::move(ct));
@@ -296,6 +297,7 @@ TEST_SUITE("Compactor integration") {
 
         // Status callback must NOT fire on no-op.
         CHECK_FALSE(callback_fired);
+        CHECK_FALSE(progress_fired);
     }
 
     // -----------------------------------------------------------------------
@@ -307,7 +309,8 @@ TEST_SUITE("Compactor integration") {
         batbox::inference::Client client{cfg};
 
         auto msgs = make_conversation(5);
-        Compactor compactor{2};
+        bool progress_fired = false;
+        Compactor compactor{2, nullptr, [&](std::string_view) { progress_fired = true; }};
 
         auto [src, ct] = batbox::CancelToken::make_root();
         src.request_stop();  // cancel immediately
@@ -319,6 +322,7 @@ TEST_SUITE("Compactor integration") {
             static_cast<void>(compactor.compact(msgs, client, std::move(ct))),
             batbox::CancelledException
         );
+        CHECK_FALSE(progress_fired);
     }
 
     // -----------------------------------------------------------------------
@@ -336,13 +340,15 @@ TEST_SUITE("Compactor integration") {
         batbox::inference::Client client{cfg};
 
         auto msgs = make_conversation(5);
-        Compactor compactor{2};
+        bool progress_fired = false;
+        Compactor compactor{2, nullptr, [&](std::string_view) { progress_fired = true; }};
 
         auto [src, ct] = batbox::CancelToken::make_root();
         auto result = compactor.compact(msgs, client, std::move(ct));
 
         REQUIRE_FALSE(result.has_value());
         CHECK(result.error().find("http 401") != std::string::npos);
+        CHECK_FALSE(progress_fired);
     }
 
     // -----------------------------------------------------------------------

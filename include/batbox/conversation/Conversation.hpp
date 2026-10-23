@@ -224,6 +224,11 @@ public:
     [[nodiscard]] std::size_t last_prompt_tokens() const noexcept { return last_prompt_tokens_; }
     [[nodiscard]] std::size_t compaction_count() const noexcept { return compaction_count_; }
 
+    // Register before run_turn(). Called on the conversation's owning thread
+    // only after successful exact tokenization or validated summary work,
+    // including intermediate compaction chunks. No start/timer notifications.
+    void set_on_context_progress_cb(Compactor::ProgressCallback cb);
+
     // -------------------------------------------------------------------------
     // restore()
     //
@@ -605,6 +610,8 @@ private:
 
     // Token streaming callback (may be nullptr).
     std::function<void(std::string_view)> on_delta_cb_;
+
+    Compactor::ProgressCallback on_context_progress_cb_;
 
     // Message-appended callback (may be nullptr).
     // Called from the worker thread after each tool-call or tool-result

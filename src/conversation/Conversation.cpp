@@ -87,6 +87,14 @@ Conversation::Conversation(batbox::inference::Client&                client,
 }
 
 // =============================================================================
+// set_on_context_progress_cb()
+// =============================================================================
+
+void Conversation::set_on_context_progress_cb(Compactor::ProgressCallback cb) {
+    on_context_progress_cb_ = std::move(cb);
+}
+
+// =============================================================================
 // set_on_message_appended_cb()
 // =============================================================================
 
@@ -1025,6 +1033,8 @@ Result<void> Conversation::prepare_exact_context(
         batbox::inference::ChatRequest& req, const batbox::CancelToken& ct) {
     auto counted = client_.count_prompt_tokens(req, ct);
     if (!counted) return batbox::Err(counted.error());
+    if (!ct.is_cancelled() && on_context_progress_cb_)
+        on_context_progress_cb_("prompt_tokenized");
     last_prompt_tokens_ = counted.value();
     if (last_prompt_tokens_ < exact_compact_tokens_) return {};
 
@@ -1038,7 +1048,7 @@ Result<void> Conversation::prepare_exact_context(
     for (int attempt = 0; attempt < 3; ++attempt) {
         if (attempt == 1 && keeps[0] == 1) continue;
         const int keep = keeps[attempt];
-        Compactor compactor{keep};
+        Compactor compactor{keep, nullptr, on_context_progress_cb_};
         // Reserve generous reasoning/output space without reducing the model's
         // configured context window. Oversized input is reduced in bounded chunks.
         auto compacted = compactor.compact(messages_, client_, ct, req.model, 20000, 90000);
@@ -1060,6 +1070,8 @@ Result<void> Conversation::prepare_exact_context(
             apply_standing_reminder(candidate, standing_handles_provider_());
         auto after = client_.count_prompt_tokens(candidate, ct);
         if (!after) return batbox::Err(after.error());
+        if (!ct.is_cancelled() && on_context_progress_cb_)
+            on_context_progress_cb_("compaction_candidate_tokenized");
         if (after.value() >= exact_compact_tokens_ || after.value() >= before) continue;
 
         Message boundary;
