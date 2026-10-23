@@ -195,5 +195,13 @@
     },
     "automatic_retry_log_count": 2,
     "memory_request_timeout_log_count": 0
+  },
+  "native_recall_final_deployment": {
+    "source_commit": "6f9231e429a835a18a16d9bbba37f61a79cf12fd",
+    "binary_sha256": "d19941a43309841c2551d166f9f106d641e7160f20ec8c6c916602c3ba6de810",
+    "native_recall_timeout_seconds": 1300,
+    "watchdog_stale_seconds": 2100,
+    "regression_evidence": "../native_recall_timeout/20261023-result.json",
+    "scope": "Both native recall paths passed47-second HTTP fixtures; live HippoRAG recalls were independently verified through the same memory service API."
   }
 }

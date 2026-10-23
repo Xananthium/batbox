@@ -1,0 +1,127 @@
+{
+  "utc": "2026-10-23T18:43:36.528073+00:00",
+  "status": "observation_finalized_while_production_continues",
+  "native_service": {
+    "MainPID": "189205",
+    "ActiveState": "active",
+    "SubState": "running"
+  },
+  "native_pid": 189205,
+  "native_binary_sha256": "d19941a43309841c2551d166f9f106d641e7160f20ec8c6c916602c3ba6de810",
+  "backend_pid": 162873,
+  "backend_process_present": true,
+  "all_coordinator_and_worker_session_ids_preserved": true,
+  "process_settings": {
+    "BATBOX_CTX_LEN_DEFAULT": "200000",
+    "BATBOX_MAX_TOKENS": "4096",
+    "BATBOX_REQUEST_TIMEOUT_SEC": "1800",
+    "BATBOX_STREAM_IDLE_TIMEOUT_SEC": "600"
+  },
+  "effective_watchdog_stale_seconds": 2100,
+  "current_metadata": {
+    "running.json": {
+      "cycle": 8,
+      "last_operation": "compaction_candidate_tokenized",
+      "phase": "running",
+      "pid": 189205,
+      "session_id": "a71d5cab-6309-4659-a1ba-c2f2db66ec66",
+      "started_at": "2026-10-23T18:38:14Z",
+      "updated_at": "2026-10-23T18:42:32Z"
+    },
+    "state.json": {
+      "cycle": 8,
+      "phase": "running",
+      "session_id": "a71d5cab-6309-4659-a1ba-c2f2db66ec66"
+    },
+    "workers/7562c112-0fb8-4556-be56-811aa54db17d.json": {
+      "agent_id": "7562c112-0fb8-4556-be56-811aa54db17d",
+      "exact_compaction_tokens": 100000,
+      "last_operation": "stream_delta_received",
+      "last_progress_at": "2026-10-23T18:43:36Z",
+      "phase": "streaming",
+      "progress_sequence": 113,
+      "recovery_attempts": 5,
+      "recovery_failures": 2,
+      "retry_delay_seconds": 4,
+      "session_id": "35d7a97e-c3a7-4cd8-8ef8-079705285636",
+      "status": "running",
+      "updated_at": "2026-10-23T18:43:36Z"
+    },
+    "workers/cd11ed33-2f8f-4cc6-abfc-71a14d6ecfaf.json": {
+      "agent_id": "cd11ed33-2f8f-4cc6-abfc-71a14d6ecfaf",
+      "completed_turns": 9,
+      "exact_compaction_tokens": 100000,
+      "last_operation": "stream_delta_received",
+      "last_progress_at": "2026-10-23T18:43:36Z",
+      "phase": "streaming",
+      "progress_sequence": 1060,
+      "prompt_tokens": 72611,
+      "recovery_attempts": 4,
+      "recovery_failures": 0,
+      "session_id": "1c48a1aa-3bfd-4579-8c88-693711971dc7",
+      "status": "running",
+      "updated_at": "2026-10-23T18:43:36Z"
+    },
+    "workers/25ed56ef-1bed-4eb6-9c44-682f2e208455.json": {
+      "agent_id": "25ed56ef-1bed-4eb6-9c44-682f2e208455",
+      "exact_compaction_tokens": 100000,
+      "last_operation": "stream_delta_received",
+      "last_progress_at": "2026-10-23T18:43:36Z",
+      "phase": "streaming",
+      "progress_sequence": 1040,
+      "recovery_attempts": 4,
+      "recovery_failures": 1,
+      "retry_delay_seconds": 2,
+      "session_id": "bf227436-a375-4691-8255-c76fbe99fdf2",
+      "status": "running",
+      "updated_at": "2026-10-23T18:43:36Z"
+    }
+  },
+  "recent_coordinator_progress": [
+    {
+      "at": "2026-10-23T18:38:15Z",
+      "event": "context_progress",
+      "operation": "prompt_tokenized",
+      "cycle": 8,
+      "session_id": "a71d5cab-6309-4659-a1ba-c2f2db66ec66"
+    },
+    {
+      "at": "2026-10-23T18:38:15Z",
+      "event": "context_progress",
+      "operation": "compaction_prompt_tokenized",
+      "cycle": 8,
+      "session_id": "a71d5cab-6309-4659-a1ba-c2f2db66ec66"
+    },
+    {
+      "at": "2026-10-23T18:42:32Z",
+      "event": "context_progress",
+      "operation": "compaction_summary_completed",
+      "cycle": 8,
+      "session_id": "a71d5cab-6309-4659-a1ba-c2f2db66ec66"
+    },
+    {
+      "at": "2026-10-23T18:42:32Z",
+      "event": "context_progress",
+      "operation": "compaction_candidate_tokenized",
+      "cycle": 8,
+      "session_id": "a71d5cab-6309-4659-a1ba-c2f2db66ec66"
+    }
+  ],
+  "coordinator_content_delta": {
+    "cpu_native_regression": "passed",
+    "live_event_observed": false,
+    "live_events": [],
+    "observation_limit": "Coordinator is in its legitimate nonstreaming compaction phase; visible stream progress is not expected until summary completion. This is an unobserved live check, not a failed test."
+  },
+  "worker_live_progress": {
+    "reasoning_delta_observed_before_restart": true,
+    "reasoning_evidence": "20261023-live-reasoning-progress.json",
+    "visible_stream_progress_present_in_snapshot": true
+  },
+  "auxiliary_watch_stopped": true,
+  "stop_reason": "Requested final snapshot; leave continuous production running rather than wait for its next turn",
+  "network_captures_running": false,
+  "model_requests_sent_by_observer": 0,
+  "production_services_changed_by_observer": false,
+  "raw_text_or_reasoning_in_report": false
+}

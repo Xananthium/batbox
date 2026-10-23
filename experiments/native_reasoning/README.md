@@ -26,3 +26,19 @@ sampling, speculative decoding and cache configuration were not changed.
 The architecture map now refers to the live deployment record for mutable
 binary, revision, PID and timeout values. Changing a release no longer requires
 re-embedding repeated copies of those values throughout that map.
+
+Passive production observation also identified a separate coordinator issue:
+its visible-output callback was empty. The final release records throttled
+`content_delta` progress from real nonempty fragments without storing text in
+heartbeat data. The old callback failed the new content-only native test; the
+final combined build passes all three worker integration cases, including empty,
+burst and silent-stream controls. See `20261023-content-progress.json`.
+
+Release `d19941a43309841c2551d166f9f106d641e7160f20ec8c6c916602c3ba6de810`
+from source `6f9231e` also contains the independently validated native recall
+deadline fix. Final activation took 2.067 seconds with the backend process
+unchanged. `20261023-final-live-snapshot.json` records active services, preserved
+session identities and live worker streaming. The coordinator was in a normal
+non-streaming compaction pass, so its latest content callback was regression
+tested but not yet observed live. Earlier live worker reasoning progress is
+recorded separately in `20261023-live-reasoning-progress.json`.

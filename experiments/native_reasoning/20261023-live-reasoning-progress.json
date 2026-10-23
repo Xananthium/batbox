@@ -1,0 +1,70 @@
+{
+  "utc": "2026-10-23T18:40:18.108782+00:00",
+  "status": "live_native_reasoning_progress_observed",
+  "observed_native_pid": 185069,
+  "observed_native_binary_sha256": "8a4dee96a585489f3c1dcc0090572a736d78e36e96ed007c9e85eec766d767cb",
+  "previous_worker_snapshot": {
+    "observed_at": "2026-10-23T18:38:03.522632+00:00",
+    "file": "workers/cd11ed33-2f8f-4cc6-abfc-71a14d6ecfaf.json",
+    "data": {
+      "agent_id": "cd11ed33-2f8f-4cc6-abfc-71a14d6ecfaf",
+      "completed_turns": 9,
+      "exact_compaction_tokens": 100000,
+      "last_operation": "reasoning_started",
+      "last_progress_at": "2026-10-23T18:38:02Z",
+      "phase": "reasoning",
+      "progress_sequence": 1017,
+      "prompt_tokens": 72611,
+      "recovery_attempts": 3,
+      "recovery_failures": 0,
+      "session_id": "1c48a1aa-3bfd-4579-8c88-693711971dc7",
+      "status": "running",
+      "updated_at": "2026-10-23T18:38:02Z"
+    }
+  },
+  "observed_reasoning_snapshot": {
+    "observed_at": "2026-10-23T18:38:07.650285+00:00",
+    "file": "workers/cd11ed33-2f8f-4cc6-abfc-71a14d6ecfaf.json",
+    "data": {
+      "agent_id": "cd11ed33-2f8f-4cc6-abfc-71a14d6ecfaf",
+      "completed_turns": 9,
+      "exact_compaction_tokens": 100000,
+      "last_operation": "reasoning_delta",
+      "last_progress_at": "2026-10-23T18:38:06Z",
+      "phase": "reasoning",
+      "progress_sequence": 1018,
+      "prompt_tokens": 72611,
+      "recovery_attempts": 3,
+      "recovery_failures": 0,
+      "session_id": "1c48a1aa-3bfd-4579-8c88-693711971dc7",
+      "status": "running",
+      "updated_at": "2026-10-23T18:38:06Z"
+    }
+  },
+  "native_reasoning_accumulator_advanced": true,
+  "same_worker_session_as_start": true,
+  "process_settings_at_observation": {
+    "BATBOX_CTX_LEN_DEFAULT": "200000",
+    "BATBOX_MAX_TOKENS": "4096",
+    "BATBOX_REQUEST_TIMEOUT_SEC": "1800",
+    "BATBOX_STREAM_IDLE_TIMEOUT_SEC": "600"
+  },
+  "effective_watchdog_stale_seconds": 2100,
+  "backend_pid": 162873,
+  "backend_still_present_after_native_restart": true,
+  "following_native_restart": {
+    "pid": 189205,
+    "binary_sha256": "d19941a43309841c2551d166f9f106d641e7160f20ec8c6c916602c3ba6de810",
+    "all_coordinator_and_worker_session_ids_preserved": true,
+    "process_settings": {
+      "BATBOX_CTX_LEN_DEFAULT": "200000",
+      "BATBOX_MAX_TOKENS": "4096",
+      "BATBOX_REQUEST_TIMEOUT_SEC": "1800",
+      "BATBOX_STREAM_IDLE_TIMEOUT_SEC": "600"
+    }
+  },
+  "wire_field_for_this_reasoning_event_captured": false,
+  "limitation": "The native reasoning_delta callback proves the normalized reasoning accumulator grew. The exact wire source (modern reasoning versus inline content) was not captured for this event. A follow-up passive capture did not start because the old native PID had already exited during the authorized restart.",
+  "model_requests_sent": 0,
+  "raw_reasoning_saved": false
+}
