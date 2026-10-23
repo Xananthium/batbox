@@ -1,0 +1,74 @@
+{
+  "observed_at": "2026-10-23T22:56:39.659200+00:00",
+  "source_commit": "517eac06ce7c79306254b47b36183c755dd03f4c",
+  "binary_sha256": "b47a0cfd0ca6115c48e21cff5947bd631ef2f60987a261f4610bfa041cd8e9d6",
+  "same_coordinator_session": true,
+  "same_worker_ids": true,
+  "native_pid": 231568,
+  "backend_pid_unchanged": true,
+  "services": {
+    "batbox-engine": "active",
+    "batbox-memory": "active",
+    "batbox-api": "active",
+    "batbox-watchdog.timer": "active"
+  },
+  "native_active_requests": 4,
+  "native_actor_count": 4,
+  "watcher_result": "activity-protected",
+  "watcher_timer_seconds": 15,
+  "activation": [
+    {
+      "step": "pause-watcher",
+      "seconds": 0.009,
+      "at": "2026-10-23T22:55:17.049851+00:00"
+    },
+    {
+      "step": "reload-units",
+      "seconds": 0.138,
+      "at": "2026-10-23T22:55:17.188093+00:00"
+    },
+    {
+      "step": "stop-native",
+      "seconds": 0.413,
+      "at": "2026-10-23T22:55:17.601538+00:00"
+    },
+    {
+      "step": "reload-memory",
+      "seconds": 1.254,
+      "at": "2026-10-23T22:55:18.855725+00:00"
+    },
+    {
+      "step": "start-native",
+      "seconds": 0.018,
+      "at": "2026-10-23T22:55:19.932604+00:00"
+    },
+    {
+      "step": "activation-complete",
+      "at": "2026-10-23T22:55:19.932689+00:00"
+    }
+  ],
+  "memory_context": [
+    {
+      "file": "server-context.json",
+      "content_stored": true,
+      "graph_current": false,
+      "embedding_chunks": 6
+    },
+    {
+      "file": "program-map.json",
+      "content_stored": true,
+      "graph_current": false,
+      "embedding_chunks": 5
+    }
+  ],
+  "current_context_cpu_recall": {
+    "backend": "cpu-vector",
+    "server_context_returned": true
+  },
+  "limits": [
+    "Live observation proves active request tracking and preservation through restart; no naturally idle production wake was observed in this snapshot.",
+    "Wake delivery and crash-boundary idempotence were exercised by native integration tests.",
+    "Real model quality after filtering remains to be observed; no initial backend degeneration cause is established.",
+    "HippoRAG updates of the changed current-context sources were pending at this snapshot."
+  ]
+}

@@ -7,6 +7,9 @@ inputs, not authored Batbox code.
 
 * [Native shutdown](native_shutdown/README.md): cancellation regression and
   restart tests, including preservation of worker IDs and transcripts.
+* [Request-aware wake supervision](native_wakeup/README.md): durable idle wakes,
+  request/deadline tracking, crash-boundary checks, and measured repetition
+  recovery behavior with transcript and memory preservation.
 * [Memory recovery](memory/20261023-graph-recovery.json): reconciliation of an
   interrupted legacy graph insert; checkpoint/replay tests live in
   `python-sidecar/tests/memory`.

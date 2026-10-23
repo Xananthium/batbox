@@ -62,3 +62,11 @@ fixtures. They establish harness behavior, not model answer quality or GPU
 throughput. The accompanying validation record distinguishes these tests from
 the installed production observation. Raw conversations and credentials remain
 outside the repository.
+
+[Validation record](20261023-validation.json) lists the tested cases and binary.
+[Production activation](20261023-live.json) confirms the same coordinator and
+worker identities, four active native requests, an unchanged backend process,
+and the watcher correctly protecting those requests. A naturally idle wake was
+not observed in that production snapshot; deterministic native tests exercised
+delivery and restart recovery. Updated current-context sources were available
+through CPU recall while their HippoRAG refresh continued in the background.
