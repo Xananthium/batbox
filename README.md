@@ -6,28 +6,135 @@ retrieves source-backed memory, and continues work between user messages. The
 interactive harness remains available. The model, source, memory, credentials,
 and operating decisions stay under your control.
 
-Okay so listen. You use Claude Code. Or Codex. Or Cursor. Or Aider. They're
-good. They're, like, genuinely good. But every single one of them is a
-frontend that wires to exactly one company's API, and that company decides
-what you can ask, how fast you can ask it, and whether your prompts get used
-to train the next model. And like — that's fine, that's their business model,
-nobody's mad — but what if you didn't want that? What if you wanted the
-frontend without the company?
-
-That's BatBox. It's a terminal that talks to AI. It does what those tools do.
-It just doesn't belong to anybody.
-
 ```
 you ──→ BatBox ──→ any OpenAI-compatible endpoint ──→ any model
 ```
 
-That's the whole thing. Local Ollama on your laptop. LM Studio on the machine
-in the closet. DeepSeek. Kimi. GLM. Qwen. OpenAI if you really want. A janky
-$3/month API key you found on the internet. If it speaks OpenAI-compatible
-HTTP, BatBox speaks back. C++20. A native client with optional local services. No account, no
-phone-home, no marketplace, nobody between you and the model.
+[Build](#build) · [Configure](#configure) · [Run](#run)
 
-This is the version of the tool where you own the wire.
+## The Kitchen Table Journals
+
+Original fiction for this project, inspired by Octavia E. Butler's
+*Parable of the Sower* and continuing the Southern California journals on the
+two REDCELL model cards. The [implementation guide](#what-batbox-actually-is)
+follows the story.
+
+| Part | Journal date | Story | Project |
+|---|---|---|---|
+| 1 | October 14, 2027 | [The whole seed](https://huggingface.co/Xananthium/REDCELL-26B-A4B-OSINT-Cyber-Abliterated-Pilot-BF16-Vision#the-whole-seed) | Complete BF16 model |
+| 2 | October 15, 2027 | [What we could carry](https://huggingface.co/Xananthium/REDCELL-26B-A4B-OSINT-Cyber-Abliterated-Pilot-W6A8-Vision#what-we-could-carry) | W6A8 model |
+| 3 | October 16, 2027 | [The work between us](#the-work-between-us) | BatBox |
+| 4 | October 18, 2027 | [What remembering costs](https://github.com/Xananthium/KV-CACHE-CHUNKING/blob/main/README.md#what-remembering-costs) | KV-cache research |
+
+### The work between us
+
+**October 16, 2027**
+
+Mrs. Ruiz brought the schedule back on an envelope. She had crossed out the
+first hour and written two names beside the second.
+
+"The water truck comes then," she said. "If I go, who gets my time?"
+
+I had divided the afternoon into equal pieces. It had looked fair on the
+screen. I had not put the water line on it, or the walk home with the cans,
+or the people who had to be watched while somebody else went out.
+
+Tessa had three repairs beside her name. Her electrical lessons were at the
+bottom, in a space I had marked *if time permits*.
+
+She tapped that space with her fingernail.
+
+"Whose time?"
+
+I said we could change it. She waited until I did.
+
+The smaller model was running under the kitchen table. For weeks I had been
+working on a terminal program to use with it. I called the program BatBox.
+Until this morning, I had mostly used it myself.
+
+Mrs. Ruiz pulled her chair close enough that our knees touched. I showed her
+where to type, where the answer appeared, where the files stayed. She asked
+me to close it and open it again. She wanted to see whether yesterday's work
+would still be there.
+
+It was. She read the last exchange slowly. Then she found a mistake in it.
+
+We had been gathering instructions for the pump behind her house. The model
+had found a clear diagram in one of our saved manuals. I had marked the page
+as useful. Mrs. Ruiz said the drawing showed a different pump. Hers had been
+replaced before her youngest grandchild was born.
+
+"You wrote down the old one," she said.
+
+I looked at my note. She was right. The machine had carried my mistake along
+very neatly.
+
+Tessa went out with her to read the plate on the casing. When they came back,
+I added the number, the date, and the photograph they had taken. We kept the
+old note and marked why it had changed. I wanted the next person to know
+which pump the instructions belonged to.
+
+Then I began assigning the rest of the work.
+
+Tessa could check the diagram. Tessa could look over the parts. Tessa could
+teach someone how to make the repair. The program could keep the list and
+show us what remained. I was pleased with how quickly it was coming together.
+
+My sister pushed her chair back.
+
+"You have made a machine that gives me work."
+
+"It gives all of us work."
+
+"Read the names."
+
+I read them. There was a great deal under hers.
+
+Mrs. Ruiz folded the envelope along its old crease. She said she could sit
+with the children while Tessa studied. One of the adults in her house could
+take my turn in the water line tomorrow. I could go today, and I could learn
+enough about the records to teach somebody besides my sister.
+
+Tessa wanted her hour of lessons first. She also wanted whoever learned the
+repair to stay for the cleaning afterward.
+
+We put those things on the list. The list grew longer. Nobody had become
+faster.
+
+Before we left for the truck, I set BatBox to go through the manuals we had
+chosen, record their page references, and list the measurements we still
+needed. It could do that work while I carried water. We would check what it
+found when we returned. A finished search would not mean a finished repair.
+
+Mrs. Ruiz asked whether it would read everything on the drive.
+
+I had been about to offer her a copy of the whole working folder. Her
+employment papers were in it, beside the pump photograph. She had brought
+them yesterday because she wanted help reading a deduction.
+
+We moved the papers out of the shared folder. I showed her what would be
+copied. She read the names of the files before she said yes.
+
+The truck was late. By the time I got back, Tessa was at the keyboard,
+working through an electrical lesson we had put together from the manuals.
+There was a page of notes beside her, written in her small, crowded hand.
+She covered it when I leaned over to see.
+
+"My hour," she said.
+
+I put the cans away. The pump could wait until she was finished. I had not
+known how much I expected her to yield until she stopped yielding it.
+
+Tonight we each have a copy of the shared work. Mrs. Ruiz has learned how to
+add a question without waiting for me. Tessa has written her study time into
+tomorrow's schedule in ink.
+
+There is still an open task beside the pump: check the instructions against
+the machine. I left it open. Beside it I put my name, with Tessa's agreement
+to show me where to begin after her lesson.
+
+[Previous: What we could carry](https://huggingface.co/Xananthium/REDCELL-26B-A4B-OSINT-Cyber-Abliterated-Pilot-W6A8-Vision#what-we-could-carry)
+· [Next: What remembering costs](https://github.com/Xananthium/KV-CACHE-CHUNKING/blob/main/README.md#what-remembering-costs)
 
 ---
 
