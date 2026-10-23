@@ -1,0 +1,18 @@
+[Unit]
+Description=BatBox local memory, CPU embeddings, HippoRAG and Scrapling sessions
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/batbox/python-sidecar
+ExecStart=%h/engine-env/bin/python -m batbox_memory --config %h/.batbox/memory-service.json
+Environment=CUDA_VISIBLE_DEVICES=
+Environment=OMP_NUM_THREADS=4
+Environment=PYTHONUNBUFFERED=1
+Restart=on-failure
+RestartSec=5
+UMask=0077
+TimeoutStopSec=180
+
+[Install]
+WantedBy=default.target

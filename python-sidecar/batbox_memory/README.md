@@ -24,6 +24,8 @@ The API binds only to `127.0.0.1:8771` and is for trusted local processes. Do no
 
 Recall uses official HippoRAG when its graph is available and not being updated. Otherwise it returns CPU vector retrieval explicitly labeled `cpu-vector`. `ready` in the memory queue means document embeddings are ready; `graph_index` and `hipporag` report graph progress separately. Extraction errors remain visible and retryable.
 
+Each graph update saves a checkpoint and a durable operation record before changing HippoRAG's files. Startup restores and replays interrupted operations, including source replacements. Completed extraction and embedding caches are retained. The operation record is removed only after the graph files and SQLite progress record are committed. A stale graph from older versions can be rebuilt from compatible stored chunks and extraction results; configuration or provenance mismatches remain explicit errors.
+
 Each memory requires an HTTP(S), file or transcript source URI, capture time and SHA-256 hash. Historical Heather/Maya imports also retain source author/date, import time, local URI and immutable repository commit URL. Retrieval visibly warns that those records describe past state and do not define the engine's identity. Generated observations remain attributed to their transcript, not treated as verified external facts.
 
 ## Durable private sessions
@@ -55,4 +57,6 @@ Run from `python-sidecar`:
 
 The user unit is `batbox-memory.service`. Configuration specifies database, graph/session directories, local LLM URL/model, embedding path, Scrapling Python, SearXNG URL and sources. Sources may be file/directory strings or objects with `path`, `recursive`, `source_base`, `source_author`, `historical`, `source_commit`, `git_root`, `kind` and `priority`. Explicit JSON/code files are supported. Directory scanning imports Markdown notes only, including legacy names with trailing backticks; it does not implicitly scan builds or environments.
 
-Tests exercise actual Scrapling login/cookie restoration, browser cookies/localStorage across fresh processes, credential origin boundaries, cache isolation, file permissions, durable asynchronous queue recovery, deduplication/content reversion and embedding retries. Graph extraction quality still depends on model and source accuracy.
+Shutdown waits for background workers for `shutdown_timeout_seconds` (default 150 seconds). Set the service unit's `TimeoutStopSec=180` or above that configured deadline. An update that exceeds the deadline remains recoverable through its checkpoint when the process restarts.
+
+Tests exercise actual Scrapling login/cookie restoration, browser cookies/localStorage across fresh processes, credential origin boundaries, cache isolation, file permissions, durable asynchronous queue recovery, deduplication/content reversion and embedding retries. Graph recovery tests use real HippoRAG stores and SIGKILL at insertion, deletion, metadata, SQLite commit and recovery boundaries, with deterministic CPU/extraction fixtures and no model endpoint. Graph extraction quality still depends on model and source accuracy.

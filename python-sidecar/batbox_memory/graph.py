@@ -6,6 +6,7 @@ import threading
 import time
 from pathlib import Path
 
+from .graph_checkpoint import IndexCheckpoint
 from .store import timestamp
 
 LOG = logging.getLogger(__name__)
@@ -19,6 +20,8 @@ class Graph:
         self.model = model
         self.lock = threading.Lock()
         self.rag = None
+        self.llm = None
+        self.checkpoint = IndexCheckpoint(self.directory)
         self.status = {"state": "starting", "backend": "HippoRAG", "nodes": 0, "edges": 0, "last_error": None}
 
     def initialize(self):
@@ -29,6 +32,7 @@ class Graph:
         from hipporag.embedding_model.base import BaseEmbeddingModel, EmbeddingConfig
         from hipporag.llm.openai_gpt import CacheOpenAI
         from hipporag.utils.config_utils import BaseConfig
+        from hipporag.utils.state_utils import StateConsistencyError
         import torch
         torch.set_num_threads(4)
         owner = self.store
@@ -68,10 +72,54 @@ class Graph:
         llm = LocalJSONLLM(str(self.directory / "llm-cache"), config, max_retries=1)
         llm.llm_config.generate_params["extra_body"] = {"chat_template_kwargs": {"enable_thinking": False}}
         llm.openai_client = llm.openai_client.with_options(timeout=60, max_retries=1)
-        self.rag = HippoRAG(global_config=config, embedding_model=CachedCPUEmbedding(config), extraction_llm=llm,
-                           index_identity="batbox-cpu-bge-v1-local-openie-json-v1")
-        self.status.update(state="ready", last_error=None)
-        self.refresh_stats()
+        self.llm = llm
+        with self.lock:
+            operation = self.checkpoint.read()
+            if operation:
+                self.status.update(state="recovering")
+                self.checkpoint.restore(operation)
+                config.force_index_from_scratch = operation["kind"] == "rebuild"
+
+            def create_rag():
+                return HippoRAG(global_config=config, embedding_model=CachedCPUEmbedding(config), extraction_llm=llm,
+                                index_identity="batbox-cpu-bge-v1-local-openie-json-v1")
+
+            self.rag = create_rag()
+            if operation and operation["kind"] == "rebuild":
+                self._rebuild_graph()
+            else:
+                try:
+                    self.rag.prepare_retrieval_objects()
+                except StateConsistencyError as exc:
+                    # A pre-journal interrupted write can leave a stale graph.
+                    # Configuration/provenance failures are not safe to rewrite.
+                    repairable = ("Graph/store node count mismatch", "Graph state is missing",
+                                  "Graph vertices are missing", "Graph vertex IDs do not match")
+                    if operation or not str(exc).startswith(repairable):
+                        raise
+                    self.status.update(state="recovering", recovery_reason=str(exc))
+                    self.checkpoint.begin(self.rag, {"kind": "rebuild", "created_at": timestamp(), "reason": str(exc)})
+                    self.rag.close()
+                    config.force_index_from_scratch = True
+                    self.rag = create_rag()
+                    self._rebuild_graph()
+                if operation:
+                    self._apply_operation(operation)
+                    self.status["replayed_operations"] = self.status.get("replayed_operations", 0) + 1
+            self.status.update(state="ready", last_error=None)
+            self.refresh_stats()
+
+    def _rebuild_graph(self):
+        # Official rebuild path reuses persisted chunks, OpenIE and embeddings.
+        self.rag.index([])
+        if not self.rag.chunk_embedding_store.get_all_ids():
+            self.rag.save_igraph()
+        self.rag.global_config.force_index_from_scratch = False
+        self.rag.prepare_retrieval_objects()
+        self.checkpoint.sync_index(self.rag)
+        self.checkpoint.finish()
+        self.status.update(last_recovered_at=timestamp(),
+                           graph_rebuilds=self.status.get("graph_rebuilds", 0) + 1)
 
     def refresh_stats(self):
         if self.rag:
@@ -81,7 +129,6 @@ class Graph:
                                entities=len(self.rag.entity_embedding_store.get_all_ids()))
 
     def index_one(self):
-        from hipporag.utils.misc_utils import Chunk
         with self.store.connect() as c:
             c.execute("BEGIN")
             node = c.execute("""SELECT n.*,p.content_hash,p.kind,p.captured_at,p.metadata FROM nodes n
@@ -94,24 +141,49 @@ class Graph:
             old = c.execute("SELECT chunks FROM graph_index WHERE node_id=?", (node["id"],)).fetchone()
         with self.lock:
             self.status.update(state="indexing", current_source=node["source"])
-            if old:
-                self.rag.delete(json.loads(old[0]))
             # Include a provenance header to distinguish identical text captured from distinct sources.
             metadata = json.loads(node["metadata"])
             historical = f"Historical author: {metadata.get('source_author')}; source date: {metadata.get('source_date')}. {metadata.get('historical_warning')}\n" if metadata.get("historical") else ""
             docs = [f"Source: {node['source']}\nKind: {node['kind']}\n{historical}\n{p}" for p in pieces]
-            self.rag.index([Chunk(content=doc, source_id=node["id"], metadata={
+            operation = {"kind": "index", "created_at": timestamp(), "node_id": node["id"],
+                         "content_hash": node["content_hash"], "old_docs": json.loads(old[0]) if old else [],
+                         "chunks": [{"content": doc, "source_id": node["id"], "metadata": {
                 "source": node["source"], "kind": node["kind"], "captured_at": node["captured_at"],
                 "content_hash": node["content_hash"], "chunk_idx": i, **metadata,
-            }) for i, doc in enumerate(docs)])
-            with self.store.connect() as c:
-                c.execute("INSERT OR REPLACE INTO graph_index VALUES (?,?,?,?)", (node["id"], node["content_hash"], json.dumps(docs), timestamp()))
+            }} for i, doc in enumerate(docs)]}
+            operation = self.checkpoint.begin(self.rag, operation)
+            self._apply_operation(operation)
             self.refresh_stats()
             self.status.update(state="ready", last_error=None, last_indexed_at=timestamp())
         return True
 
+    def _apply_operation(self, operation):
+        from hipporag.utils.misc_utils import Chunk
+        docs = [chunk["content"] for chunk in operation["chunks"]]
+        retained = set(docs)
+        removed = [doc for doc in operation["old_docs"] if doc not in retained]
+        if removed:
+            self.rag.delete(removed)
+        cached = self.checkpoint.recovered_extractions(self.rag, docs)
+        if cached:
+            existing, _ = self.rag.load_existing_openie([])
+            by_id = {row["idx"]: row for row in existing}
+            for row in cached:
+                by_id.setdefault(row["idx"], row)
+            self.rag._openie_info = list(by_id.values())
+        self.rag.index([Chunk(**chunk) for chunk in operation["chunks"]])
+        self.rag.prepare_retrieval_objects()
+        self.checkpoint.sync_index(self.rag)
+        self._commit_operation(operation, docs)
+        self.checkpoint.finish()
+
+    def _commit_operation(self, operation, docs):
+        with self.store.connect() as c:
+            c.execute("INSERT OR REPLACE INTO graph_index VALUES (?,?,?,?)", (
+                operation["node_id"], operation["content_hash"], json.dumps(docs), timestamp()))
+
     def recall(self, query, limit):
-        if self.rag is None or not self.status.get("passages") or not self.lock.acquire(blocking=False):
+        if self.status["state"] != "ready" or self.rag is None or not self.status.get("passages") or not self.lock.acquire(blocking=False):
             return None
         try:
             solutions = self.rag.retrieve([query], num_to_retrieve=limit)
@@ -136,6 +208,8 @@ class Graph:
             try:
                 if self.rag is None:
                     self.initialize()
+                if stop.is_set():
+                    break
                 if not self.index_one():
                     stop.wait(2)
                 else:
@@ -143,5 +217,16 @@ class Graph:
                     stop.wait(0.5)
             except Exception as exc:
                 self.status.update(state="retry", last_error=str(exc)[:1000], retry_at=time.time() + 30)
-                LOG.exception("HippoRAG background index failed; retrying in 30s")
+                LOG.exception("HippoRAG update failed; reloading its checkpoint before retry in 30s")
+                self.close()
                 stop.wait(30)
+
+    def close(self):
+        with self.lock:
+            if self.rag is not None:
+                self.rag.close()
+                self.rag = None
+            # The injected LLM is owned by this adapter, not by HippoRAG.
+            if self.llm is not None:
+                self.llm.close()
+                self.llm = None

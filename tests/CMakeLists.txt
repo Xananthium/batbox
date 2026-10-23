@@ -2069,4 +2069,10 @@ if(Python3_Interpreter_FOUND)
             ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_native_workers.py)
     set_tests_properties(native_worker_lifecycle PROPERTIES
         LABELS "integration;autonomous;workers" TIMEOUT 90)
+    add_test(NAME native_shutdown_lifecycle
+        COMMAND ${CMAKE_COMMAND} -E env
+            BATBOX_AUTONOMOUS_BIN=$<TARGET_FILE:batbox>
+            ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_native_shutdown.py)
+    set_tests_properties(native_shutdown_lifecycle PROPERTIES
+        LABELS "integration;autonomous;workers" TIMEOUT 90)
 endif()

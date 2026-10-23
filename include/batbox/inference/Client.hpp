@@ -117,7 +117,9 @@ public:
     ///   "http <code>: <body excerpt>" — server returned 4xx/5xx
     ///   "parse: <what>"              — response body was not valid JSON or
     ///                                  did not conform to the expected shape
-    [[nodiscard]] Result<ChatResponse> chat(const ChatRequest& req);
+    ///   "cancelled"                  — cancellation interrupted the request
+    [[nodiscard]] Result<ChatResponse> chat(
+        const ChatRequest& req, const CancelToken& ct = {});
 
     // -------------------------------------------------------------------------
     // stream_chat() — SSE streaming POST

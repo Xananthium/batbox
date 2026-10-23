@@ -107,13 +107,20 @@ struct Signals {
 };
 
 Json request(const std::string& base, const std::string& path,
-             const Json& body = Json(), const std::string& token = {}) {
+             const Json& body = Json(), const std::string& token = {},
+             const CancelToken& ct = {}) {
+    if (stop_requested || ct.is_cancelled()) throw std::runtime_error("cancelled");
     cpr::Header headers{{"Content-Type", "application/json"}};
     if (!token.empty()) headers["Authorization"] = "Bearer " + token;
     const auto url = base + path;
+    const cpr::ProgressCallback progress{[&ct](cpr::cpr_pf_arg_t, cpr::cpr_pf_arg_t,
+        cpr::cpr_pf_arg_t, cpr::cpr_pf_arg_t, intptr_t) {
+        return !stop_requested && !ct.is_cancelled();
+    }};
     auto response = body.is_null()
-        ? cpr::Get(cpr::Url{url}, headers, cpr::Timeout{45000})
-        : cpr::Post(cpr::Url{url}, headers, cpr::Body{body.dump()}, cpr::Timeout{45000});
+        ? cpr::Get(cpr::Url{url}, headers, cpr::Timeout{45000}, progress)
+        : cpr::Post(cpr::Url{url}, headers, cpr::Body{body.dump()}, cpr::Timeout{45000}, progress);
+    if (stop_requested || ct.is_cancelled()) throw std::runtime_error("cancelled");
     if (response.error.code != cpr::ErrorCode::OK || response.status_code < 200 || response.status_code >= 300)
         throw std::runtime_error("Service " + path + " failed (HTTP " +
                                  std::to_string(response.status_code) + "): " + response.error.message);
@@ -157,7 +164,7 @@ public:
                     return tools::ToolResult::error("MemoryRemember: metadata must be an object");
                 body["metadata"]["recorded_in"] = transcript;
             }
-            auto result = request(base_, endpoint_, body);
+            auto result = request(base_, endpoint_, body, {}, ctx.cancel_token);
             std::string text = result.dump();
             if (text.size() > 48000) text = text.substr(0, 48000) + "\n[truncated: use a narrower query]";
             return tools::ToolResult::ok(std::move(text));
@@ -513,7 +520,8 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
     struct WorkerShutdown {
         agents::AgentSupervisor& supervisor;
         CancelSource& source;
-        ~WorkerShutdown() { source.request_stop(); supervisor.shutdown(); }
+        void stop() { source.request_stop(); supervisor.shutdown(); }
+        ~WorkerShutdown() { stop(); }
     } worker_shutdown{supervisor, worker_source};
     auto worker_child = [&] {
         auto [child_source, child] = worker_token.child();
@@ -700,7 +708,11 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
     }
-    persist(); publish_status("stopped"); event("stopped");
+    persist(); publish_status("stopping");
+    // Keep the watchdog marker until all workers have stopped. A clean-stop
+    // event must not precede a potentially blocking worker join.
+    worker_shutdown.stop();
+    publish_status("stopped"); event("stopped");
     fs::remove(running_file);
     return 0;
 }

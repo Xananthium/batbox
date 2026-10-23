@@ -5,6 +5,7 @@ import logging
 import os
 import signal
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -50,6 +51,17 @@ class Service:
             thread = threading.Thread(name="batbox-" + name, target=fn, daemon=True)
             thread.start()
             self.threads.append(thread)
+
+    def close(self):
+        self.stop.set()
+        deadline = time.monotonic() + self.config.get("shutdown_timeout_seconds", 150)
+        for thread in self.threads:
+            thread.join(max(0, deadline - time.monotonic()))
+        running = [thread.name for thread in self.threads if thread.is_alive()]
+        if running:
+            LOG.warning("Shutdown deadline reached; durable jobs/checkpoint will resume: %s", running)
+        else:
+            self.graph.close()
 
     def status(self):
         return self.store.stats() | {"started_at": self.started_at, "hipporag": dict(self.graph.status),
@@ -148,6 +160,7 @@ def main():
     finally:
         service.stop.set()
         server.server_close()
+        service.close()
 
 
 if __name__ == "__main__":

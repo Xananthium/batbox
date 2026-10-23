@@ -118,7 +118,7 @@ Compactor::compact(const std::vector<Message>& msgs,
 
     auto summarize_one = [&](const batbox::inference::ChatRequest& request) -> Result<std::string> {
         if (ct.is_cancelled()) return batbox::Err(std::string("cancelled"));
-        auto result = client.chat(request);
+        auto result = client.chat(request, ct);
         if (!result) return batbox::Err(result.error());
         const auto& response = result.value();
         if (ct.is_cancelled()) return batbox::Err(std::string("cancelled"));

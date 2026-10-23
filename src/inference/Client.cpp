@@ -264,7 +264,8 @@ std::string Client::completions_url() const {
 // chat() — non-streaming POST
 // ---------------------------------------------------------------------------
 
-Result<ChatResponse> Client::chat(const ChatRequest& req) {
+Result<ChatResponse> Client::chat(const ChatRequest& req, const CancelToken& ct) {
+    if (ct.is_cancelled()) return batbox::Err(std::string("cancelled"));
     ChatRequest wire_req = req;
     wire_req.stream = false;
     wire_req.stream_options_include_usage = std::nullopt;
@@ -292,9 +293,14 @@ Result<ChatResponse> Client::chat(const ChatRequest& req) {
         cpr::Url{url},
         headers,
         cpr::Body{body_str},
-        cpr::Timeout{timeout_ms}
+        cpr::Timeout{timeout_ms},
+        cpr::ProgressCallback{[&ct](cpr::cpr_pf_arg_t, cpr::cpr_pf_arg_t,
+                                   cpr::cpr_pf_arg_t, cpr::cpr_pf_arg_t, intptr_t) {
+            return !ct.is_cancelled();
+        }}
     );
 
+    if (ct.is_cancelled()) return batbox::Err(std::string("cancelled"));
     if (http.error) {
         return batbox::Err("transport: " + http.error.message);
     }
