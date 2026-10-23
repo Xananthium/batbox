@@ -78,3 +78,5 @@ agentic/
 # Isolated third-party kernel build checkouts; track our patches and reports.
 /experiments/backend/20261023-qat-format/optimized_gguf/plugin/
 /experiments/backend/20261023-qat-format/optimized_gguf/upstream-pr141/
+# Local mirror; canonical sources/results are in the KV-CACHE-CHUNKING repo.
+/experiments/kv_reuse/
