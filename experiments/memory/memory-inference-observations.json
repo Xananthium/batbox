@@ -1,0 +1,997 @@
+{
+  "observed_at": "2026-10-23T18:36:50.494812+00:00",
+  "window_start": "2026-10-23 17:11:50 UTC",
+  "window_end": "2026-10-23 18:36:03 UTC",
+  "source": "systemd journal for batbox-memory.service",
+  "scope": "Normal production background extraction and live retrieval; native agents and other clients share the same backend. No performance benchmark requests added.",
+  "method": "The SDK logs completed HTTP responses but no request-start timestamp. Completion-to-completion gaps in one process are observations, not exact per-request latency, TTFT, or isolated decode speed; they can include local work, graph commits, and idle time.",
+  "completed_http_responses": 139,
+  "http_status_counts": {
+    "200": 137,
+    "500": 2
+  },
+  "http_error_responses": 2,
+  "automatic_retry_log_count": 2,
+  "memory_request_timeout_log_count": 0,
+  "completion_gap_seconds": {
+    "count": 137,
+    "median": 11.126304,
+    "max": 328.194901
+  },
+  "warning_or_error_log_records": [],
+  "events": [
+    {
+      "at": "2026-10-23T17:14:20.018840+00:00",
+      "pid": "166585",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": null
+    },
+    {
+      "at": "2026-10-23T17:15:07.229248+00:00",
+      "pid": "166585",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 47.210408
+    },
+    {
+      "at": "2026-10-23T17:15:54.965008+00:00",
+      "pid": "166585",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 47.73576
+    },
+    {
+      "at": "2026-10-23T17:16:07.354940+00:00",
+      "pid": "166585",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 12.389932
+    },
+    {
+      "at": "2026-10-23T17:17:40.473523+00:00",
+      "pid": "166585",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 93.118583
+    },
+    {
+      "at": "2026-10-23T17:18:00.049741+00:00",
+      "pid": "166585",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 19.576218
+    },
+    {
+      "at": "2026-10-23T17:18:11.506702+00:00",
+      "pid": "166585",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 11.456961
+    },
+    {
+      "at": "2026-10-23T17:18:15.153978+00:00",
+      "pid": "166585",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 3.647276
+    },
+    {
+      "at": "2026-10-23T17:18:42.206037+00:00",
+      "pid": "166585",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 27.052059
+    },
+    {
+      "at": "2026-10-23T17:19:09.599607+00:00",
+      "pid": "166585",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 27.39357
+    },
+    {
+      "at": "2026-10-23T17:19:28.102749+00:00",
+      "pid": "166585",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 18.503142
+    },
+    {
+      "at": "2026-10-23T17:19:43.456771+00:00",
+      "pid": "166585",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 15.354022
+    },
+    {
+      "at": "2026-10-23T17:19:53.539116+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": null
+    },
+    {
+      "at": "2026-10-23T17:19:58.293234+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 4.754118
+    },
+    {
+      "at": "2026-10-23T17:20:05.789193+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 7.495959
+    },
+    {
+      "at": "2026-10-23T17:20:15.563644+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 9.774451
+    },
+    {
+      "at": "2026-10-23T17:20:22.880693+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 7.317049
+    },
+    {
+      "at": "2026-10-23T17:20:30.310992+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 7.430299
+    },
+    {
+      "at": "2026-10-23T17:20:39.705487+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 9.394495
+    },
+    {
+      "at": "2026-10-23T17:20:51.123696+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 11.418209
+    },
+    {
+      "at": "2026-10-23T17:20:58.563528+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 7.439832
+    },
+    {
+      "at": "2026-10-23T17:21:05.204315+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 6.640787
+    },
+    {
+      "at": "2026-10-23T17:21:13.707508+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 8.503193
+    },
+    {
+      "at": "2026-10-23T17:21:21.242398+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 7.53489
+    },
+    {
+      "at": "2026-10-23T17:21:27.900040+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 6.657642
+    },
+    {
+      "at": "2026-10-23T17:21:37.036396+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 9.136356
+    },
+    {
+      "at": "2026-10-23T17:24:59.339171+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 202.302775
+    },
+    {
+      "at": "2026-10-23T17:30:27.534072+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 328.194901
+    },
+    {
+      "at": "2026-10-23T17:31:22.495510+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 54.961438
+    },
+    {
+      "at": "2026-10-23T17:31:26.997858+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 4.502348
+    },
+    {
+      "at": "2026-10-23T17:32:05.801101+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 38.803243
+    },
+    {
+      "at": "2026-10-23T17:32:13.765152+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 7.964051
+    },
+    {
+      "at": "2026-10-23T17:32:19.937546+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 6.172394
+    },
+    {
+      "at": "2026-10-23T17:34:03.812351+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 103.874805
+    },
+    {
+      "at": "2026-10-23T17:34:54.961766+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 51.149415
+    },
+    {
+      "at": "2026-10-23T17:35:16.626567+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 21.664801
+    },
+    {
+      "at": "2026-10-23T17:35:23.746565+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 7.119998
+    },
+    {
+      "at": "2026-10-23T17:36:07.617566+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 43.871001
+    },
+    {
+      "at": "2026-10-23T17:36:32.270079+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 24.652513
+    },
+    {
+      "at": "2026-10-23T17:36:57.008644+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 24.738565
+    },
+    {
+      "at": "2026-10-23T17:37:11.105244+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 14.0966
+    },
+    {
+      "at": "2026-10-23T17:37:58.962365+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 47.857121
+    },
+    {
+      "at": "2026-10-23T17:40:54.292498+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 175.330133
+    },
+    {
+      "at": "2026-10-23T17:41:07.962164+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 13.669666
+    },
+    {
+      "at": "2026-10-23T17:41:18.402806+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 10.440642
+    },
+    {
+      "at": "2026-10-23T17:41:55.906844+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 37.504038
+    },
+    {
+      "at": "2026-10-23T17:42:08.062238+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 12.155394
+    },
+    {
+      "at": "2026-10-23T17:42:26.592663+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 18.530425
+    },
+    {
+      "at": "2026-10-23T17:42:53.042283+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 26.44962
+    },
+    {
+      "at": "2026-10-23T17:43:07.804292+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 14.762009
+    },
+    {
+      "at": "2026-10-23T17:43:11.548714+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 3.744422
+    },
+    {
+      "at": "2026-10-23T17:43:22.847523+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 11.298809
+    },
+    {
+      "at": "2026-10-23T17:43:38.114958+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 15.267435
+    },
+    {
+      "at": "2026-10-23T17:43:44.303392+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 6.188434
+    },
+    {
+      "at": "2026-10-23T17:45:34.003645+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 109.700253
+    },
+    {
+      "at": "2026-10-23T17:46:36.132588+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "other",
+      "seconds_since_previous_response_same_process": 62.128943
+    },
+    {
+      "at": "2026-10-23T17:46:43.085182+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 6.952594
+    },
+    {
+      "at": "2026-10-23T17:46:49.717869+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 6.632687
+    },
+    {
+      "at": "2026-10-23T17:48:51.706604+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 121.988735
+    },
+    {
+      "at": "2026-10-23T17:49:07.397203+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 15.690599
+    },
+    {
+      "at": "2026-10-23T17:50:52.759954+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 105.362751
+    },
+    {
+      "at": "2026-10-23T17:51:04.240696+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 11.480742
+    },
+    {
+      "at": "2026-10-23T17:51:12.214008+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 7.973312
+    },
+    {
+      "at": "2026-10-23T17:51:16.571802+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 4.357794
+    },
+    {
+      "at": "2026-10-23T17:51:27.859739+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 11.287937
+    },
+    {
+      "at": "2026-10-23T17:51:36.552726+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 8.692987
+    },
+    {
+      "at": "2026-10-23T17:51:44.372163+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 7.819437
+    },
+    {
+      "at": "2026-10-23T17:51:50.729151+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 6.356988
+    },
+    {
+      "at": "2026-10-23T17:51:56.467324+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 5.738173
+    },
+    {
+      "at": "2026-10-23T17:52:02.692964+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 6.22564
+    },
+    {
+      "at": "2026-10-23T17:52:08.684129+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 5.991165
+    },
+    {
+      "at": "2026-10-23T17:52:15.111821+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 6.427692
+    },
+    {
+      "at": "2026-10-23T17:52:20.897928+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 5.786107
+    },
+    {
+      "at": "2026-10-23T17:52:27.159070+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 6.261142
+    },
+    {
+      "at": "2026-10-23T17:52:32.126132+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 4.967062
+    },
+    {
+      "at": "2026-10-23T17:52:37.257517+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 5.131385
+    },
+    {
+      "at": "2026-10-23T17:52:42.352586+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 5.095069
+    },
+    {
+      "at": "2026-10-23T17:52:46.704516+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 4.35193
+    },
+    {
+      "at": "2026-10-23T17:52:51.314355+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 4.609839
+    },
+    {
+      "at": "2026-10-23T17:52:58.277719+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 6.963364
+    },
+    {
+      "at": "2026-10-23T17:53:03.579033+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 5.301314
+    },
+    {
+      "at": "2026-10-23T17:53:08.873155+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 5.294122
+    },
+    {
+      "at": "2026-10-23T17:53:13.578146+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 4.704991
+    },
+    {
+      "at": "2026-10-23T17:53:23.918827+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 10.340681
+    },
+    {
+      "at": "2026-10-23T17:53:35.047363+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 11.128536
+    },
+    {
+      "at": "2026-10-23T17:53:43.697025+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 8.649662
+    },
+    {
+      "at": "2026-10-23T17:53:55.308064+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 11.611039
+    },
+    {
+      "at": "2026-10-23T17:54:06.434368+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 11.126304
+    },
+    {
+      "at": "2026-10-23T17:54:19.491239+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 13.056871
+    },
+    {
+      "at": "2026-10-23T17:54:31.479767+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 11.988528
+    },
+    {
+      "at": "2026-10-23T17:54:42.081889+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 10.602122
+    },
+    {
+      "at": "2026-10-23T17:54:49.201846+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 7.119957
+    },
+    {
+      "at": "2026-10-23T17:54:59.649774+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 10.447928
+    },
+    {
+      "at": "2026-10-23T17:55:06.952461+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 7.302687
+    },
+    {
+      "at": "2026-10-23T17:55:13.318465+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 6.366004
+    },
+    {
+      "at": "2026-10-23T17:55:19.753627+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 6.435162
+    },
+    {
+      "at": "2026-10-23T17:55:26.955618+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 7.201991
+    },
+    {
+      "at": "2026-10-23T17:55:33.525532+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 6.569914
+    },
+    {
+      "at": "2026-10-23T17:55:39.814910+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 6.289378
+    },
+    {
+      "at": "2026-10-23T17:55:45.579461+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 5.764551
+    },
+    {
+      "at": "2026-10-23T17:55:51.198358+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 5.618897
+    },
+    {
+      "at": "2026-10-23T17:55:54.278132+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 3.079774
+    },
+    {
+      "at": "2026-10-23T17:55:55.981096+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 1.702964
+    },
+    {
+      "at": "2026-10-23T17:55:57.526759+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 1.545663
+    },
+    {
+      "at": "2026-10-23T17:56:03.058533+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 5.531774
+    },
+    {
+      "at": "2026-10-23T17:58:40.737910+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 157.679377
+    },
+    {
+      "at": "2026-10-23T18:00:34.813505+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 114.075595
+    },
+    {
+      "at": "2026-10-23T18:00:44.726341+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 9.912836
+    },
+    {
+      "at": "2026-10-23T18:01:05.220220+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 20.493879
+    },
+    {
+      "at": "2026-10-23T18:01:45.549062+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 40.328842
+    },
+    {
+      "at": "2026-10-23T18:03:01.428030+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 75.878968
+    },
+    {
+      "at": "2026-10-23T18:03:19.290143+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 17.862113
+    },
+    {
+      "at": "2026-10-23T18:04:05.058967+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 45.768824
+    },
+    {
+      "at": "2026-10-23T18:07:43.429600+00:00",
+      "pid": "169298",
+      "status": 500,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 218.370633
+    },
+    {
+      "at": "2026-10-23T18:07:59.927613+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "other",
+      "seconds_since_previous_response_same_process": 16.498013
+    },
+    {
+      "at": "2026-10-23T18:08:14.720661+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 14.793048
+    },
+    {
+      "at": "2026-10-23T18:08:24.813788+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 10.093127
+    },
+    {
+      "at": "2026-10-23T18:08:58.595115+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 33.781327
+    },
+    {
+      "at": "2026-10-23T18:09:03.409598+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 4.814483
+    },
+    {
+      "at": "2026-10-23T18:09:24.016718+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 20.60712
+    },
+    {
+      "at": "2026-10-23T18:13:03.865005+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 219.848287
+    },
+    {
+      "at": "2026-10-23T18:13:42.995491+00:00",
+      "pid": "169298",
+      "status": 500,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 39.130486
+    },
+    {
+      "at": "2026-10-23T18:17:01.878409+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "other",
+      "seconds_since_previous_response_same_process": 198.882918
+    },
+    {
+      "at": "2026-10-23T18:19:39.045645+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 157.167236
+    },
+    {
+      "at": "2026-10-23T18:23:19.706305+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 220.66066
+    },
+    {
+      "at": "2026-10-23T18:23:53.519195+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 33.81289
+    },
+    {
+      "at": "2026-10-23T18:24:55.859600+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 62.340405
+    },
+    {
+      "at": "2026-10-23T18:28:09.658919+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 193.799319
+    },
+    {
+      "at": "2026-10-23T18:28:25.660412+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 16.001493
+    },
+    {
+      "at": "2026-10-23T18:28:41.640455+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 15.980043
+    },
+    {
+      "at": "2026-10-23T18:29:00.255607+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 18.615152
+    },
+    {
+      "at": "2026-10-23T18:29:22.894056+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "triples",
+      "seconds_since_previous_response_same_process": 22.638449
+    },
+    {
+      "at": "2026-10-23T18:34:07.509824+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "other",
+      "seconds_since_previous_response_same_process": 284.615768
+    },
+    {
+      "at": "2026-10-23T18:34:14.716365+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 7.206541
+    },
+    {
+      "at": "2026-10-23T18:34:22.408019+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 7.691654
+    },
+    {
+      "at": "2026-10-23T18:34:27.810708+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 5.402689
+    },
+    {
+      "at": "2026-10-23T18:34:30.890819+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 3.080111
+    },
+    {
+      "at": "2026-10-23T18:34:34.549191+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 3.658372
+    },
+    {
+      "at": "2026-10-23T18:34:40.203833+00:00",
+      "pid": "169298",
+      "status": 200,
+      "stage_hint": "ner",
+      "seconds_since_previous_response_same_process": 5.654642
+    }
+  ]
+}

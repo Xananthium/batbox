@@ -1,0 +1,54 @@
+{
+  "observed_at": "2026-10-23T17:20:11.133963+00:00",
+  "historical_records": 57,
+  "invariants_preserved": true,
+  "priorities": [
+    {
+      "author": "Heather",
+      "priority": 300,
+      "records": 47
+    },
+    {
+      "author": "Maya",
+      "priority": 300,
+      "records": 10
+    }
+  ],
+  "health": {
+    "nodes": 193,
+    "embeddings": 865,
+    "edges": 74,
+    "embedding_cache": 5738,
+    "graph_index": 91,
+    "queue": {
+      "ready": 321
+    },
+    "counters": {
+      "embedding_cache_hits": 529,
+      "embeddings_computed": 5738
+    },
+    "recent_errors": [],
+    "embedding_model": "BAAI/bge-small-en-v1.5",
+    "embedding_device": "CPUExecutionProvider",
+    "database": "/home/isnotreal/memory.db",
+    "started_at": "2026-10-23T17:19:46.646878+00:00",
+    "hipporag": {
+      "state": "indexing",
+      "backend": "HippoRAG",
+      "nodes": 2139,
+      "edges": 11021,
+      "last_error": null,
+      "llm_request_timeout_seconds": 600.0,
+      "passages": 214,
+      "facts": 2346,
+      "entities": 1925,
+      "current_source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/2026-03-23.md",
+      "last_indexed_at": "2026-10-23T17:19:58.790557+00:00"
+    },
+    "workers": {
+      "batbox-memory": true,
+      "batbox-sources": true,
+      "batbox-hipporag": true
+    }
+  }
+}

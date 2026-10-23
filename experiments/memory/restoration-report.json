@@ -1,0 +1,199 @@
+{
+  "status": "complete",
+  "observed_at": "2026-10-23T18:36:03.263393+00:00",
+  "summary_prose": "BatBox memory is running and verified. All 57 historical records (47 Heather, 10 Maya), both current system snapshots, and the direct mission-page source are indexed; all 60 persisted source/hash/provenance checks pass against the stable architecture map. Five CPU-vector checks and two actual HippoRAG recalls pass, with five graph seeds each and preserved historical attribution. Local graph inference uses a configurable 600-second timeout; shutdown keeps its independent 150-second deadline and durable checkpoint recovery. Other engineering and production sources continue indexing in the background.",
+  "final_requirements": {
+    "historical_graph_records": 57,
+    "current_snapshot_hashes": "must equal current files",
+    "mission_direct_source_graph": true,
+    "persisted_chunk_provenance_sources": 60,
+    "live_hipporag_retrieval": "passed"
+  },
+  "state": {
+    "observed_at": "2026-10-23T18:36:03.234371+00:00",
+    "historical": [
+      {
+        "author": "Heather",
+        "records": 47,
+        "embedded": 47,
+        "graph_ready": 47
+      },
+      {
+        "author": "Maya",
+        "records": 10,
+        "embedded": 10,
+        "graph_ready": 10
+      }
+    ],
+    "current_snapshots": [
+      {
+        "source": "file:///home/isnotreal/.batbox/autonomous/server-context.json",
+        "expected_hash": "09613cd9137bba3ee67c0cbee2485e2177ec258bfa683ce74ab18886f50d84bf",
+        "stored_hash": "09613cd9137bba3ee67c0cbee2485e2177ec258bfa683ce74ab18886f50d84bf",
+        "graph_hash": "09613cd9137bba3ee67c0cbee2485e2177ec258bfa683ce74ab18886f50d84bf",
+        "current_file_graphed": true
+      },
+      {
+        "source": "file:///home/isnotreal/.batbox/autonomous/program-map.json",
+        "expected_hash": "41297162d32a9cff4a91eadbd6b709d7d0b2e4297c201f5f2b8c60777e1590fe",
+        "stored_hash": "41297162d32a9cff4a91eadbd6b709d7d0b2e4297c201f5f2b8c60777e1590fe",
+        "graph_hash": "41297162d32a9cff4a91eadbd6b709d7d0b2e4297c201f5f2b8c60777e1590fe",
+        "current_file_graphed": true
+      }
+    ],
+    "mission": {
+      "job_id": 242,
+      "state": "ready",
+      "source_uri": "https://digitaldisconnections.com/our-story.html",
+      "content_hash": "26c08f7af6abde6805fad02954b81cf22754ffa2e8745ed3411d0578e9a0d0cc",
+      "graph_ready": 1
+    },
+    "queue": {
+      "ready": 364
+    },
+    "graph_index_rows": 98,
+    "other_graph_work_pending": 118,
+    "requested_targets_complete": true
+  },
+  "cpu_retrieval_cases_passed": 5,
+  "source_changes": [
+    "python-sidecar/batbox_memory/graph.py",
+    "python-sidecar/batbox_memory/__main__.py",
+    "python-sidecar/batbox_memory/README.md",
+    "python-sidecar/tests/memory/test_graph_timeout.py"
+  ],
+  "safe_evidence_files": [
+    "20261023-graph-recovery.json",
+    "timeout-deployment.json",
+    "historical-priority-deployment.json",
+    "restoration-before.json",
+    "restoration-current.json",
+    "restoration-progress.jsonl",
+    "graph-provenance.json",
+    "retrieval-cpu-vector.json",
+    "memory_restore_checks.py",
+    "verify_graph_provenance.py",
+    "verify_restored_retrieval.py",
+    "memory-inference-observations.json",
+    "retrieval-hipporag.json",
+    "watch_restoration.py",
+    "restoration-targets-complete.json",
+    "structured-output-retry-20261023.json",
+    "restoration-report.json",
+    "retrieval-hipporag-historical.json",
+    "commit-files.txt"
+  ],
+  "private_material_excluded": [
+    "Raw recalled text",
+    "Authenticated session state and credentials",
+    "Full historical source content",
+    "Private recovery archive and canonical databases"
+  ],
+  "validation": {
+    "focused_timeout_and_shutdown_tests_passed": 4,
+    "live_timeout_evidence": "NER completed after 145.9 seconds; two completed extraction responses were reused from cache.",
+    "prior_memory_and_recovery_tests_passed": 15
+  },
+  "limits": [
+    "Graph indexing continues for other queued sources; completing these 60 requested sources does not mean the entire evolving engineering queue is empty.",
+    "Two XGrammar token [0] rejections returned HTTP 500 and succeeded on existing retries. Both graph operations committed; no quantization, speculative-decoding, or historical-loop cause was established.",
+    "The 91/252 tok/s backend figures are isolated benchmarks. Actual shared-load HippoRAG recalls took 61.29s and 283.59s; these are end-to-end retrieval times, not decode throughput."
+  ],
+  "performance_scope": "The backend 91/252 tokens/s results are isolated benchmark figures. During normal production plus background graph indexing, observed memory response gaps span seconds to minutes; these are shared-load observations and are not decode-speed or TTFT measurements.",
+  "persisted_graph_provenance": {
+    "observed_at": "2026-10-23T18:36:03.239705+00:00",
+    "sources": 60,
+    "passed_sources": 60,
+    "all_passed": true
+  },
+  "first_requested_sources_complete_observed_at": "2026-10-23T17:55:49.558562+00:00",
+  "first_requested_sources_complete_graph_counts": {
+    "nodes": 2478,
+    "edges": 13244,
+    "passages": 266,
+    "facts": 2817,
+    "entities": 2212
+  },
+  "final_runtime_map_sha256": "41297162d32a9cff4a91eadbd6b709d7d0b2e4297c201f5f2b8c60777e1590fe",
+  "handled_inference_errors": {
+    "artifact": "structured-output-retry-20261023.json",
+    "count": 2,
+    "existing_retries_succeeded": true,
+    "were_timeouts": false
+  },
+  "runtime_identity_policy": "Mutable runtime identity is resolved from the deployment file referenced by the architecture map at point of use.",
+  "completed_at": "2026-10-23T18:36:03.263393+00:00",
+  "health": {
+    "nodes": 217,
+    "embeddings": 940,
+    "edges": 74,
+    "embedding_cache": 7089,
+    "graph_index": 98,
+    "queue": {
+      "ready": 364
+    },
+    "counters": {
+      "embedding_cache_hits": 928,
+      "embeddings_computed": 7105,
+      "hipporag_retrievals": 2
+    },
+    "recent_errors": [],
+    "embedding_model": "BAAI/bge-small-en-v1.5",
+    "embedding_device": "CPUExecutionProvider",
+    "database": "/home/isnotreal/memory.db",
+    "started_at": "2026-10-23T17:19:46.646878+00:00",
+    "hipporag": {
+      "state": "indexing",
+      "backend": "HippoRAG",
+      "nodes": 2567,
+      "edges": 13554,
+      "last_error": null,
+      "llm_request_timeout_seconds": 600.0,
+      "passages": 274,
+      "facts": 2883,
+      "entities": 2293,
+      "current_source": "file:///home/isnotreal/KV-CACHE-CHUNKING/RESEARCH_LOG.md",
+      "last_indexed_at": "2026-10-23T18:29:23.879570+00:00"
+    },
+    "workers": {
+      "batbox-memory": true,
+      "batbox-sources": true,
+      "batbox-hipporag": true
+    }
+  },
+  "live_hipporag_retrievals": [
+    {
+      "case": "historical_heather",
+      "backend": "HippoRAG",
+      "elapsed_seconds": 61.29306285400526,
+      "results_count": 20,
+      "graph_seed_count": 5,
+      "passed": true
+    },
+    {
+      "case": "current_program",
+      "backend": "HippoRAG",
+      "elapsed_seconds": 283.58942947900505,
+      "results_count": 20,
+      "graph_seed_count": 5,
+      "passed": true
+    }
+  ],
+  "native_client_followup": {
+    "owner": "root/native runtime",
+    "observed_legacy_recall_http_deadline_seconds": 45,
+    "evidence": "Successful graph recalls took 61.29s and 283.59s under production load, exceeding the old native /recall deadline.",
+    "status_at_memory_handoff": "Path-specific recall deadline fix is in the final native build; deployment/verification owned by root."
+  },
+  "inference_observations": {
+    "window_start": "2026-10-23 17:11:50 UTC",
+    "window_end": "2026-10-23 18:36:03 UTC",
+    "completed_http_responses": 139,
+    "http_status_counts": {
+      "200": 137,
+      "500": 2
+    },
+    "automatic_retry_log_count": 2,
+    "memory_request_timeout_log_count": 0
+  }
+}

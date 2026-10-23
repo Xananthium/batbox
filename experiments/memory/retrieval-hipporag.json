@@ -1,0 +1,80 @@
+{
+  "started_at": "2026-10-23T18:29:23.918902+00:00",
+  "requested_backend": "HippoRAG",
+  "selected_cases": [
+    "current_program"
+  ],
+  "cases": [
+    {
+      "case": "current_program",
+      "observed_at": "2026-10-23T18:29:23.960606+00:00",
+      "elapsed_seconds": 283.58942947900505,
+      "backend": "HippoRAG",
+      "results_count": 20,
+      "graph_seed_count": 5,
+      "expected_source": "file:///home/isnotreal/.batbox/autonomous/program-map.json",
+      "expected_historical_author": null,
+      "matching_results": [
+        {
+          "source": "file:///home/isnotreal/.batbox/autonomous/program-map.json",
+          "kind": "current_verified",
+          "content_hash": "41297162d32a9cff4a91eadbd6b709d7d0b2e4297c201f5f2b8c60777e1590fe",
+          "captured_at": "2026-10-23T18:18:24.788362+00:00",
+          "source_author": "BatBox current source",
+          "source_date": null,
+          "source_commit": null,
+          "historical": false,
+          "historical_warning": null,
+          "imported_at": "2026-10-23T18:18:24.788561+00:00",
+          "canonical_metadata_match": true,
+          "import_timestamp_matches_latest_ingest": true
+        },
+        {
+          "source": "file:///home/isnotreal/.batbox/autonomous/program-map.json",
+          "kind": "current_verified",
+          "content_hash": "41297162d32a9cff4a91eadbd6b709d7d0b2e4297c201f5f2b8c60777e1590fe",
+          "captured_at": "2026-10-23T18:18:24.788362+00:00",
+          "source_author": "BatBox current source",
+          "source_date": null,
+          "source_commit": null,
+          "historical": false,
+          "historical_warning": null,
+          "imported_at": "2026-10-23T18:18:24.788561+00:00",
+          "canonical_metadata_match": true,
+          "import_timestamp_matches_latest_ingest": true
+        },
+        {
+          "source": "file:///home/isnotreal/.batbox/autonomous/program-map.json",
+          "kind": "current_verified",
+          "content_hash": "41297162d32a9cff4a91eadbd6b709d7d0b2e4297c201f5f2b8c60777e1590fe",
+          "captured_at": "2026-10-23T18:18:24.788362+00:00",
+          "source_author": "BatBox current source",
+          "source_date": null,
+          "source_commit": null,
+          "historical": false,
+          "historical_warning": null,
+          "imported_at": "2026-10-23T18:18:24.788561+00:00",
+          "canonical_metadata_match": true,
+          "import_timestamp_matches_latest_ingest": true
+        },
+        {
+          "source": "file:///home/isnotreal/.batbox/autonomous/program-map.json",
+          "kind": "current_verified",
+          "content_hash": "41297162d32a9cff4a91eadbd6b709d7d0b2e4297c201f5f2b8c60777e1590fe",
+          "captured_at": "2026-10-23T18:18:24.788362+00:00",
+          "source_author": "BatBox current source",
+          "source_date": null,
+          "source_commit": null,
+          "historical": false,
+          "historical_warning": null,
+          "imported_at": "2026-10-23T18:18:24.788561+00:00",
+          "canonical_metadata_match": true,
+          "import_timestamp_matches_latest_ingest": true
+        }
+      ],
+      "raw_response_private": "/home/isnotreal/.batbox/diagnostics/memory-restoration-20261023/hipporag-current_program-1.json",
+      "passed": true
+    }
+  ],
+  "all_passed": true
+}

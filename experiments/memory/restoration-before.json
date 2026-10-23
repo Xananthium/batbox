@@ -1,0 +1,47 @@
+{
+  "observed_at": "2026-10-23T16:48:49.347403+00:00",
+  "historical": [
+    {
+      "author": "Heather",
+      "records": 47,
+      "embedded": 47,
+      "graph_ready": 42
+    },
+    {
+      "author": "Maya",
+      "records": 10,
+      "embedded": 10,
+      "graph_ready": 10
+    }
+  ],
+  "current_snapshots": [
+    {
+      "source": "file:///home/isnotreal/.batbox/autonomous/server-context.json",
+      "expected_hash": "9667bec1cb3c6925f847bbb7ae79692b53be2ef0c7afd2b231b4a4a65291900e",
+      "stored_hash": "bc2d1795c937f45273891d38ca8af4df38da6977ff63f2152cfb1fd987f48a0d",
+      "graph_hash": "18f3550cc5ba5ec414d865f57ddeb61c760083a2dadb21f9643dab00da9247d6",
+      "current_file_graphed": false
+    },
+    {
+      "source": "file:///home/isnotreal/.batbox/autonomous/program-map.json",
+      "expected_hash": "792d45c2cb139aba0e3ce3a1c4b69985cb5995bd63d3c918a2d35677df22ed3d",
+      "stored_hash": "3c7bf5e4147a5a08190081e1d535542b7d270ba4d1ac2a40b0c1a0f19754cd19",
+      "graph_hash": "6194da22724e65e1bb344123c22e1086ee484bdb3d436e372fcc92bcac241ae7",
+      "current_file_graphed": false
+    }
+  ],
+  "mission": {
+    "job_id": 242,
+    "state": "pending",
+    "source_uri": null,
+    "content_hash": null,
+    "graph_ready": 0
+  },
+  "queue": {
+    "pending": 1,
+    "ready": 241
+  },
+  "graph_index_rows": 90,
+  "other_graph_work_pending": 94,
+  "requested_targets_complete": false
+}

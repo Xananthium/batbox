@@ -1,0 +1,35 @@
+{
+  "observed_at": "2026-10-23T18:18:07.731264+00:00",
+  "events": [
+    {
+      "failed_http_response_at": "2026-10-23T18:07:43.429Z",
+      "failed_http_status": 500,
+      "successful_retry_response_at": "2026-10-23T18:07:59.927Z",
+      "successful_http_status": 200,
+      "retry_count": 1,
+      "was_timeout": false,
+      "request_id": "chatcmpl-b9910da1e543ad36-b2cc4e97",
+      "backend_error": "XGrammar failed to advance FSM; grammar rejected tokens [0]. Scheduler terminated the request.",
+      "graph_operation_committed": true
+    },
+    {
+      "failed_http_response_at": "2026-10-23T18:13:42.995Z",
+      "failed_http_status": 500,
+      "successful_retry_response_at": "2026-10-23T18:17:01.877Z",
+      "successful_http_status": 200,
+      "retry_count": 1,
+      "was_timeout": false,
+      "request_id": "chatcmpl-9c9398f2729841e0-9306a4e8",
+      "backend_error": "XGrammar failed to advance FSM at18:13:36; grammar rejected tokens [0]. Scheduler terminated the request.",
+      "graph_operation_committed": true,
+      "committed_content_hash": "26d9f4988d68137c1d08381794c5589c77f804b2435a1ad81aab458f0fd4f7f7",
+      "graph_operation_committed_at": "2026-10-23T18:19:39.907435+00:00"
+    }
+  ],
+  "observed_failures": 2,
+  "successful_retries": 2,
+  "request_timeout_seconds": 600,
+  "backend_main_pid_after": 162873,
+  "causal_scope": "Observed structured-output generation failures recovered by existing retries. This does not establish a model-format, speculative-decoding, or historical-repetition cause. No controlled ablation was performed.",
+  "service_or_model_changes_for_these_events": false
+}

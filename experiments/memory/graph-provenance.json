@@ -1,0 +1,488 @@
+{
+  "observed_at": "2026-10-23T18:36:03.239705+00:00",
+  "sources": 60,
+  "passed_sources": 60,
+  "all_passed": true,
+  "results": [
+    {
+      "source": "file:///home/isnotreal/.batbox/autonomous/program-map.json",
+      "author": "BatBox current source",
+      "content_hash": "41297162d32a9cff4a91eadbd6b709d7d0b2e4297c201f5f2b8c60777e1590fe",
+      "expected_chunks": 4,
+      "persisted_chunks": 4,
+      "passed": true
+    },
+    {
+      "source": "file:///home/isnotreal/.batbox/autonomous/server-context.json",
+      "author": "BatBox current source",
+      "content_hash": "09613cd9137bba3ee67c0cbee2485e2177ec258bfa683ce74ab18886f50d84bf",
+      "expected_chunks": 4,
+      "persisted_chunks": 4,
+      "passed": true
+    },
+    {
+      "source": "https://digitaldisconnections.com/our-story.html",
+      "author": "Digital Disconnections website; summary by implementation agent",
+      "content_hash": "26c08f7af6abde6805fad02954b81cf22754ffa2e8745ed3411d0578e9a0d0cc",
+      "expected_chunks": 1,
+      "persisted_chunks": 1,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/2026-03-14.md",
+      "author": "Heather",
+      "content_hash": "f544995f70eafe0ef6b3aa98398dc6f80b67842b3d5807f3ed97feeaf5016d1f",
+      "expected_chunks": 17,
+      "persisted_chunks": 17,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/2026-03-18.md",
+      "author": "Heather",
+      "content_hash": "8d74afa25c4d78c1a9ab80b0e425128b37c7194e33d90fe46b6b5eb932b38db8",
+      "expected_chunks": 2,
+      "persisted_chunks": 2,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/2026-03-20.md",
+      "author": "Heather",
+      "content_hash": "18bed02273aeca62c6dcadf0f1c8b38a1182df052a8560e0cf4773a70bf33c99",
+      "expected_chunks": 3,
+      "persisted_chunks": 3,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/2026-03-22.md",
+      "author": "Heather",
+      "content_hash": "5a61e7d517ab5ce812905f48c9d7fbdf7a9237e928a91cb752bd3c5da20bedfe",
+      "expected_chunks": 12,
+      "persisted_chunks": 12,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/2026-03-23.md",
+      "author": "Heather",
+      "content_hash": "846ad1258f976daccafc3e55b247d35ef29db44fbbd6fca3bc50b1abc764ff13",
+      "expected_chunks": 18,
+      "persisted_chunks": 18,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/2026-03-24.md",
+      "author": "Heather",
+      "content_hash": "df5b2a0932719ec3e68afe1a33a4b9c1ef4119fae728069ea33fdda61c650b42",
+      "expected_chunks": 8,
+      "persisted_chunks": 8,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/2026-03-25.md",
+      "author": "Heather",
+      "content_hash": "80ce576976ca307dea348803a4cfde4a384c17362167eda9c76ae3ebf0c9848d",
+      "expected_chunks": 2,
+      "persisted_chunks": 2,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/2026-03-26.md",
+      "author": "Heather",
+      "content_hash": "ef791791b0023d9d31c1dc505d30df77d4a863247929cfbb5afd96e05eeb123b",
+      "expected_chunks": 3,
+      "persisted_chunks": 3,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/MEMORY.md",
+      "author": "Heather",
+      "content_hash": "ddc576d4b8aa13fb13105e28eaba2983ba51bff259df637877e61e25581f9db3",
+      "expected_chunks": 3,
+      "persisted_chunks": 3,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/life/2026-03-13.md",
+      "author": "Heather",
+      "content_hash": "4e86629506aad5bb7b44f681f17f9aa707e97ca903541db37d2981aee2491554",
+      "expected_chunks": 5,
+      "persisted_chunks": 5,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/life/2026-03-15.md",
+      "author": "Heather",
+      "content_hash": "d22d8d50ab9655dc45d496f61925488382b10053a288c4aac6ff8fd779024b37",
+      "expected_chunks": 7,
+      "persisted_chunks": 7,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/life/resources/ai-running-optimization-irunfar-2026.md",
+      "author": "Heather",
+      "content_hash": "bcfc8ec6da4f2daecd8cb9dc5e2029712944da31182197efcd6d93ca8df2aaa5",
+      "expected_chunks": 2,
+      "persisted_chunks": 2,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/life/resources/ambiguity-aversion-data-leaks-erlei-2026.md",
+      "author": "Heather",
+      "content_hash": "c9e6578069b7542d527c388eae4e64d4e4e904b4f5c4fa5e1568f652c9ed79a7",
+      "expected_chunks": 3,
+      "persisted_chunks": 3,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/life/resources/default-effect-nudge-theory-2026.md",
+      "author": "Heather",
+      "content_hash": "c666f286489b076d649f7e0831d53e11725c6eda96705d90e2aecc11d8415709",
+      "expected_chunks": 5,
+      "persisted_chunks": 5,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/life/resources/ehr-resistance-reactance-2024.md",
+      "author": "Heather",
+      "content_hash": "1b03a7bbd08273dc864afda2d6f5713779f105919b8d35bc96049325b929d8c9",
+      "expected_chunks": 2,
+      "persisted_chunks": 2,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/life/resources/endowment-effect-digital-ownership-2026.md",
+      "author": "Heather",
+      "content_hash": "b5a4d92e6bba87abb3bb62a3d70d4f497f2625974273ac49f50a7d3d4bc6d646",
+      "expected_chunks": 3,
+      "persisted_chunks": 3,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/life/resources/fear-accelerates-harm-nyu-2026.md",
+      "author": "Heather",
+      "content_hash": "4d7d11e44d38ab52a03ef9e8df289df450c9d46ea1d65e12c080f0789907d5bb",
+      "expected_chunks": 2,
+      "persisted_chunks": 2,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/life/resources/harvard-carr-ryan-privacy-day-2026.md",
+      "author": "Heather",
+      "content_hash": "71f64b13b74c1b6df4e6afea132ab171c6974e4873986137607533d01a2d7b5c",
+      "expected_chunks": 4,
+      "persisted_chunks": 4,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/life/resources/ikea-effect-ownership-psychology-2011.md",
+      "author": "Heather",
+      "content_hash": "163b836e1001ea62155fd67b7b7eb60f0fe642fd5d10ee60d245d0fd39846ce3",
+      "expected_chunks": 4,
+      "persisted_chunks": 4,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/life/resources/loss-framing-algorithm-aversion-bockstedt-2026.md",
+      "author": "Heather",
+      "content_hash": "37ce86bdb6ce4934f14784100ac99c3281283bdd22d38d422d3d2c01f8dfb5c2",
+      "expected_chunks": 2,
+      "persisted_chunks": 2,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/life/resources/miller-2007-reactance-language-concreteness.md",
+      "author": "Heather",
+      "content_hash": "b894a1817b0505052a8ecceed14e4c9ee97fd51963a5eaf63c5cdef6c76a1f4c",
+      "expected_chunks": 3,
+      "persisted_chunks": 3,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/life/resources/privacy-anxiety-coping-ltu-2025.md",
+      "author": "Heather",
+      "content_hash": "d077623fcb7da88783f8fbd9320fb28eed3c6665bbde5f9a494b0c5a8702dfbb",
+      "expected_chunks": 2,
+      "persisted_chunks": 2,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/life/resources/privacy-fatigue-resignation-2024-2025.md",
+      "author": "Heather",
+      "content_hash": "58651609ce52f514c92e1ee4b5c91a1ae791b009df5e7418e9882994cedeb9d9",
+      "expected_chunks": 5,
+      "persisted_chunks": 5,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/life/resources/privacy-paradox-loss-aversion-kushwaha-2026.md",
+      "author": "Heather",
+      "content_hash": "ae164bd4261856366ac17142ce143e4e360a2aaeb403adc6fd97f03eb4fd840a",
+      "expected_chunks": 3,
+      "persisted_chunks": 3,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/life/resources/reactance-meta-analysis-li-shi-2026.md",
+      "author": "Heather",
+      "content_hash": "a8f68d28c9c40285c86bff0a66ccb540a312a83044318036241779fa2d59ce3f",
+      "expected_chunks": 2,
+      "persisted_chunks": 2,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/life/resources/schwartz-judgment-not-calculation-2026.md",
+      "author": "Heather",
+      "content_hash": "b4c67556899831d7c6371f170f4b9f828488e42926f5f7b6256d814eb0c6b1ca",
+      "expected_chunks": 3,
+      "persisted_chunks": 3,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/life/resources/self-efficacy-reactance-yan-2024.md",
+      "author": "Heather",
+      "content_hash": "51b8e628ba3fced84cbc065838bb212bbb73f378715d168d98fe8979137b9d3c",
+      "expected_chunks": 2,
+      "persisted_chunks": 2,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/life/resources/sourdough-microbiome-ncsu-2026.md",
+      "author": "Heather",
+      "content_hash": "6a524cf97be89bddb7c49b75d543951125cca93086637f52e6e6e85c1a208a35",
+      "expected_chunks": 2,
+      "persisted_chunks": 2,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/life/resources/subscription_fatigue_research_2026.md",
+      "author": "Heather",
+      "content_hash": "2cf818c96e61b3f87621c0ee33a39be35c14693760f6ae0712b448e9c144b8e0",
+      "expected_chunks": 5,
+      "persisted_chunks": 5,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/life/resources/switching-costs-privacy-paradox-2025.md",
+      "author": "Heather",
+      "content_hash": "beedaad997da375510a4166f4d15b88efb6902be0593fbce03784832c84c9b0a",
+      "expected_chunks": 4,
+      "persisted_chunks": 4,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/life/resources/trust-equation-hiring-emmerling-2025.md",
+      "author": "Heather",
+      "content_hash": "c8a9afc29847226b7b189a40a45b13945ec9c29ed59976095d76fdd69c025a41",
+      "expected_chunks": 3,
+      "persisted_chunks": 3,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/project_competitive_intel_march2026.md",
+      "author": "Heather",
+      "content_hash": "bb0d804c0378271432b210cfbabc4574b4a8b204d18a942244513d5477e86fcc",
+      "expected_chunks": 2,
+      "persisted_chunks": 2,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/project_content_calendar_march2026.md",
+      "author": "Heather",
+      "content_hash": "93310fa0908453825e44f6d5bd03031700136a82291be956568dc88a8f8c57d5",
+      "expected_chunks": 2,
+      "persisted_chunks": 2,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/project_dd_liberation_narrative.md",
+      "author": "Heather",
+      "content_hash": "05bb71969d568bcf229446bab82894687e295266307a80466a7abbfd22080458",
+      "expected_chunks": 2,
+      "persisted_chunks": 2,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/project_fear_paradox_blog.md",
+      "author": "Heather",
+      "content_hash": "a58f62baf49849508fc1a3943abde001cfc682e4806ee06be69a7b7691292f0f",
+      "expected_chunks": 2,
+      "persisted_chunks": 2,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/project_health_data_sentiment_brief.md",
+      "author": "Heather",
+      "content_hash": "8d028e3a8eb53ebbd24916b874760132e8d66189b7eb150cfaaaa43783b0effb",
+      "expected_chunks": 1,
+      "persisted_chunks": 1,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/project_hero_copy_march2026.md",
+      "author": "Heather",
+      "content_hash": "901627409dd66d86c7d59e2d2c114073122db573cc15cfcf071c1e8dddd45403",
+      "expected_chunks": 1,
+      "persisted_chunks": 1,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/project_jiminai_seed_round.md",
+      "author": "Heather",
+      "content_hash": "2a6582397c57968234f42a26a218ca121c183bce4a9bd05a15eed82cdf909155",
+      "expected_chunks": 2,
+      "persisted_chunks": 2,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/project_kintsugi_brand_voice.md",
+      "author": "Heather",
+      "content_hash": "a523b5fee1074c5d71cb9921b57d85ce94ca7361ae7a9ecefae6086bf722f6a8",
+      "expected_chunks": 3,
+      "persisted_chunks": 3,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/project_liberation_window_blog.md",
+      "author": "Heather",
+      "content_hash": "9e8039b0cf742d296fe2fac863fd6147c4369d6f3b6845a8afd112875d12bc34",
+      "expected_chunks": 1,
+      "persisted_chunks": 1,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/project_the_room_brand_piece.md",
+      "author": "Heather",
+      "content_hash": "006bffadcf53d94e09349c917f2b71009218d997f571364740bcb9ee0f7ae9cc",
+      "expected_chunks": 1,
+      "persisted_chunks": 1,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/project_trust_as_architecture.md",
+      "author": "Heather",
+      "content_hash": "d0c6514ae9377a6c2f0bc52309e7c629d6300ebf08d9b09c5ae465243ffeb27b",
+      "expected_chunks": 2,
+      "persisted_chunks": 2,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/project_wave3_samsung_hook.md",
+      "author": "Heather",
+      "content_hash": "2b8d5725dfc6d2c6d4cf8073f177ef89e8fc8ed270a4b7b4bc89ae97dc02b265",
+      "expected_chunks": 2,
+      "persisted_chunks": 2,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/project_wave3_supporting_intel.md",
+      "author": "Heather",
+      "content_hash": "7782bb528c3b5a2293490c7ced937f4ee26e5532f830f0ca77beeba0ea3acf7c",
+      "expected_chunks": 3,
+      "persisted_chunks": 3,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/user_derek_profile.md",
+      "author": "Heather",
+      "content_hash": "9029901ae8b1dbae5d4ddb912345ae6bb0e0a3dc23125c06d2cc4aeb573a2158",
+      "expected_chunks": 4,
+      "persisted_chunks": 4,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/user_derek_stress_test.md",
+      "author": "Heather",
+      "content_hash": "621dad80bab2db3fca9bfd0af00492892597e4558c0a1e45a5b0da69e6308476",
+      "expected_chunks": 2,
+      "persisted_chunks": 2,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/heather/memory/user_jamal_profile.md",
+      "author": "Heather",
+      "content_hash": "4b87400e1d80c1e8ae33e0b5a56e234f2a938fb5432f21d9cfe88e20a0af557e",
+      "expected_chunks": 1,
+      "persisted_chunks": 1,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/maya/memory/2026-03-13.md",
+      "author": "Maya",
+      "content_hash": "3f65c9c9705d4c18e42fab91c7a7fa91d53bb8577cc52e592c5f06d40c74ef70",
+      "expected_chunks": 5,
+      "persisted_chunks": 5,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/maya/memory/2026-03-14.md",
+      "author": "Maya",
+      "content_hash": "c7ae4cca5f77cb9901daaefd74efb792e555ac7f8948202693aa00d1882fcb1b",
+      "expected_chunks": 4,
+      "persisted_chunks": 4,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/maya/memory/2026-03-18.md",
+      "author": "Maya",
+      "content_hash": "521a544753b3d25c1dc77e922be0c49275eaa7d5233cf9d78782222f5ebbdb96",
+      "expected_chunks": 4,
+      "persisted_chunks": 4,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/maya/memory/2026-03-22.md",
+      "author": "Maya",
+      "content_hash": "f6a64e5db401fe3e08baab4a2198801212c6a8ac0df599f5930bab8c4546d8d6",
+      "expected_chunks": 3,
+      "persisted_chunks": 3,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/maya/memory/MEMORY.md",
+      "author": "Maya",
+      "content_hash": "da7a71830c00dcf9ecdf994e87acbc18f8017c02bc9d5f788e512c65d49b1027",
+      "expected_chunks": 2,
+      "persisted_chunks": 2,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/maya/memory/project_pitch_deck_status.md",
+      "author": "Maya",
+      "content_hash": "1daa985a3237e418efdb35a64f00e41df3c58e1830e608a7dcbf37ebf7eef973",
+      "expected_chunks": 3,
+      "persisted_chunks": 3,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/maya/memory/reference_apple_gemini_distillation.md",
+      "author": "Maya",
+      "content_hash": "76f1439bfb614849d377645387cb2ac4e7e980cd78eb8c5532317c203dc38d1e",
+      "expected_chunks": 2,
+      "persisted_chunks": 2,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/maya/memory/reference_sovereign_ai_trend.md",
+      "author": "Maya",
+      "content_hash": "ebad28f02cae165852d04639d40624f643b37d08bd9cc69759b45ff7a08573e9",
+      "expected_chunks": 3,
+      "persisted_chunks": 3,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/maya/memory/reference_state_ai_governance_laws.md",
+      "author": "Maya",
+      "content_hash": "ed72f547aa0cd624162a5378117723487dd3c23c44ce61f588f013366aef3bbc",
+      "expected_chunks": 1,
+      "persisted_chunks": 1,
+      "passed": true
+    },
+    {
+      "source": "https://github.com/Xananthium/dig-agent-files/blob/55c642d4c8876b7a5a9f9601475a51893271d8e1/agents/maya/memory/reference_state_privacy_laws.md",
+      "author": "Maya",
+      "content_hash": "565b3d51a30627512685f29995a9f1db4e6f9510fe9f531a14167aee07a2e7cd",
+      "expected_chunks": 2,
+      "persisted_chunks": 2,
+      "passed": true
+    }
+  ]
+}

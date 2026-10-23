@@ -1,0 +1,46 @@
+{
+  "observed_at": "2026-10-23T18:36:03.234371+00:00",
+  "historical": [
+    {
+      "author": "Heather",
+      "records": 47,
+      "embedded": 47,
+      "graph_ready": 47
+    },
+    {
+      "author": "Maya",
+      "records": 10,
+      "embedded": 10,
+      "graph_ready": 10
+    }
+  ],
+  "current_snapshots": [
+    {
+      "source": "file:///home/isnotreal/.batbox/autonomous/server-context.json",
+      "expected_hash": "09613cd9137bba3ee67c0cbee2485e2177ec258bfa683ce74ab18886f50d84bf",
+      "stored_hash": "09613cd9137bba3ee67c0cbee2485e2177ec258bfa683ce74ab18886f50d84bf",
+      "graph_hash": "09613cd9137bba3ee67c0cbee2485e2177ec258bfa683ce74ab18886f50d84bf",
+      "current_file_graphed": true
+    },
+    {
+      "source": "file:///home/isnotreal/.batbox/autonomous/program-map.json",
+      "expected_hash": "41297162d32a9cff4a91eadbd6b709d7d0b2e4297c201f5f2b8c60777e1590fe",
+      "stored_hash": "41297162d32a9cff4a91eadbd6b709d7d0b2e4297c201f5f2b8c60777e1590fe",
+      "graph_hash": "41297162d32a9cff4a91eadbd6b709d7d0b2e4297c201f5f2b8c60777e1590fe",
+      "current_file_graphed": true
+    }
+  ],
+  "mission": {
+    "job_id": 242,
+    "state": "ready",
+    "source_uri": "https://digitaldisconnections.com/our-story.html",
+    "content_hash": "26c08f7af6abde6805fad02954b81cf22754ffa2e8745ed3411d0578e9a0d0cc",
+    "graph_ready": 1
+  },
+  "queue": {
+    "ready": 364
+  },
+  "graph_index_rows": 98,
+  "other_graph_work_pending": 118,
+  "requested_targets_complete": true
+}
