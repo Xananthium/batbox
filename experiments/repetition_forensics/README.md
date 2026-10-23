@@ -60,3 +60,12 @@ not in this occurrence's serving path, but its cause remains unestablished.
 [The sanitized record](20261023-native-planning-repetition.json) preserves the
 output hash and scope; raw text stays private. The engine received explicit
 issue feedback to base progress claims on actual diffs and test receipts.
+
+## Evening autonomous follow-up
+
+The [18:38–22:34 UTC production audit](20261023-autonomous-followup.md) found
+repeated-word degeneration in most coordinator and worker turns, despite active
+services and successful compaction. Repetitive finals also entered persistent
+context and memory. It records actual tool and build outcomes, matching sampling
+settings, and the distinction between a persistence gap and an unknown initial
+cause. No runtime repair is claimed by that report.
