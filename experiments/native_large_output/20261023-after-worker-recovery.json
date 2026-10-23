@@ -1,0 +1,285 @@
+{
+  "observed_at": "2026-10-23T18:02:28.033584+00:00",
+  "deployment_started_at": "2026-10-23T17:58:17Z",
+  "inspection": "Read-only worker journals and durable transcript receipts; no new model/API requests or service changes.",
+  "configured_context": 200000,
+  "compaction_threshold": 100000,
+  "request_timeout_seconds": 600,
+  "stream_idle_timeout_seconds": 600,
+  "evidence_scope": "Post-restart native tool execution and preserved source data. This does not establish a completed self-improvement patch or deployment by the autonomous workers.",
+  "workers": [
+    {
+      "role": "runtime-maintainer-1",
+      "agent_id": "25ed56ef-1bed-4eb6-9c44-682f2e208455",
+      "session_id": "bf227436-a375-4691-8255-c76fbe99fdf2",
+      "predeployment_messages": 27,
+      "observed_messages": 37,
+      "journal": {
+        "status": "running",
+        "phase": "streaming",
+        "updated_at": "2026-10-23T18:02:25Z",
+        "last_progress_at": "2026-10-23T18:02:25Z",
+        "last_operation": "stream_delta_received",
+        "progress_sequence": 35,
+        "recovery_attempts": 1
+      },
+      "completed_turn_count_known": false,
+      "new_tool_receipts": [
+        {
+          "message_index": 28,
+          "message_id": "57ba7c76-3d4c-40c9-835e-2bad186c45af",
+          "tool_call_id": "chatcmpl-tool-b9e36f84a14d0d06",
+          "tool_name": "Read",
+          "timestamp_ms": 1792778405529,
+          "timestamp_utc": "2026-10-23T18:00:05.529000+00:00",
+          "result_bytes": 16284,
+          "result_sha256": "f88587c5932beddbda1e5d33dc163efd882516e26f55dc8efe552b8c55badd16",
+          "is_error": false,
+          "argument_fields": [
+            "file_path"
+          ],
+          "target_basename": "README.md"
+        },
+        {
+          "message_index": 30,
+          "message_id": "e5074b19-f0bb-4e22-b626-0780afebaf46",
+          "tool_call_id": "chatcmpl-tool-8739e74e0f3d92bf",
+          "tool_name": "Bash",
+          "timestamp_ms": 1792778446207,
+          "timestamp_utc": "2026-10-23T18:00:46.207000+00:00",
+          "result_bytes": 367,
+          "result_sha256": "99bffb616f25437a10913ddf2c716c53acd1135782fb284c5227aaf5a7846f25",
+          "is_error": false,
+          "argument_fields": [
+            "command",
+            "description"
+          ],
+          "command_program": "ls",
+          "exit_code": 0
+        },
+        {
+          "message_index": 32,
+          "message_id": "87d68f17-feb1-49f3-bcd5-610805f62070",
+          "tool_call_id": "chatcmpl-tool-84caffefb32ac7c9",
+          "tool_name": "Bash",
+          "timestamp_ms": 1792778467476,
+          "timestamp_utc": "2026-10-23T18:01:07.476000+00:00",
+          "result_bytes": 48,
+          "result_sha256": "0590407fa3dded658d37c5bfdf88345ad511302f1617b39d80903d1836b07eab",
+          "is_error": false,
+          "argument_fields": [
+            "command",
+            "description"
+          ],
+          "command_program": "ls",
+          "exit_code": 0
+        },
+        {
+          "message_index": 34,
+          "message_id": "d4ade3d2-6a5d-4308-a6ca-86537e385d88",
+          "tool_call_id": "chatcmpl-tool-92368294a2ec3a1a",
+          "tool_name": "Read",
+          "timestamp_ms": 1792778474644,
+          "timestamp_utc": "2026-10-23T18:01:14.644000+00:00",
+          "result_bytes": 51791,
+          "result_sha256": "ffcc41e5d5b55567a3f131b83aa7097f6bc9b5ef15af65bb27806e06ca968351",
+          "is_error": false,
+          "argument_fields": [
+            "file_path"
+          ],
+          "target_basename": "Engine.cpp"
+        },
+        {
+          "message_index": 36,
+          "message_id": "f2da73ed-c700-4649-b2fc-c78c91426bec",
+          "tool_call_id": "chatcmpl-tool-af55d34644e76473",
+          "tool_name": "CommunicationControl",
+          "timestamp_ms": 1792778505658,
+          "timestamp_utc": "2026-10-23T18:01:45.658000+00:00",
+          "result_bytes": 99,
+          "result_sha256": "e53dcaf72b7f14134beca238f1f77ca271548248175169f26404fd471562ea32",
+          "is_error": false,
+          "argument_fields": [
+            "enabled"
+          ]
+        }
+      ],
+      "preserved_oversized_results": [
+        {
+          "original_message_id": "f3eb7260-e961-40ae-bef0-30feb5088d69",
+          "original_message_index": 26,
+          "bytes": 1048580,
+          "sha256": "383b07520bcc4a1bcf4349d1954cc5365fba2db2dfcdb4667007970fb3ceb60b",
+          "equals_predeployment_sha256": true,
+          "artifact_basename": "383b07520bcc4a1bcf4349d1954cc5365fba2db2dfcdb4667007970fb3ceb60b.txt",
+          "artifact_sha256": "383b07520bcc4a1bcf4349d1954cc5365fba2db2dfcdb4667007970fb3ceb60b",
+          "artifact_mode": "0o600",
+          "page_count": 17,
+          "pages_reconstruct_original_exactly": true
+        }
+      ],
+      "later_journal_observation": {
+        "observed_at": "2026-10-23T18:03:17.499132+00:00",
+        "status": "running",
+        "phase": "streaming",
+        "updated_at": "2026-10-23T18:03:16Z",
+        "last_progress_at": "2026-10-23T18:03:16Z",
+        "last_operation": "stream_delta_received"
+      },
+      "seconds_since_restart_to_first_persisted_tool_result": 108.529
+    },
+    {
+      "role": "verification-monitor-3",
+      "agent_id": "7562c112-0fb8-4556-be56-811aa54db17d",
+      "session_id": "35d7a97e-c3a7-4cd8-8ef8-079705285636",
+      "predeployment_messages": 7,
+      "observed_messages": 13,
+      "journal": {
+        "status": "running",
+        "phase": "context_prepared",
+        "updated_at": "2026-10-23T18:01:08Z",
+        "last_progress_at": "2026-10-23T18:01:08Z",
+        "last_operation": "prompt_tokenized",
+        "progress_sequence": 16,
+        "recovery_attempts": 1
+      },
+      "completed_turn_count_known": false,
+      "new_tool_receipts": [
+        {
+          "message_index": 8,
+          "message_id": "6133065b-ccd0-4a33-a8c0-fe8af22a0a01",
+          "tool_call_id": "chatcmpl-tool-aeb06e53bdc56a15",
+          "tool_name": "Bash",
+          "timestamp_ms": 1792778423690,
+          "timestamp_utc": "2026-10-23T18:00:23.690000+00:00",
+          "result_bytes": 23,
+          "result_sha256": "9aa9bd0703910fd0e6afff0ce3ec346f087d80883181e635fbaa120c82a904b5",
+          "is_error": false,
+          "argument_fields": [
+            "command",
+            "description"
+          ],
+          "command_program": "find",
+          "exit_code": 0
+        },
+        {
+          "message_index": 10,
+          "message_id": "0e29eee4-b0fb-4026-bcdd-c4e077a44827",
+          "tool_call_id": "chatcmpl-tool-a232393028fcf69a",
+          "tool_name": "Bash",
+          "timestamp_ms": 1792778450366,
+          "timestamp_utc": "2026-10-23T18:00:50.366000+00:00",
+          "result_bytes": 24,
+          "result_sha256": "6c19eb847cb16c098a6d6f9be3f56b8eba765e073ee93fda4707596bd8317917",
+          "is_error": false,
+          "argument_fields": [
+            "command",
+            "description"
+          ],
+          "command_program": "find",
+          "exit_code": 0
+        },
+        {
+          "message_index": 12,
+          "message_id": "cf429154-6086-40d8-ab33-a8c7623de28b",
+          "tool_call_id": "chatcmpl-tool-a253d08fc79e2626",
+          "tool_name": "Bash",
+          "timestamp_ms": 1792778467939,
+          "timestamp_utc": "2026-10-23T18:01:07.939000+00:00",
+          "result_bytes": 224,
+          "result_sha256": "589bfb118050a2584831b6439f6c2ad79c0986fa7b028d693dfdafdea9ba9674",
+          "is_error": false,
+          "argument_fields": [
+            "command",
+            "description"
+          ],
+          "command_program": "ls",
+          "exit_code": 0
+        }
+      ],
+      "preserved_oversized_results": [
+        {
+          "original_message_id": "6b41c944-751d-48bc-91c1-63564b8ef63c",
+          "original_message_index": 6,
+          "bytes": 1048374,
+          "sha256": "134889e056574b17d2407d937d7f403b78e08a1a67e1cd738200c53ffdcd645a",
+          "equals_predeployment_sha256": true,
+          "artifact_basename": "134889e056574b17d2407d937d7f403b78e08a1a67e1cd738200c53ffdcd645a.txt",
+          "artifact_sha256": "134889e056574b17d2407d937d7f403b78e08a1a67e1cd738200c53ffdcd645a",
+          "artifact_mode": "0o600",
+          "page_count": 17,
+          "pages_reconstruct_original_exactly": true
+        }
+      ],
+      "later_journal_observation": {
+        "observed_at": "2026-10-23T18:03:17.499132+00:00",
+        "status": "running",
+        "phase": "context_prepared",
+        "updated_at": "2026-10-23T18:03:14Z",
+        "last_progress_at": "2026-10-23T18:03:14Z",
+        "last_operation": "prompt_tokenized"
+      },
+      "seconds_since_restart_to_first_persisted_tool_result": 126.69
+    }
+  ],
+  "engine": {
+    "pid": 179991,
+    "executable": "/home/isnotreal/.local/lib/batbox-engine/releases/500fc1120de216b33731/batbox",
+    "sha256": "500fc1120de216b337315501b4b1409d8d0a06934118f87260caa74ce71e95ac"
+  },
+  "backend": {
+    "pid": 162873,
+    "matches_predeployment_pid": true
+  },
+  "both_affected_workers_have_postrestart_tool_receipts": true,
+  "all_original_results_and_artifacts_verified": true,
+  "shared_load": {
+    "observed_at": "2026-10-23T18:03:17.499132+00:00",
+    "established_client_connections_by_process": {
+      "caddy": 7,
+      "batbox": 4,
+      "python": 1
+    },
+    "total_established_client_connections": 12,
+    "socket_inspection_succeeded": true,
+    "privacy": "Only aggregate counts retained; no remote addresses, request bodies or client identifiers.",
+    "interpretation": "Shared production load includes native workers/coordinator, memory service and external requests forwarded by Caddy; isolated benchmark throughput is not a per-conversation live guarantee.",
+    "recent_backend_metrics": [
+      {
+        "prompt_tokens_per_second": 0.0,
+        "generation_tokens_per_second": 4.1,
+        "running_requests": 10,
+        "waiting_requests": 2,
+        "deferred_requests": 1,
+        "gpu_kv_cache_percent": 96.3,
+        "timestamp_utc": "2026-10-23T18:02:38.661794+00:00"
+      },
+      {
+        "prompt_tokens_per_second": 1448.3,
+        "generation_tokens_per_second": 11.5,
+        "running_requests": 10,
+        "waiting_requests": 2,
+        "deferred_requests": 2,
+        "gpu_kv_cache_percent": 86.5,
+        "timestamp_utc": "2026-10-23T18:02:48.662160+00:00"
+      },
+      {
+        "prompt_tokens_per_second": 260.7,
+        "generation_tokens_per_second": 10.6,
+        "running_requests": 12,
+        "waiting_requests": 0,
+        "gpu_kv_cache_percent": 99.0,
+        "timestamp_utc": "2026-10-23T18:02:58.662630+00:00"
+      },
+      {
+        "prompt_tokens_per_second": 0.0,
+        "generation_tokens_per_second": 7.0,
+        "running_requests": 11,
+        "waiting_requests": 1,
+        "deferred_requests": 1,
+        "gpu_kv_cache_percent": 98.4,
+        "timestamp_utc": "2026-10-23T18:03:08.663070+00:00"
+      }
+    ]
+  }
+}

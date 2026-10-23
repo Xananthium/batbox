@@ -204,6 +204,13 @@ relevant memory, and advances its current goal. Source inspection, code changes,
 tests, and deployment are available to it. Tool intent and results are persisted
 so recovery can distinguish recorded actions from interrupted actions.
 
+Standing workers recover independently of a busy coordinator, retaining their
+identities and sessions with bounded retry backoff. Tool outputs of at least
+512 KiB remain complete in the transcript and private hashed artifacts; active
+context receives a head/tail preview and paths for reading exact pages. This also
+applies to restored histories, so an oversized directory listing does not force
+every recovery attempt to summarize the same output again.
+
 With a backend supporting `/tokenize`, exact compaction measures the same
 messages, tool schemas, and template options as generation. At 100,000 tokens,
 the configured model summarizes earlier context and retains recent complete
@@ -232,6 +239,10 @@ uses the local `~/.batbox/autonomous/api.key` credential and exposes:
 | `GET, PATCH /v1/issues/{id}` | Read an issue or change its status |
 | `POST /v1/issues/{id}/comments` | Queue a message to the engine |
 | `GET /v1/status` | Current engine status |
+
+Status distinguishes the coordinator's saved snapshot from fresh worker journals,
+including actual progress, phase and recovery attempts. Reading status does not
+refresh a heartbeat.
 
 Issues support `backlog`, `todo`, `in_progress`, `in_review`, `done`, `blocked`,
 and `cancelled`. Replies become issue messages; answering does not automatically

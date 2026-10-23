@@ -28,6 +28,23 @@ backoff and the same durable worker/session identities. Worker journals record
 actual context, tool, streaming, and completion activity. Received reasoning
 deltas can refresh progress; a blocked request cannot manufacture a heartbeat.
 
-Production activation and post-repair observations will be recorded separately
-from CPU regression results. A successful model response does not by itself
-prove that the autonomous worker changed source code or deployed an improvement.
+CPU validation passed: 4 archive cases / 158 assertions, 22 conversation cases /
+326 assertions, 2 worker lifecycle cases, 9 autonomous lifecycle cases, 3 shutdown
+cases, and 6 API cases. The actual 1,048,580-byte worker result became a
+17,285-byte active view with 17 exact pages. These are byte measurements, not
+backend token counts. See `20261023-cpu-validation.json`.
+
+Production release `500fc1120de216b337315501b4b1409d8d0a06934118f87260caa74ce71e95ac`
+was activated at 17:58 UTC. Batbox/API restart took 2.069 seconds and left the
+inference backend process unchanged. Both formerly stalled workers resumed
+durable tool execution with their original identities: five maintainer receipts
+and three verification receipts by 18:03. Their first receipts arrived 108.5 and
+126.7 seconds after restart. Original transcript hashes and private artifacts
+matched; all pages reconstructed the exact outputs.
+
+`20261023-after-worker-recovery.json` records those observations. Neither worker
+had finished its full turn at that snapshot. The server was handling additional
+proxy traffic: four native, one memory, and seven proxy connections, with 10–12
+running inference requests in nearby metrics. These recovery timings are under
+shared production load, not isolated serving benchmarks. Tool receipts establish
+execution; they do not prove an autonomous source improvement or deployment.
