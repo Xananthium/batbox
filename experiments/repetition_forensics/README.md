@@ -39,6 +39,12 @@ CUDA_VISIBLE_DEVICES='' VLLM_PLUGINS='' /path/to/vllm-env/bin/python \
   probe_sampling_fallback.py --output 20261023-anthropic-sampling-fallback.json
 ```
 
-The controlled MTP-on/off serving comparison is a separate pending experiment.
+The [active V2 sampler audit](MTP_SAMPLING_AUDIT.md) passed 13 CPU source checks
+and found no demonstrated active-path sampling defect. These checks emulate
+selected function bodies; they do not validate CUDA execution or diagnose the
+historical incident.
+
+The controlled MTP-on/off serving comparison is a separate pending experiment,
+deferred to prioritize restoring fast production operation.
 Zero loops in a small sample would establish only failure to reproduce, not
 the absence of a rare failure or its historical cause.

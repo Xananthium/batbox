@@ -1,0 +1,345 @@
+{
+  "status": "cpu_source_semantics_checked_not_cuda_or_incident_reproduction",
+  "utc": "2026-10-23T16:47:17.718868+00:00",
+  "script_sha256": "d65566982233c7bb885e21f189e572dc1b3fb59c5b4af188630a5f1fc26b3a7b",
+  "torch_version": "2.5.1+cpu",
+  "torch_cuda_build": null,
+  "gpu_calls": 0,
+  "vllm_imported": false,
+  "production_packages_modified": false,
+  "cpu_threads": 1,
+  "runtime_snapshot_sha256": "4f41b6f0acc9df3d7d1da6b03557d13f834d139153c654b656782638695d1dfe",
+  "historical_launch_sha256": "6a0675aadb24517c4c9a8c5be981e59d02f42b439bf784d96f811766ea42c53b",
+  "captured_v2_runner": "1",
+  "historical_launch_v2_runner": "1",
+  "captured_speculative_config": {
+    "method": "mtp",
+    "model": "/home/isnotreal/models/gemma4-31b-qat-hauhau-balanced-native-mixed-w4w8a16/assistant",
+    "num_speculative_tokens": 2,
+    "quantization": "compressed-tensors",
+    "max_model_len": 200000,
+    "draft_load_config": {
+      "load_format": "safetensors"
+    },
+    "use_local_argmax_reduction": true
+  },
+  "historical_request_sampler_recovered": false,
+  "oct22_exact_installed_sampling_source_verified": false,
+  "confirmed_active_path_sampling_bug": false,
+  "incident_cause_established": false,
+  "checks": [
+    {
+      "name": "previous_speculative_tokens_included_without_double_counting_last_committed",
+      "passed": true,
+      "draft_token_logits": [
+        2.0,
+        0.25,
+        0.0
+      ],
+      "last_committed_logits": [
+        0.25,
+        0.25,
+        0.25
+      ]
+    },
+    {
+      "name": "prompt_tokens_receive_repetition_only",
+      "passed": true
+    },
+    {
+      "name": "verification_does_not_mutate_committed_counts",
+      "passed": true
+    },
+    {
+      "name": "mixed_request_histories_and_penalties_are_separate",
+      "passed": true
+    },
+    {
+      "name": "repetition_penalty_is_presence_based_not_count_escalating",
+      "passed": true,
+      "occurrences_compared": [
+        1,
+        62784
+      ],
+      "penalty": 1.1,
+      "repeated_token_logit": 1.8181817531585693
+    },
+    {
+      "name": "post_update_commits_only_emitted_tokens_and_rolls_back_rejection",
+      "passed": true,
+      "committed_tokens": [
+        7,
+        8
+      ],
+      "last_token": 8
+    },
+    {
+      "name": "v2_verification_and_bonus_all_apply_min_p",
+      "passed": true,
+      "finite_tokens_per_row": [
+        1,
+        1,
+        1
+      ],
+      "pipeline_order": [
+        "penalties",
+        "thinking_budget_noop",
+        "temperature",
+        "min_p",
+        "top_k_top_p"
+      ]
+    },
+    {
+      "name": "top_k_applies_to_every_expanded_row",
+      "passed": true
+    },
+    {
+      "name": "top_p_applies_to_every_expanded_row",
+      "passed": true
+    },
+    {
+      "name": "production_like_filters_can_leave_repeated_token_as_only_choice",
+      "passed": true,
+      "repeated_token_probability": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "synthetic_logits": true,
+      "measured_model_logits": false
+    },
+    {
+      "name": "one_hot_repeated_drafts_obey_target_probability_ratio",
+      "passed": true,
+      "cases": [
+        {
+          "target_probability": 0.0,
+          "uniform": 0.05,
+          "accepted": 0
+        },
+        {
+          "target_probability": 0.0,
+          "uniform": 0.2,
+          "accepted": 0
+        },
+        {
+          "target_probability": 0.0,
+          "uniform": 0.5,
+          "accepted": 0
+        },
+        {
+          "target_probability": 0.0,
+          "uniform": 0.95,
+          "accepted": 0
+        },
+        {
+          "target_probability": 0.1,
+          "uniform": 0.05,
+          "accepted": 2
+        },
+        {
+          "target_probability": 0.1,
+          "uniform": 0.2,
+          "accepted": 0
+        },
+        {
+          "target_probability": 0.1,
+          "uniform": 0.5,
+          "accepted": 0
+        },
+        {
+          "target_probability": 0.1,
+          "uniform": 0.95,
+          "accepted": 0
+        },
+        {
+          "target_probability": 0.4,
+          "uniform": 0.05,
+          "accepted": 2
+        },
+        {
+          "target_probability": 0.4,
+          "uniform": 0.2,
+          "accepted": 2
+        },
+        {
+          "target_probability": 0.4,
+          "uniform": 0.5,
+          "accepted": 0
+        },
+        {
+          "target_probability": 0.4,
+          "uniform": 0.95,
+          "accepted": 0
+        },
+        {
+          "target_probability": 0.9,
+          "uniform": 0.05,
+          "accepted": 2
+        },
+        {
+          "target_probability": 0.9,
+          "uniform": 0.2,
+          "accepted": 2
+        },
+        {
+          "target_probability": 0.9,
+          "uniform": 0.5,
+          "accepted": 2
+        },
+        {
+          "target_probability": 0.9,
+          "uniform": 0.95,
+          "accepted": 0
+        },
+        {
+          "target_probability": 1.0,
+          "uniform": 0.05,
+          "accepted": 2
+        },
+        {
+          "target_probability": 1.0,
+          "uniform": 0.2,
+          "accepted": 2
+        },
+        {
+          "target_probability": 1.0,
+          "uniform": 0.5,
+          "accepted": 2
+        },
+        {
+          "target_probability": 1.0,
+          "uniform": 0.95,
+          "accepted": 2
+        }
+      ]
+    },
+    {
+      "name": "greedy_verification_requires_target_argmax",
+      "passed": true
+    },
+    {
+      "name": "legacy_target_path_has_no_min_p_processor_reference",
+      "passed": true
+    }
+  ],
+  "source_files": {
+    "v1/worker/gpu/sample/penalties.py": {
+      "sha256": "a5e99c71e6ac50ef025b8a7b0b903a1d2679738d8319af9c98bb200389388b29",
+      "symbols": {
+        "_penalties_kernel": 105
+      },
+      "matches_captured_20261023_manifest": true
+    },
+    "v1/worker/gpu/sample/min_p.py": {
+      "sha256": "4cb5e2f45e1ced6f9685283a7a5c8cfd7204d9a249822e866cfff756c7f04f62",
+      "symbols": {
+        "_min_p_kernel": 9
+      },
+      "matches_captured_20261023_manifest": true
+    },
+    "v1/worker/gpu/sample/gumbel.py": {
+      "sha256": "c14a5fa1899a9ff320c62f29bd161be4a4f0fa124ecf26a28681f0f3d143868e",
+      "symbols": {
+        "_temperature_kernel": 22
+      },
+      "matches_captured_20261023_manifest": true
+    },
+    "v1/worker/gpu/input_batch.py": {
+      "sha256": "2e4c2ebdb2c1ce04026d15288f5408624d880f335735636985efa3a3209a56f2",
+      "symbols": {
+        "_post_update_kernel": 557
+      },
+      "matches_captured_20261023_manifest": true
+    },
+    "v1/worker/gpu/sample/sampler.py": {
+      "sha256": "620b0ff1bea504ebe61794b91ab07cdc243d3d05f8dea4c4044c374add76270b",
+      "symbols": {
+        "Sampler.apply_sampling_params": 226
+      },
+      "matches_captured_20261023_manifest": true
+    },
+    "v1/sample/ops/topk_topp_sampler.py": {
+      "sha256": "970afd0e8565ddfdcf50dc99892d893b20cb186214cc35e15aeb97d1dba90bd0",
+      "symbols": {
+        "apply_top_k_top_p_pytorch": 473
+      },
+      "matches_captured_20261023_manifest": true
+    },
+    "v1/worker/gpu/spec_decode/rejection_sampler_utils.py": {
+      "sha256": "99556e8419a66b3bd1ce993a056a4974856bda810b3d1154d6104a1609a518c0",
+      "symbols": {
+        "_compute_global_logsumexp": 22,
+        "_compute_global_target_argmax": 95,
+        "_compute_global_logprobs_and_logsumexp": 120,
+        "_rejection_kernel": 488
+      },
+      "matches_captured_20261023_manifest": true
+    },
+    "v1/sample/rejection_sampler.py": {
+      "sha256": "9acaefa7ff3ff02649adf3a2edc4a7281d0089c23566fe5ff140c5f820d88ac4",
+      "symbols": {
+        "apply_sampling_constraints": 522,
+        "RejectionSampler.apply_logits_processors": 307
+      },
+      "matches_captured_20261023_manifest": true
+    },
+    "v1/worker/gpu/spec_decode/rejection_sampler.py": {
+      "sha256": "25759f98e8aace9a556bc4252c206f246535f0536ebc919f97e097f92a72066a",
+      "symbols": {},
+      "matches_captured_20261023_manifest": true
+    },
+    "v1/worker/gpu/spec_decode/speculator.py": {
+      "sha256": "b25efadde6376b2168a2d5284f788d239079b0ef1480e68fafc25d557d44389a",
+      "symbols": {},
+      "matches_captured_20261023_manifest": true
+    },
+    "v1/worker/gpu/spec_decode/gemma4/speculator.py": {
+      "sha256": "547fda08c0d4b9426de95a2805357ccea8bd6a83322bf431102807be1445752a",
+      "symbols": {},
+      "matches_captured_20261023_manifest": true
+    },
+    "v1/worker/gpu/sample/states.py": {
+      "sha256": "7dbccea6fb6e24830dafb447a43f93fd0539f33ef02f1b5bf7c2547234cbffa3",
+      "symbols": {},
+      "matches_captured_20261023_manifest": true
+    },
+    "v1/worker/gpu/sample/thinking_budget.py": {
+      "sha256": "89d4255450c1659c6d3f49dbfc0e8af5035904cdd98e3e8fc0a1bd21650203d0",
+      "symbols": {},
+      "matches_captured_20261023_manifest": true
+    },
+    "v1/worker/gpu/model_runner.py": {
+      "sha256": "5240fe8d62d403e466a4aa07a28fb7af5c0f1e9b9c3bb08c4003185bde461f87",
+      "symbols": {},
+      "matches_captured_20261023_manifest": true
+    },
+    "config/speculative.py": {
+      "sha256": "ce135651a7a0343ff526f72e9545932617378161abd03135d67eda6de89c617c",
+      "symbols": {},
+      "matches_captured_20261023_manifest": true
+    },
+    "entrypoints/anthropic/serving.py": {
+      "sha256": "9a12939d6502e54042fc524c175daf5c9f214bf9fb3851a1d98590aede1f7dd9",
+      "symbols": {},
+      "matches_captured_20261023_manifest": true
+    },
+    "entrypoints/anthropic/protocol.py": {
+      "sha256": "b3db7f280d57c9723bdc7251394e0c33d47d9202e6e08545cf9c6e93f4d76e69",
+      "symbols": {},
+      "matches_captured_20261023_manifest": true
+    },
+    "entrypoints/openai/chat_completion/protocol.py": {
+      "sha256": "8744d5e2004b2d376e34cf17de51c919bca6d81b0cc8392da138db1ef05a7c61",
+      "symbols": {},
+      "matches_captured_20261023_manifest": true
+    }
+  },
+  "limitations": [
+    "Triton operations emulated on CPU; no CUDA kernel compilation or launch.",
+    "top_k/top_p use the installed PyTorch fallback, not the active GPU Triton/FlashInfer kernels.",
+    "No model forward pass, logits capture, RNG quality test, batch race test, or exact incident replay.",
+    "The synthetic singleton distribution demonstrates a possible loop mechanism, not measured Gemma behavior.",
+    "Legacy min_p omission is not the captured active V2 path."
+  ]
+}
