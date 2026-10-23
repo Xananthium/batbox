@@ -1,0 +1,22 @@
+{
+  "started_at": "2026-10-23T17:06:26.916437+00:00",
+  "scope": "production Batbox graceful shutdown/restart; inference and memory services continue",
+  "stop_seconds": 1.4169156610005302,
+  "stopped_service": {
+    "Result": "success",
+    "ExecMainStatus": "0",
+    "ActiveState": "inactive"
+  },
+  "running_marker_removed": true,
+  "no_new_crash_report": true,
+  "same_session": true,
+  "phase_after": "preparing",
+  "same_worker_ids": true,
+  "passed": true,
+  "worker_count_before": 3,
+  "worker_count_after": 3,
+  "new_process": true,
+  "tested_binary_sha256": "7775ff66c98a9f6ef0b98ca2339059dc9e304013852e9a6dcdc1f0cb19636aa7",
+  "backend": "Pinned upstream PR141 original Hauhau Gemma4 GGUF; production inference and memory indexing continued.",
+  "private_source": "/home/isnotreal/.batbox/diagnostics/native-graceful-restart-live-20261023.json"
+}
