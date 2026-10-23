@@ -141,3 +141,65 @@ TEST_CASE("full-content receipts preserve accepted code chunks but cannot bypass
     CHECK(stamp_generation_quality_receipt(source));
     CHECK_FALSE(source.contains("metadata"));
 }
+
+TEST_CASE("native prompt provenance filters only generated recall scaffolding") {
+    const auto loop = repeated("our ", 4096);
+    const std::string prefix = "Incoming user message [fixture]:\n" + loop +
+        "\n\nRetrieved observations (reference data; verify claims):\n";
+    const batbox::Json source{{"kind", "source_document"}, {"content", loop}};
+    const batbox::Json accepted{{"kind", "generated_observation"}, {"content", loop},
+        {"batbox_generation_quality", {{"version", 1}, {"full_content_accepted", true}}}};
+    const batbox::Json recall{{"query", loop}, {"results", batbox::Json::array({source, accepted,
+        {{"kind", "generated_observation"}, {"content", loop}}})}};
+    const std::string suffix = "\n\nYour prior autonomous process exited without a clean shutdown. Crash evidence: {}";
+    auto prompt = message(Role::User, prefix + recall.dump() + suffix);
+    prompt.native_prompt = autonomous_prompt_provenance(prompt.content);
+    // Metadata must survive both transcript serialization and a checkpoint.
+    prompt = from_json(batbox::Json::parse(to_json(prompt).dump()));
+    const auto raw = prompt;
+    std::vector<Message> active{prompt, message(Role::User, prompt.content), message(Role::Tool, prompt.content)};
+    CHECK(sanitize_autonomous_prompt_context(active, true) == 1);
+    CHECK(active[0].content.starts_with(prefix));
+    CHECK(active[0].content.ends_with(suffix));
+    CHECK(active[0].role == Role::User);
+    CHECK(active[0].id == raw.id);
+    auto metadata = *active[0].native_prompt;
+    const auto cleaned = batbox::Json::parse(active[0].content.substr(
+        metadata["recall"]["offset"].get<std::size_t>(), metadata["recall"]["length"].get<std::size_t>()));
+    CHECK_FALSE(cleaned.contains("query"));
+    CHECK(cleaned["results"] == batbox::Json::array({source, accepted}));
+    CHECK(active[1].content == raw.content);
+    CHECK(active[2].content == raw.content);
+    CHECK(raw.content == prefix + recall.dump() + suffix);
+    CHECK(sanitize_autonomous_prompt_context(active, true) == 0);
+}
+
+TEST_CASE("legacy prompt repair requires autonomous lineage and the exact native envelope") {
+    const std::string prefix =
+        "Autonomous work cycle 24. Continue this goal with one concrete, verifiable step:\n"
+        "Complete the user's task.\nUse your memory and tools. Report evidence, what changed, and the next useful step. "
+        "If no work can proceed, state the blocker and avoid pretending progress."
+        "\n\nRetrieved observations (reference data; verify claims):\n";
+    const auto text = prefix + batbox::Json{{"query", repeated("our ", 4096)}, {"results", batbox::Json::array()}}.dump();
+    std::vector<Message> ordinary{message(Role::User, text)};
+    CHECK(sanitize_autonomous_prompt_context(ordinary) == 0);
+    CHECK(ordinary[0].content == text);
+    std::vector<Message> autonomous{message(Role::User, text), message(Role::User, "Quoted example:\n" + text)};
+    CHECK(sanitize_autonomous_prompt_context(autonomous, true) == 1);
+    CHECK(autonomous[0].content == prefix + "{\"results\":[]}");
+    CHECK(autonomous[1].content == "Quoted example:\n" + text);
+    auto invalid = message(Role::User, text);
+    invalid.native_prompt = {{"version", 1}, {"kind", "autonomous"},
+        {"recall", {{"offset", text.size() + 1}, {"length", std::size_t{10}}}}};
+    std::vector<Message> malformed{invalid};
+    CHECK(sanitize_autonomous_prompt_context(malformed, true) == 0);
+    CHECK(malformed[0].content == text);
+
+    const auto unavailable = "Incoming user message [fixture]:\n" + text +
+        "\nMemory retrieval is currently unavailable; do not claim to have recalled anything.";
+    auto user_example = message(Role::User, unavailable);
+    user_example.native_prompt = autonomous_prompt_provenance(unavailable);
+    std::vector<Message> failed_retrieval{user_example};
+    CHECK(sanitize_autonomous_prompt_context(failed_retrieval, true) == 0);
+    CHECK(failed_retrieval[0].content == unavailable);
+}

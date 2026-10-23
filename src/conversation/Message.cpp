@@ -91,6 +91,7 @@ Json to_json(const Message& m) {
     j["id"]      = m.id;
     j["role"]    = std::string(to_wire_role(m.role));
     j["content"] = m.content;
+    if (m.native_prompt) j["native_prompt"] = *m.native_prompt;
 
     // Timestamp as milliseconds since epoch (portable, avoids locale/TZ issues)
     const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -153,6 +154,8 @@ Message from_json(const Json& j) {
     m.id      = j["id"].get<std::string>();
     m.role    = role_from_string(j["role"].get<std::string>());
     m.content = j["content"].get<std::string>();
+    if (j.contains("native_prompt") && j["native_prompt"].is_object())
+        m.native_prompt = j["native_prompt"];
 
     // Restore timestamp
     const std::int64_t ms = j["ts"].get<std::int64_t>();

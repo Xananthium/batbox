@@ -75,6 +75,12 @@ target_sources(test_generation_quality PRIVATE
     ${PROJECT_SOURCE_DIR}/src/conversation/GenerationQuality.cpp
     ${PROJECT_SOURCE_DIR}/src/conversation/Message.cpp)
 
+batbox_add_unit_test(test_streaming_generation_quality
+    unit/test_streaming_generation_quality.cpp batbox_core)
+target_sources(test_streaming_generation_quality PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/conversation/GenerationQuality.cpp
+    ${PROJECT_SOURCE_DIR}/src/conversation/Message.cpp)
+
 batbox_add_unit_test(test_tool_output_archive
     unit/test_tool_output_archive.cpp batbox_core)
 target_sources(test_tool_output_archive PRIVATE
@@ -2087,6 +2093,12 @@ if(Python3_Interpreter_FOUND)
             BATBOX_AUTONOMOUS_BIN=$<TARGET_FILE:batbox>
             ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_generation_quality.py)
     set_tests_properties(autonomous_generation_quality PROPERTIES
+        LABELS "integration;autonomous" TIMEOUT 90)
+    add_test(NAME autonomous_streaming_generation_quality
+        COMMAND ${CMAKE_COMMAND} -E env
+            BATBOX_AUTONOMOUS_BIN=$<TARGET_FILE:batbox>
+            ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_streaming_generation_quality.py)
+    set_tests_properties(autonomous_streaming_generation_quality PROPERTIES
         LABELS "integration;autonomous" TIMEOUT 90)
     add_test(NAME native_worker_lifecycle
         COMMAND ${CMAKE_COMMAND} -E env

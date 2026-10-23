@@ -319,7 +319,9 @@ applies to restored histories, so an oversized directory listing does not force
 every recovery attempt to summarize the same output again.
 
 Autonomous conversations also detect extreme consecutive repetition of a short
-prose phrase. Rejected output stays in the raw transcript, while active context
+prose phrase during visible streaming, cancelling that request before it spends
+the remaining output budget. Received partial output stays in the raw transcript,
+while active context
 receives a recovery instruction and the existing retry backoff applies. The
 engine excludes these generated observations from new memory submissions and
 filters explicitly tagged repetitive generated memories from recalled context.
@@ -327,6 +329,13 @@ Historical memory records are retained. This is a narrow heuristic: ordinary
 token-limit endings, user messages, tool results and fenced code are not rejected
 merely for being long or repetitive. It does not diagnose the model or backend
 cause of degeneration.
+
+Native-generated recall sections carry provenance through session checkpoints.
+Recovery removes the memory service's echoed query from those sections, so a
+previous repetitive final cannot return inside an otherwise valid user-role
+operating prompt. Actual user text and recalled source/tool records remain
+unchanged. Cycle prompts identify the tool workspace and absolute source/build
+paths; the workspace is distinct from the repository root.
 
 With a backend supporting `/tokenize`, exact compaction measures the same
 messages, tool schemas, and template options as generation. At 100,000 tokens,

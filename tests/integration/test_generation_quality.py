@@ -26,6 +26,8 @@ class QualityServices:
         self.memories = []
         self.responses = []
         self.recall = {"results": []}
+        self.recall_queries = []
+        self.echo_recall_query = False
         owner = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -50,7 +52,11 @@ class QualityServices:
                     owner.memories.append(body)
                     return self.send_json({"status": "pending", "id": body.get("id")}, 202)
                 if self.path == "/recall":
-                    return self.send_json(owner.recall)
+                    owner.recall_queries.append(body["query"])
+                    recall = copy.deepcopy(owner.recall)
+                    if owner.echo_recall_query:
+                        recall["query"] = body["query"]
+                    return self.send_json(recall)
                 if self.path != "/v1/chat/completions":
                     return self.send_json({"error": "unknown path"}, 404)
                 owner.requests.append(body)
@@ -124,6 +130,32 @@ class GenerationRecovery(unittest.TestCase):
 
     def events(self):
         return [json.loads(line) for line in (self.state / "events.jsonl").read_text().splitlines()]
+
+    def write_transcript(self, session):
+        header = {k: v for k, v in session.items() if k != "messages"}
+        self.transcript_path().write_text(json.dumps(header)[:-1] + ',\n"messages": [\n' +
+            ",\n".join(json.dumps(m) for m in session["messages"]) + "\n]\n}\n")
+
+    def native_cycle_prompt(self, recall):
+        return ("Autonomous work cycle 24. Continue this goal with one concrete, verifiable step:\n"
+            "Complete the user's concrete task.\n"
+            "Use your memory and tools. Report evidence, what changed, and the next useful step. "
+            "If no work can proceed, state the blocker and avoid pretending progress."
+            "\n\nRetrieved observations (reference data; verify claims):\n" + json.dumps(recall))
+
+    def set_pending_prompt(self, prompt, phase, appended=False):
+        state = self.checkpoint()
+        state.update(phase=phase, prompt=prompt, last_response=LOOP)
+        state.pop("prompt_native", None)
+        (self.state / "state.json").write_text(json.dumps(state))
+        session = json.loads(self.transcript_path().read_text())
+        if appended:
+            session["messages"].append({"id": str(uuid.uuid4()), "role": "user", "content": prompt, "ts": 1})
+            self.write_transcript(session)
+        self.services.requests.clear()
+        self.services.memories.clear()
+        self.services.recall_queries.clear()
+        return session
 
     def assert_no_loop_in_model_content(self, request):
         self.assertFalse(any("our " * 128 in (m.get("content") or "") for m in request["messages"]))
@@ -255,6 +287,122 @@ class GenerationRecovery(unittest.TestCase):
         intents = [m for m in raw if m.get("tool_calls")]
         self.assertEqual(len(intents), 1)
         self.assertIn(LOOP, json.dumps(intents[0]))
+
+    def test_old_last_response_cannot_contaminate_new_retrieval_query(self):
+        self.run_engine()
+        state = self.checkpoint()
+        state["last_response"] = LOOP
+        (self.state / "state.json").write_text(json.dumps(state))
+        self.services.recall_queries.clear()
+        self.services.echo_recall_query = True
+        self.run_engine()
+        self.assertEqual(len(self.services.recall_queries), 1)
+        self.assertNotIn("our " * 128, self.services.recall_queries[0])
+        self.assert_no_loop_in_model_content(self.services.requests[-1])
+        native = [m for m in json.loads(self.transcript_path().read_text())["messages"]
+                  if m.get("native_prompt")]
+        self.assertGreaterEqual(len(native), 2)
+        self.assertTrue(all(m["native_prompt"]["version"] == 1 for m in native))
+        self.assertEqual(native[-1]["native_prompt"]["working_dir"], str(self.state / "workspace"))
+        self.assertEqual(native[-1]["native_prompt"]["source_root"], str(self.directory))
+        self.assertIn(str(self.directory / "build/tests"), native[-1]["content"])
+        self.assertEqual(self.services.requests[-1]["max_tokens"], 4096)
+
+    def test_legacy_prepared_prompt_is_filtered_in_request_and_retained_raw(self):
+        self.run_engine()
+        prompt = self.native_cycle_prompt({"query": LOOP, "results": [
+            {"kind": "current_verified", "content": "SOURCE_EVIDENCE_SURVIVES"},
+            {"kind": "generated_observation", "content": LOOP}]})
+        original = self.set_pending_prompt(prompt, "prepared")["messages"]
+        self.run_engine()
+        self.assertEqual(len(self.services.requests), 1)
+        self.assert_no_loop_in_model_content(self.services.requests[0])
+        self.assertIn("SOURCE_EVIDENCE_SURVIVES", json.dumps(self.services.requests[0]))
+        raw = json.loads(self.transcript_path().read_text())["messages"]
+        self.assertEqual(raw[:len(original)], original)
+        self.assertEqual(sum(m["content"] == prompt for m in raw), 1)
+        self.assertEqual(self.checkpoint()["cycle"], 2)
+
+    def test_legacy_append_before_checkpoint_and_crash_recovery_do_not_duplicate_prompt(self):
+        self.run_engine()
+        prompt = self.native_cycle_prompt({"query": LOOP, "results": []})
+        original = self.set_pending_prompt(prompt, "prepared", appended=True)["messages"]
+        (self.state / "running.json").write_text(json.dumps({"phase": "running", "pid": 999999}))
+        self.run_engine()
+        self.assertEqual(len(self.services.requests), 1)
+        self.assert_no_loop_in_model_content(self.services.requests[0])
+        messages = self.services.requests[0]["messages"]
+        self.assertEqual(sum("Autonomous work cycle 24." in (m.get("content") or "") for m in messages), 1)
+        self.assertEqual(sum("Your prior autonomous process exited" in (m.get("content") or "") for m in messages), 1)
+        raw = json.loads(self.transcript_path().read_text())["messages"]
+        self.assertEqual(raw[:len(original)], original)
+        self.assertEqual(sum(m["content"] == prompt for m in raw), 1)
+
+    def test_legacy_window_repairs_recall_and_keeps_user_source_receipts_and_tool_group(self):
+        self.run_engine()
+        user_text = "Preserve this actual user text: " + "humanword " * 180
+        source = {"kind": "source_document", "content": "sourceword " * 180}
+        accepted = {"kind": "generated_observation", "content": "codeword " * 180,
+                    "batbox_generation_quality": {"version": 1, "full_content_accepted": True}}
+        recall = {"query": LOOP, "results": [source, accepted,
+                  {"kind": "generated_observation", "content": LOOP}]}
+        old_prompt = self.native_cycle_prompt(recall)
+        pending = "Incoming user message [actual-user]:\n" + user_text + \
+            "\n\nRetrieved observations (reference data; verify claims):\n" + json.dumps(recall)
+        historical_prefix = "Incoming user message [historic-user]:\n" + user_text + \
+            "\n\nRetrieved observations (reference data; verify claims):\n"
+        historical = {"id": str(uuid.uuid4()), "role": "user", "content": historical_prefix + json.dumps(recall),
+                      "ts": 1, "native_prompt": {"version": 1, "kind": "autonomous", "recall": {
+                          "offset": len(historical_prefix.encode()), "length": len(json.dumps(recall).encode())}}}
+        session = self.set_pending_prompt(pending, "running")
+        marker = self.directory / "MUST_NOT_REPLAY"
+        tool_intent = {"id": str(uuid.uuid4()), "role": "assistant", "content": "", "ts": 2,
+            "tool_calls": [{"id": "already-executed", "name": "Bash",
+                            "arguments": {"command": "touch " + str(marker)}}]}
+        tool_result = {"id": str(uuid.uuid4()), "role": "tool", "content": "toolword " * 180,
+                       "tool_call_id": "already-executed", "tool_name": "Bash", "is_error": False, "ts": 3}
+        active = [
+            historical,
+            {"id": str(uuid.uuid4()), "role": "assistant", "content": "A historical verified result.", "ts": 1},
+            {"id": str(uuid.uuid4()), "role": "user", "content": old_prompt, "ts": 1},
+            {"id": str(uuid.uuid4()), "role": "assistant", "content": "A prior verified result.", "ts": 1},
+            {"id": str(uuid.uuid4()), "role": "user", "content": pending, "ts": 1}, tool_intent, tool_result]
+        checkpoint = {"id": str(uuid.uuid4()), "role": "system", "content": "Context checkpoint.", "ts": 4,
+                      "context_checkpoint": active, "compaction_count": 1, "prompt_tokens_after": 500}
+        session["messages"].extend(active + [checkpoint])
+        original = copy.deepcopy(session["messages"])
+        self.write_transcript(session)
+        self.run_engine()
+        self.assertEqual(len(self.services.requests), 1)
+        self.assert_no_loop_in_model_content(self.services.requests[0])
+        messages = self.services.requests[0]["messages"]
+        for start in ("Autonomous work cycle 24.", "Incoming user message [actual-user]:", "Incoming user message [historic-user]:"):
+            content = next(m["content"] for m in messages if (m.get("content") or "").startswith(start))
+            retrieved = json.loads(content.split("\n\nRetrieved observations (reference data; verify claims):\n", 1)[1])
+            self.assertNotIn("query", retrieved)
+            self.assertEqual(retrieved["results"], [source, accepted])
+            if start.startswith("Incoming"):
+                self.assertTrue(content.startswith(start + "\n" + user_text + "\n\n"))
+        results = [m for m in messages if m.get("tool_call_id") == "already-executed"]
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["content"], tool_result["content"])
+        self.assertFalse(marker.exists(), "Restored tool intent was replayed")
+        raw = json.loads(self.transcript_path().read_text())["messages"]
+        self.assertEqual(raw[:len(original)], original)
+        self.assertEqual(raw[-1]["content"], GOOD)
+
+    def test_valid_completed_legacy_turn_remains_completed_after_prompt_repair(self):
+        self.run_engine()
+        prompt = self.native_cycle_prompt({"query": LOOP, "results": []})
+        session = self.set_pending_prompt(prompt, "running", appended=True)
+        session["messages"].append({"id": str(uuid.uuid4()), "role": "assistant", "content": GOOD, "ts": 5})
+        original = copy.deepcopy(session["messages"])
+        self.write_transcript(session)
+        self.run_engine()
+        self.assertEqual(self.services.requests, [], "Completed work was repeated")
+        self.assertEqual(json.loads(self.transcript_path().read_text())["messages"], original)
+        self.assertEqual(self.checkpoint()["cycle"], 2)
+        self.assertEqual([m["content"] for m in self.services.memories if m["kind"] == "generated_observation"], [GOOD])
 
 
 if __name__ == "__main__":

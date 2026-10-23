@@ -167,7 +167,8 @@ public:
 
     // Autonomous callers must not advance their own checkpoint unless the
     // prompt is durable. On failure this leaves messages_ unchanged.
-    [[nodiscard]] Result<void> user_message_durable(std::string_view text);
+    [[nodiscard]] Result<void> user_message_durable(
+        std::string_view text, batbox::Json native_prompt = batbox::Json());
 
     // Close an interrupted trailing tool group without replaying any action.
     // Missing results are explicitly marked as unknown, including on retries

@@ -26,6 +26,16 @@ struct GenerationDegeneration {
 [[nodiscard]] std::optional<GenerationDegeneration> detect_degenerate_prose(
     std::string_view content);
 
+// Reuse the same exclusions on a growing visible response. Inspect at most
+// once per 256 newly received bytes and ignore the unfinished final word;
+// callers retain the complete original text and decide how to stop transport.
+class StreamingGenerationGuard {
+public:
+    [[nodiscard]] std::optional<GenerationDegeneration> check(std::string_view content);
+private:
+    std::size_t checked_bytes_{0};
+};
+
 // Only assistant finals are changed, in the caller's active copy. User/tool
 // content and assistant tool intents are untouched. A recovery user marker
 // keeps a rejected pending final from looking completed after restart.
@@ -33,6 +43,16 @@ struct GenerationDegeneration {
 [[nodiscard]] std::size_t sanitize_degenerate_assistant_context(
     std::vector<Message>& messages);
 void replace_with_generation_recovery(Message& message);
+
+// Call only for prompts assembled by the native autonomous engine. Records
+// the generated recall JSON range while leaving embedded user/source text
+// outside that range untouched. Metadata survives durable context checkpoints.
+[[nodiscard]] batbox::Json autonomous_prompt_provenance(std::string_view content);
+// Remove request-query echoes and rejected generated observations only inside
+// native recall payloads. Legacy recognition requires an autonomous session
+// plus the exact native cycle envelope; generic user messages are never scanned.
+[[nodiscard]] std::size_t sanitize_autonomous_prompt_context(
+    std::vector<Message>& messages, bool legacy_autonomous_session = false);
 
 // Generated observations only: explicitly tagged source/user/tool memories
 // are never rejected. These helpers do not read, write or delete memory data.

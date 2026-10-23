@@ -106,6 +106,11 @@ struct Message {
     /// Tool-result body for Role::Tool messages.
     std::string content;
 
+    /// Native autonomous prompt provenance, never sent as a wire field. The
+    /// recall byte range distinguishes generated retrieval scaffolding from
+    /// actual user text even when both share the API's user role.
+    std::optional<Json> native_prompt;
+
     // ---- Tool call fields (assistant emissions) -----------------------------
 
     /// Present when role==Assistant and the model requested one or more tool

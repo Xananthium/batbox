@@ -231,17 +231,20 @@ void Conversation::user_message(std::string_view text) {
     messages_.push_back(std::move(msg));
 }
 
-Result<void> Conversation::user_message_durable(std::string_view text) {
+Result<void> Conversation::user_message_durable(std::string_view text, batbox::Json native_prompt) {
     auto started = ensure_session_started();
     if (!started) return batbox::Err(started.error());
     Message msg;
     msg.role = Role::User;
     msg.content = std::string(text);
+    if (!native_prompt.is_null()) msg.native_prompt = std::move(native_prompt);
     auto saved = store_.append_message(session_id_, to_json(msg));
     if (!saved) return batbox::Err(saved.error());
     batbox::perf::g_perf.set_first_token_ms(0);
     submit_time_ = std::chrono::steady_clock::now();
     messages_.push_back(std::move(msg));
+    if (generation_quality_guard_)
+        (void)sanitize_autonomous_prompt_context(messages_);
     return {};
 }
 
@@ -283,8 +286,10 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         return batbox::Err(std::string("cancelled"));
     }
 
-    if (generation_quality_guard_)
+    if (generation_quality_guard_) {
         (void)sanitize_degenerate_assistant_context(messages_);
+        (void)sanitize_autonomous_prompt_context(messages_, pending_agent_id_ == "autonomous");
+    }
     auto recovered = recover_interrupted_tools();
     if (!recovered) return batbox::Err(recovered.error());
 
@@ -520,6 +525,7 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
     std::string                   accumulated_content;
     std::string                   finish_reason;
     batbox::inference::UsageDelta usage;
+    std::optional<GenerationDegeneration> streaming_degeneration;
 
     // S5 (DIS-983) AC1: one-shot reactive overflow retry guard. If an endpoint
     // loudly rejects the prompt as too large, we compact and retry the turn
@@ -615,6 +621,8 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         // kept alive for the duration of the call.  The child fires whenever
         // the parent ct fires, giving us linked cancellation.
         auto [stream_src, stream_tok] = ct.child();
+        StreamingGenerationGuard streaming_quality;
+        bool streamed_tool_intent = false;
 
         // PEXT2 3.1 (D-1): for iteration 0 reuse the body string captured by the
         // pre-flight token-estimate dump (preflight_body_str), eliminating the
@@ -710,6 +718,8 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
                         }
                     }
                 }
+                if (delta.tool_calls.has_value() && !delta.tool_calls->empty())
+                    streamed_tool_intent = true;
                 // Capture finish reason.
                 if (delta.finish_reason.has_value()) {
                     finish_reason = *delta.finish_reason;
@@ -727,6 +737,14 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
                 if (delta.usage.has_value()) {
                     usage = *delta.usage;
                 }
+                // Cancel only this inference request. Already journaled tool
+                // results remain in context, and incomplete intents never run.
+                // Tool arguments and reasoning are not visible prose.
+                if (generation_quality_guard_ && !streamed_tool_intent &&
+                    !ct.is_cancelled() && !streaming_degeneration) {
+                    streaming_degeneration = streaming_quality.check(accumulated_content);
+                    if (streaming_degeneration) stream_src.request_stop();
+                }
         };
 
         // PEXT2 3.1 (D-1): dispatch to the appropriate stream_chat overload.
@@ -741,7 +759,7 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
                 : client_.stream_chat(req, on_delta_fn, std::move(stream_tok));
         // stream_src goes out of scope here; streaming is complete.
 
-        if (!stream_res) {
+        if (!stream_res && !streaming_degeneration) {
             // S5 (DIS-983) AC1: reactive cross-provider overflow handling.
             // Normalise the loud "prompt exceeds context window" errors the
             // OpenAI-compatible endpoints return into one typed signal; on that
@@ -798,7 +816,12 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         }
 
         // Prefer usage from the streaming return value.
-        usage = stream_res.value();
+        if (stream_res) usage = stream_res.value();
+
+        // A quality stop is not a user shutdown or a transport retry. Finalize
+        // the exact received prefix below before surfacing the typed failure.
+        // In particular, never enter the tool-dispatch path on this response.
+        if (streaming_degeneration) break;
 
         // A3 / TUI-FIX-T6: accumulate session usage and fire callback on the
         // terminal UsageDelta (once per sub-turn / streaming call).
@@ -999,8 +1022,8 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
     }
 
     // ---- 6. Persist assistant message ----
-    const auto degeneration = generation_quality_guard_
-        ? detect_degenerate_prose(asst.content) : std::nullopt;
+    const auto degeneration = streaming_degeneration ? streaming_degeneration :
+        (generation_quality_guard_ ? detect_degenerate_prose(asst.content) : std::nullopt);
     auto raw = to_json(asst);
     if (degeneration) {
         raw["generation_rejected"] = "degenerate_repetition";
@@ -1008,6 +1031,10 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
             {"repeated_tokens", degeneration->repeated_tokens},
             {"phrase_tokens", degeneration->phrase_tokens},
             {"repetitions", degeneration->repetitions}};
+        if (streaming_degeneration) {
+            raw["generation_quality"]["stream_aborted"] = true;
+            raw["generation_quality"]["received_content_bytes"] = asst.content.size();
+        }
     }
     // Persist original bytes before changing the active context or reporting
     // rejection. No historical session entry is removed or rewritten.
@@ -1023,6 +1050,8 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         if (!messages_.empty() && messages_.back().role == Role::User &&
             messages_.back().content == asst.content) messages_.back() = std::move(asst);
         else messages_.push_back(std::move(asst));
+        if (streaming_degeneration && ct.is_cancelled())
+            return batbox::Err(std::string("cancelled"));
         return batbox::Err(std::string("degenerate_generation: extreme repeated prose rejected; "
             "raw output retained, active context filtered; retry after backoff"));
     }
@@ -1071,8 +1100,10 @@ Result<void> Conversation::restore(const batbox::session::SessionFile& sf) {
     session_id_  = sf.id.to_string();
     pending_agent_id_ = sf.agent_id;
     pending_endpoint_ = sf.endpoint;
-    if (generation_quality_guard_)
+    if (generation_quality_guard_) {
         (void)sanitize_degenerate_assistant_context(messages_);
+        (void)sanitize_autonomous_prompt_context(messages_, sf.agent_id == "autonomous");
+    }
     for (auto& message : messages_) archive_large_tool_output(message);
     return {};
 }

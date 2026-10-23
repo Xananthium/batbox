@@ -13,6 +13,43 @@ struct Token {
 };
 
 constexpr std::string_view receipt_key = "batbox_generation_quality";
+constexpr std::string_view recall_marker =
+    "\n\nRetrieved observations (reference data; verify claims):\n";
+
+std::optional<std::size_t> json_object_length(std::string_view text) {
+    if (text.empty() || text.front() != '{') return std::nullopt;
+    std::size_t depth = 0;
+    bool quoted = false, escaped = false;
+    for (std::size_t i = 0; i < text.size(); ++i) {
+        const char c = text[i];
+        if (quoted) {
+            if (escaped) escaped = false;
+            else if (c == '\\') escaped = true;
+            else if (c == '"') quoted = false;
+        } else if (c == '"') quoted = true;
+        else if (c == '{') ++depth;
+        else if (c == '}' && --depth == 0) return i + 1;
+    }
+    return std::nullopt;
+}
+
+bool legacy_cycle_prompt(std::string_view content) {
+    constexpr std::string_view prefix = "Autonomous work cycle ";
+    constexpr std::string_view after_number =
+        ". Continue this goal with one concrete, verifiable step:\n";
+    constexpr std::string_view instructions =
+        "\nUse your memory and tools. Report evidence, what changed, and the next useful step. "
+        "If no work can proceed, state the blocker and avoid pretending progress.";
+    if (!content.starts_with(prefix)) return false;
+    content.remove_prefix(prefix.size());
+    std::size_t digits = 0;
+    while (digits < content.size() && content[digits] >= '0' && content[digits] <= '9') ++digits;
+    if (!digits || !content.substr(digits).starts_with(after_number)) return false;
+    const auto instructions_at = content.find(instructions, digits + after_number.size());
+    const auto recall_at = content.rfind(recall_marker);
+    return instructions_at != std::string_view::npos && recall_at != std::string_view::npos &&
+        instructions_at + instructions.size() <= recall_at;
+}
 
 bool accepted_full_content(const batbox::Json& observation) {
     if (!observation.is_object() || !observation.contains("kind") ||
@@ -133,6 +170,16 @@ std::optional<GenerationDegeneration> detect_degenerate_prose(std::string_view c
     return strongest;
 }
 
+std::optional<GenerationDegeneration> StreamingGenerationGuard::check(std::string_view content) {
+    constexpr std::size_t check_interval = 256;
+    if (content.size() < checked_bytes_ || content.size() - checked_bytes_ < check_interval)
+        return std::nullopt;
+    checked_bytes_ = content.size();
+    const auto boundary = content.find_last_of(" \t\n\r\f\v");
+    if (boundary == std::string_view::npos) return std::nullopt;
+    return detect_degenerate_prose(content.substr(0, boundary + 1));
+}
+
 void replace_with_generation_recovery(Message& message) {
     message.role = Role::User;
     message.content = "[Generation recovery: the preceding assistant output was rejected for extreme repetition. "
@@ -151,6 +198,59 @@ std::size_t sanitize_degenerate_assistant_context(std::vector<Message>& messages
         }
     }
     return rejected;
+}
+
+batbox::Json autonomous_prompt_provenance(std::string_view content) {
+    batbox::Json provenance{{"version", 1}, {"kind", "autonomous"}};
+    const auto marker = content.rfind(recall_marker);
+    if (marker == std::string_view::npos) return provenance;
+    const auto offset = marker + recall_marker.size();
+    const auto length = json_object_length(content.substr(offset));
+    // A legacy recall payload was the final native segment, optionally
+    // followed by the engine's crash-recovery note. An example embedded in
+    // user text followed by a retrieval-unavailable note is not such a payload.
+    if (length) {
+        const auto suffix = content.substr(offset + *length);
+        if (suffix.empty() || suffix.starts_with(
+                "\n\nYour prior autonomous process exited without a clean shutdown. "))
+            provenance["recall"] = {{"offset", offset}, {"length", *length}};
+    }
+    return provenance;
+}
+
+std::size_t sanitize_autonomous_prompt_context(std::vector<Message>& messages,
+                                             bool legacy_autonomous_session) {
+    std::size_t changed = 0;
+    for (auto& message : messages) {
+        if (message.role != Role::User || message.tool_calls || message.tool_call_id) continue;
+        if (!message.native_prompt && legacy_autonomous_session && legacy_cycle_prompt(message.content))
+            message.native_prompt = autonomous_prompt_provenance(message.content);
+        if (!message.native_prompt) continue;
+        auto& metadata = *message.native_prompt;
+        if (!metadata.is_object() || !metadata.contains("version") ||
+            !metadata["version"].is_number_integer() || metadata["version"] != 1 ||
+            !metadata.contains("kind") || metadata["kind"] != "autonomous" ||
+            !metadata.contains("recall") || !metadata["recall"].is_object()) continue;
+        auto& range = metadata["recall"];
+        if (!range.contains("offset") || !range["offset"].is_number_unsigned() ||
+            !range.contains("length") || !range["length"].is_number_unsigned()) continue;
+        const auto offset = range["offset"].get<std::size_t>();
+        const auto length = range["length"].get<std::size_t>();
+        if (offset > message.content.size() || length > message.content.size() - offset) continue;
+        auto recall = batbox::Json::parse(message.content.substr(offset, length), nullptr, false);
+        if (recall.is_discarded() || !recall.is_object()) continue;
+        // This is the service's request echo, not an observation. A rejected
+        // assistant final must not re-enter as user text through that echo.
+        // Human queries remain verbatim in the incoming-message portion.
+        const auto removed_query = recall.erase("query");
+        const auto removed_memories = filter_degenerate_generated_memories(recall);
+        if (!removed_query && !removed_memories) continue;
+        const auto cleaned = recall.dump();
+        message.content.replace(offset, length, cleaned);
+        range["length"] = cleaned.size();
+        ++changed;
+    }
+    return changed;
 }
 
 bool reject_generated_observation(const batbox::Json& observation) {

@@ -656,6 +656,10 @@ Result<UsageDelta> Client::stream_chat_impl(
                     }
 
                     on_delta(delta);
+                    // A consumer can stop its child request after inspecting a
+                    // delta. Abort this write immediately, even if the server
+                    // sends no further bytes for the progress callback to see.
+                    if (ct.stop_requested()) return false;
 
                 } catch (const std::exception& e) {
                     lg->warn("stream_chat: chunk parse exception: {}", e.what());

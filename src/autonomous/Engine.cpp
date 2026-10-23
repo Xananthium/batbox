@@ -427,11 +427,43 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
             handles.push_back({worker.id, worker.name, worker.status_line});
         return handles;
     });
+    const auto prompt_provenance = [&] {
+        return state.contains("prompt_native") ? state["prompt_native"] :
+            conversation::autonomous_prompt_provenance(state.value("prompt", ""));
+    };
+    const auto prepared_prompt_view = [&] {
+        conversation::Message message;
+        message.content = state.at("prompt").get<std::string>();
+        message.native_prompt = prompt_provenance();
+        std::vector<conversation::Message> active{std::move(message)};
+        (void)conversation::sanitize_autonomous_prompt_context(active);
+        return active.front().content;
+    };
+    const auto restore_conversation = [&](const session::SessionFile& saved) {
+        auto active = saved;
+        // Old checkpoints did not identify native prompts. The engine's exact
+        // pending prompt is independent provenance, including inbox wrappers.
+        // Annotate only this restoration copy, never the durable raw history.
+        if (state.contains("prompt") &&
+            (state.value("phase", "") == "prepared" || state.value("phase", "") == "running")) {
+            const auto annotate = [&](Json& message) {
+                if (message.value("role", "") == "user" &&
+                    message.value("content", "") == state.at("prompt").get<std::string>())
+                    message["native_prompt"] = prompt_provenance();
+            };
+            for (auto& message : active.messages) {
+                if (message.contains("context_checkpoint"))
+                    for (auto& item : message["context_checkpoint"]) annotate(item);
+                else annotate(message);
+            }
+        }
+        return conv.restore(active);
+    };
     if (state.contains("session_id")) {
         auto previous = sessions.load(state.at("session_id").get<std::string>());
         if (!previous) throw std::runtime_error("Cannot restore autonomous transcript: " + previous.error());
         sessions.adopt_restored(previous.value());
-        auto restored = conv.restore(previous.value());
+        auto restored = restore_conversation(previous.value());
         if (!restored) throw std::runtime_error(restored.error());
     } else {
         conv.set_session_identity("autonomous", {{"base_url", cfg.api.base_url}, {"model", cfg.api.default_model}});
@@ -468,7 +500,7 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
             if (repaired) {
                 auto restored = sessions.load(conv.session_id());
                 if (!restored) throw std::runtime_error(restored.error());
-                auto applied = conv.restore(restored.value());
+                auto applied = restore_conversation(restored.value());
                 if (!applied) throw std::runtime_error(applied.error());
                 event("interrupted_tool_group_repaired");
             }
@@ -659,6 +691,7 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
 
             if (state.value("phase", "idle") == "idle") {
                 std::string prompt;
+                Json provenance{{"version", 1}, {"kind", "autonomous"}};
                 const bool wake_turn = state.contains("wake");
                 auto incoming = wake_turn ? std::optional<Json>{} : next_inbox(opts.state_dir, event);
                 if (wake_turn) {
@@ -678,6 +711,10 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
                         "\nUse your memory and tools. Report evidence, what changed, and the next useful step. "
                         "If no work can proceed, state the blocker and avoid pretending progress.";
                 }
+                prompt += "\n\nExecution paths: tools start in " + workspace.string() +
+                    ". Batbox source is " + opts.project_root.string() +
+                    "; its build tests are under " + (opts.project_root / "build/tests").string() +
+                    ". Use absolute paths or explicitly change directory for source builds and tests.";
                 if (!wake_turn) {
                     if (fs::exists(opts.letter_file)) {
                         auto letters = read_text(opts.letter_file);
@@ -708,18 +745,30 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
                     }
                     try {
                         auto query = incoming ? incoming->at("content").get<std::string>() :
-                            state.at("goal").get<std::string>() + " " + state.value("last_response", "").substr(0, 1200);
+                            state.at("goal").get<std::string>();
+                        const auto previous_response = state.value("last_response", "");
+                        // Validate the full stored response before excerpting:
+                        // old state files can predate the assistant-output guard.
+                        if (!incoming && !conversation::detect_degenerate_prose(previous_response))
+                            query += " " + previous_response.substr(0, 1200);
                         auto memories = request(opts.memory_url, "/recall", {{"query", query.substr(0, 6000)}, {"limit", 5}});
+                        if (memories.is_object()) memories.erase("query");
                         (void)conversation::filter_degenerate_generated_memories(memories);
                         auto text = memories.dump();
                         if (text.size() > 24000) text.resize(24000);
-                        prompt += "\n\nRetrieved observations (reference data; verify claims):\n" + text;
+                        prompt += "\n\nRetrieved observations (reference data; verify claims):\n";
+                        provenance["recall"] = {{"offset", prompt.size()}, {"length", text.size()}};
+                        prompt += text;
                     } catch (const std::exception& e) {
                         prompt += "\nMemory retrieval is currently unavailable; do not claim to have recalled anything.";
                         event("recall_failed", {{"error", e.what()}});
                     }
                 }
-                state["prompt"] = prompt; state["phase"] = "prepared"; persist();
+                state["prompt"] = prompt;
+                state["prompt_native"] = std::move(provenance);
+                state["prompt_native"]["working_dir"] = workspace.string();
+                state["prompt_native"]["source_root"] = opts.project_root.string();
+                state["phase"] = "prepared"; persist();
             }
             // Recognize a durable append before crash recovery can augment the
             // prepared prompt. A process may have died between that append and
@@ -727,7 +776,7 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
             // replay the same wake/user message as a second durable prompt.
             if (state.value("phase", "") == "prepared" && !conv.messages().empty()
                 && conv.messages().back().role == Role::User
-                && conv.messages().back().content == state.at("prompt").get<std::string>()) {
+                && conv.messages().back().content == prepared_prompt_view()) {
                 if (state.contains("inbox"))
                     queue_observation(conv.messages().back().id, state["inbox"].at("content").get<std::string>(),
                                       "user_input", {{"inbox_id", state["inbox"].at("id")}});
@@ -759,9 +808,9 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
                 // A crash may have occurred between durable user append and the
                 // running checkpoint. Match the exact prepared tail to avoid duplication.
                 if (conv.messages().empty() || conv.messages().back().role != Role::User ||
-                    conv.messages().back().content != state.at("prompt").get<std::string>())
+                    conv.messages().back().content != prepared_prompt_view())
                 {
-                    auto saved = conv.user_message_durable(state.at("prompt").get<std::string>());
+                    auto saved = conv.user_message_durable(state.at("prompt").get<std::string>(), prompt_provenance());
                     if (!saved) throw std::runtime_error(saved.error());
                 }
                 if (state.contains("inbox"))
@@ -812,7 +861,8 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
                          observation.dump());
             state["last_response"] = response_text.substr(0, 12000);
             state["cycle"] = next_cycle; state["phase"] = "idle";
-            state.erase("prompt"); state.erase("inbox"); state.erase("wake"); persist();
+            state.erase("prompt"); state.erase("prompt_native");
+            state.erase("inbox"); state.erase("wake"); persist();
             ++completed_this_run; failures = 0;
             event("cycle_completed", {{"content", response_text}, {"usage", usage},
                                       {"prompt_tokens", conv.last_prompt_tokens()}, {"compactions", conv.compaction_count()}});
