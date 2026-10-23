@@ -1,0 +1,170 @@
+{
+  "utc": "2026-10-23T18:37:06.800117+00:00",
+  "status": "candidate_build_and_native_regressions_passed",
+  "live_reasoning_delta_observed": false,
+  "production_observation_before_deploy": {
+    "utc": "2026-10-23T18:21:16.802318+00:00",
+    "files": {
+      "running.json": {
+        "cycle": 7,
+        "last_operation": "prompt_tokenized",
+        "phase": "running",
+        "pid": 185069,
+        "session_id": "a71d5cab-6309-4659-a1ba-c2f2db66ec66",
+        "started_at": "2026-10-23T18:20:04Z",
+        "updated_at": "2026-10-23T18:20:04Z"
+      },
+      "state.json": {
+        "cycle": 7,
+        "phase": "running",
+        "session_id": "a71d5cab-6309-4659-a1ba-c2f2db66ec66"
+      },
+      "workers/7562c112-0fb8-4556-be56-811aa54db17d.json": {
+        "agent_id": "7562c112-0fb8-4556-be56-811aa54db17d",
+        "exact_compaction_tokens": 100000,
+        "last_operation": "prompt_tokenized",
+        "last_progress_at": "2026-10-23T18:20:04Z",
+        "phase": "context_prepared",
+        "progress_sequence": 29,
+        "recovery_attempts": 3,
+        "recovery_failures": 1,
+        "retry_delay_seconds": 2,
+        "session_id": "35d7a97e-c3a7-4cd8-8ef8-079705285636",
+        "status": "running",
+        "updated_at": "2026-10-23T18:20:04Z"
+      },
+      "workers/cd11ed33-2f8f-4cc6-abfc-71a14d6ecfaf.json": {
+        "agent_id": "cd11ed33-2f8f-4cc6-abfc-71a14d6ecfaf",
+        "completed_turns": 8,
+        "exact_compaction_tokens": 100000,
+        "last_operation": "prompt_tokenized",
+        "last_progress_at": "2026-10-23T18:20:04Z",
+        "phase": "context_prepared",
+        "progress_sequence": 476,
+        "prompt_tokens": 48379,
+        "recovery_attempts": 3,
+        "recovery_failures": 0,
+        "session_id": "1c48a1aa-3bfd-4579-8c88-693711971dc7",
+        "status": "running",
+        "updated_at": "2026-10-23T18:20:04Z"
+      },
+      "workers/25ed56ef-1bed-4eb6-9c44-682f2e208455.json": {
+        "agent_id": "25ed56ef-1bed-4eb6-9c44-682f2e208455",
+        "exact_compaction_tokens": 100000,
+        "last_operation": "prompt_tokenized",
+        "last_progress_at": "2026-10-23T18:20:04Z",
+        "phase": "context_prepared",
+        "progress_sequence": 464,
+        "recovery_attempts": 3,
+        "recovery_failures": 1,
+        "retry_delay_seconds": 2,
+        "session_id": "bf227436-a375-4691-8255-c76fbe99fdf2",
+        "status": "running",
+        "updated_at": "2026-10-23T18:20:04Z"
+      }
+    },
+    "native_pid": 185069,
+    "native_binary_sha256": "8a4dee96a585489f3c1dcc0090572a736d78e36e96ed007c9e85eec766d767cb",
+    "process_timeouts": {
+      "BATBOX_CTX_LEN_DEFAULT": "200000",
+      "BATBOX_MAX_TOKENS": "4096",
+      "BATBOX_REQUEST_TIMEOUT_SEC": "1800",
+      "BATBOX_STREAM_IDLE_TIMEOUT_SEC": "600"
+    },
+    "enable_thinking_override_present": false,
+    "backend_pid": 162873,
+    "backend_process_exists": true
+  },
+  "watchdog": {
+    "effective_stale_seconds": 2100,
+    "effective_command_verified": true,
+    "dropin": "90-long-context-deadline.conf",
+    "daemon_reload_needed": false
+  },
+  "passive_wire_sample": {
+    "started_at": "2026-10-23T18:29:59.951851+00:00",
+    "finished_at": "2026-10-23T18:30:44.985075+00:00",
+    "native_pid": 185069,
+    "server_port": 8001,
+    "client_ports": [
+      42316,
+      42636,
+      42674,
+      58772
+    ],
+    "native_pid_still_present": true,
+    "field_counts_by_client_port": {
+      "42316": {
+        "payload_bytes": 82170,
+        "json_sse_events": 330,
+        "content_fields": 330,
+        "content_nonempty": 330,
+        "content_utf8_bytes": 1320
+      },
+      "42636": {
+        "payload_bytes": 82170,
+        "json_sse_events": 330,
+        "content_fields": 330,
+        "content_nonempty": 330,
+        "content_utf8_bytes": 1320
+      },
+      "42674": {
+        "payload_bytes": 82170,
+        "json_sse_events": 330,
+        "content_fields": 330,
+        "content_nonempty": 330,
+        "content_utf8_bytes": 1320
+      },
+      "58772": {}
+    },
+    "capture_filter": "src host 127.0.0.1 and dst host 127.0.0.1 and tcp src port 8001 and (tcp dst port 42316 or tcp dst port 42636 or tcp dst port 42674 or tcp dst port 58772)",
+    "raw_packets_saved": false,
+    "text_values_saved": false,
+    "requests_sent": 0,
+    "limitation": "Bounded passive sample starts mid-connection; gaps/incomplete frames are counted and discarded."
+  },
+  "finding": "Native process received content-only SSE fragments in the sampled interval; no reasoning/reasoning_content/tool_calls fields were observed. Engine constructed its coordinator Conversation with an empty visible-content callback, independently reproduced by a native fake-backend regression.",
+  "fix": "Engine coordinator now reports context_progress/content_delta only on nonempty visible fragments, throttled to at most once per second. Progress records contain no fragment text. Conversation and worker journaling are unchanged.",
+  "baseline": {
+    "binary_sha256": "661d972e64185d4487ed17782f2ccc6184abcc67b9fd7ef3a5536859d16219cd",
+    "content_only_native_case_passed": false,
+    "elapsed_seconds": 15.477,
+    "observed_failure": "Timed out waiting for native content_delta running marker",
+    "log_sha256": "2968b20a7099e07544b6dfa793b8da728f52e0b5c9f9f17fed31cfeade528f72"
+  },
+  "build": {
+    "passed": true,
+    "binary_sha256": "d19941a43309841c2551d166f9f106d641e7160f20ec8c6c916602c3ba6de810",
+    "source_base_commit": "3bb0138bd551d3db58a1215aca087690f3836cb6",
+    "modified_source_sha256": {
+      "src/autonomous/Engine.cpp": "77e92b1847100d6f037e34cf2e3f3633f526d75048dfb6dcaed1982dffd3b6eb",
+      "tests/integration/test_native_workers.py": "d25de0daa878efc9eff4eef6fd0c5c9a14c463b94c0101862037d7e927d3ba81",
+      "experiments/native_reasoning/passive_sse_fields.py": "623fdabcf83ed968f8b9273f6de9399f21564e1dd9c9b6e8eea3f28a57262e46"
+    }
+  },
+  "native_tests": {
+    "passed": true,
+    "cases": 3,
+    "elapsed_seconds": 20.606,
+    "log_sha256": "543fcfd828b6164a9618fabdbe1e469cfff50f2d1890db066d9e1edeec69590b",
+    "coverage": [
+      "modern reasoning-only stream advances coordinator marker",
+      "content-only stream advances coordinator marker",
+      "immediate fragment burst produces one throttled progress event",
+      "empty fragments and silent stream produce no heartbeat",
+      "second delayed real fragment advances marker",
+      "independent worker recovery preserves session and avoids tool replay",
+      "four concurrent native requests share stable system/tool prefix",
+      "durable inbox and sessions survive restart"
+    ]
+  },
+  "tool_call_progress_change": false,
+  "production_backend_requests_sent": 0,
+  "production_service_changes_by_this_agent": 0,
+  "limitations": [
+    "No live modern reasoning field was observed in this bounded sample; parser compatibility was separately verified with installed vLLM source and native SSE tests.",
+    "Sampled sockets belong to the native process; individual sockets were not mapped to coordinator versus worker roles.",
+    "Field counts do not identify text content or establish a repeated-word loop.",
+    "Live deployment and post-deployment heartbeat validation are handled after this candidate handoff."
+  ]
+}

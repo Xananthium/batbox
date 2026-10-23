@@ -66,6 +66,9 @@ class HangingServices:
                     count = 100100 if owner.mode == "summary" and player != "coordinator" and not summary else 512
                     return self.reply({"count": count, "max_model_len": 200000, "tokens": []})
                 if self.path == "/recall":
+                    if owner.mode == "recall":
+                        query = body.get("query", "")
+                        return self.hang(query if re.fullmatch(r"[a-f0-9-]{36}", query) else "coordinator")
                     return self.reply({"results": []})
                 if self.path == "/remember" and owner.mode == "service":
                     return self.hang(body["content"])
@@ -74,11 +77,12 @@ class HangingServices:
                 if self.path != "/v1/chat/completions":
                     return self.reply({"error": "Unexpected path"}, status=404)
                 if owner.mode:
-                    if owner.mode == "service" and player != "coordinator":
+                    if owner.mode in ("service", "recall") and player != "coordinator":
                         return self.stream({"role": "assistant", "tool_calls": [{
                             "index": 0, "id": "remember_" + player, "type": "function",
-                            "function": {"name": "MemoryRemember", "arguments": json.dumps({
-                                "content": player, "source": "fixture://shutdown"})}}]}, "tool_calls")
+                            "function": {"name": "MemoryRecall" if owner.mode == "recall" else "MemoryRemember",
+                                "arguments": json.dumps({"query": player, "limit": 1} if owner.mode == "recall" else {
+                                    "content": player, "source": "fixture://shutdown"})}}]}, "tool_calls")
                     return self.hang(player)
                 with owner.condition:
                     owner.restarted.add(player)
@@ -184,6 +188,9 @@ class NativeShutdown(unittest.TestCase):
 
     def test_service_requests_cancel_and_worker_identity_survives(self):
         self.exercise("service")
+
+    def test_long_recall_requests_cancel_and_worker_identity_survives(self):
+        self.exercise("recall")
 
 
 if __name__ == "__main__":

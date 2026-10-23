@@ -117,9 +117,13 @@ Json request(const std::string& base, const std::string& path,
         cpr::cpr_pf_arg_t, cpr::cpr_pf_arg_t, intptr_t) {
         return !stop_requested && !ct.is_cancelled();
     }};
+    // HippoRAG retrieval can perform a 600-second LLM request and one retry.
+    // Both coordinator recall and MemoryRecall use this path. Keep unrelated
+    // RPCs bounded at 45 seconds, and preserve cooperative cancellation below.
+    const auto timeout = cpr::Timeout{path == "/recall" ? 1300000 : 45000};
     auto response = body.is_null()
-        ? cpr::Get(cpr::Url{url}, headers, cpr::Timeout{45000}, progress)
-        : cpr::Post(cpr::Url{url}, headers, cpr::Body{body.dump()}, cpr::Timeout{45000}, progress);
+        ? cpr::Get(cpr::Url{url}, headers, timeout, progress)
+        : cpr::Post(cpr::Url{url}, headers, cpr::Body{body.dump()}, timeout, progress);
     if (stop_requested || ct.is_cancelled()) throw std::runtime_error("cancelled");
     if (response.error.code != cpr::ErrorCode::OK || response.status_code < 200 || response.status_code >= 300)
         throw std::runtime_error("Service " + path + " failed (HTTP " +
@@ -396,7 +400,18 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
         });
     inference::Client client(cfg);
     session::SessionStore sessions(opts.state_dir / "sessions");
-    conversation::Conversation conv(client, sessions, cfg, workspace, [](std::string_view) {}, &registry, &gate);
+    auto last_content_progress = std::chrono::steady_clock::time_point{};
+    conversation::Conversation conv(client, sessions, cfg, workspace, [&](std::string_view chunk) {
+        // The coordinator does not display streamed text, but actual nonempty
+        // fragments must refresh its watchdog. Keep text out of progress data.
+        if (chunk.empty()) return;
+        const auto now = std::chrono::steady_clock::now();
+        if (last_content_progress == std::chrono::steady_clock::time_point{} ||
+            now - last_content_progress >= std::chrono::seconds(1)) {
+            last_content_progress = now;
+            event("context_progress", {{"operation", "content_delta"}});
+        }
+    }, &registry, &gate);
     conv.set_exact_compaction_tokens(100000);
     conv.set_standing_handles_provider([&supervisor] {
         std::vector<conversation::StandingHandle> handles;

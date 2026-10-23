@@ -1,0 +1,14 @@
+{
+  "observed_at": "2026-10-23T18:12:05.966383+00:00",
+  "previous_request_timeout_seconds": 600,
+  "request_timeout_seconds": 1800,
+  "stream_idle_timeout_seconds": 600,
+  "deployment_state": "active in parser release8a4dee",
+  "reason": "Two production requests reached a fixed600s total deadline after receiving419151 and421336bytes; additionalproxytraffic was active. Preserve fullcontext/sampling/backendsettings and permitactive streams moretotal time. Idle/cancellation/watchdog controlsremain.",
+  "watchdog_stale_seconds": 2100,
+  "watchdog_reason": "Allow a1800-second bounded non-streaming summary request to finish or time out before stale-progress recovery; actual process failures still restart through systemd.",
+  "watchdog_override": "/home/isnotreal/.config/systemd/user/batbox-watchdog.service.d/90-long-context-deadline.conf",
+  "configured_context": 200000,
+  "compaction_threshold": 100000,
+  "backend_configuration_changed": false
+}

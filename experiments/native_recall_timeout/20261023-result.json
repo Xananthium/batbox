@@ -1,0 +1,67 @@
+{
+  "observed_at": "2026-10-23T18:30:26.073170+00:00",
+  "scope": "Native coordinator recall and MemoryRecall tool requests through src/autonomous/Engine.cpp request().",
+  "change": {
+    "path": "/recall",
+    "total_timeout_seconds_before": 45,
+    "total_timeout_seconds_after": 1300,
+    "other_rpc_timeout_seconds": 45,
+    "cancellation": "Existing process-stop and CancelToken progress callback retained.",
+    "reason": "Memory service LLM request timeout of 600 seconds with one retry, plus 100 seconds margin."
+  },
+  "baseline_binary_sha256": "8a4dee96a585489f3c1dcc0090572a736d78e36e96ed007c9e85eec766d767cb",
+  "candidate_binary_sha256": "661d972e64185d4487ed17782f2ccc6184abcc67b9fd7ef3a5536859d16219cd",
+  "source_base_commit": "3bb0138bd551d3db58a1215aca087690f3836cb6",
+  "fixture_delay_seconds": 47,
+  "baseline_regressions": [
+    {
+      "test": "AutonomousLifecycle.test_delayed_direct_recall_exceeds_legacy_timeout",
+      "expected_regression_reproduced": true,
+      "test_duration_seconds": 45.685,
+      "finding": "Verified delayed memory result absent from native model prompt."
+    },
+    {
+      "test": "AutonomousLifecycle.test_delayed_native_memory_recall_tool_exceeds_legacy_timeout",
+      "expected_regression_reproduced": true,
+      "test_duration_seconds": 45.713,
+      "finding": "Verified delayed memory result absent from native tool result sent to model."
+    }
+  ],
+  "candidate_checks": [
+    {
+      "test": "AutonomousLifecycle.test_delayed_direct_recall_exceeds_legacy_timeout",
+      "passed": true,
+      "test_duration_seconds": 47.678
+    },
+    {
+      "test": "AutonomousLifecycle.test_delayed_native_memory_recall_tool_exceeds_legacy_timeout",
+      "passed": true,
+      "test_duration_seconds": 47.734
+    },
+    {
+      "suite": "Remaining AutonomousLifecycle cases",
+      "passed": 9,
+      "failed": 0,
+      "duration_seconds": 9.305
+    },
+    {
+      "suite": "NativeShutdown",
+      "passed": 4,
+      "failed": 0,
+      "duration_seconds": 9.565,
+      "coverage": "Streaming, summary, MemoryRemember and long MemoryRecall cancellation. Recall case holds the coordinator plus 3 worker requests, requires SIGTERM exit under 5 seconds, then checks stable worker/session identities and durable restart."
+    }
+  ],
+  "verification_limits": [
+    "Loopback HTTP fixtures; no GPU or live memory-service inference used.",
+    "The 1300-second policy is verified by source inspection and successful requests beyond the prior 45-second limit, not by waiting for a full 1300-second timeout.",
+    "The 45-second policy for other RPCs is retained in the same conditional; this change does not alter inference context, model sampling, backend, service configuration or watchdog settings.",
+    "Candidate built and tested only; deployment remains with root."
+  ],
+  "reproduce": {
+    "delayed_direct": "python3 tests/integration/test_autonomous_engine.py AutonomousLifecycle.test_delayed_direct_recall_exceeds_legacy_timeout",
+    "delayed_tool": "python3 tests/integration/test_autonomous_engine.py AutonomousLifecycle.test_delayed_native_memory_recall_tool_exceeds_legacy_timeout",
+    "shutdown": "python3 tests/integration/test_native_shutdown.py",
+    "baseline_note": "Set BATBOX_AUTONOMOUS_BIN to the frozen baseline binary before running either delayed case; failure is expected."
+  }
+}

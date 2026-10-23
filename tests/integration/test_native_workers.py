@@ -20,7 +20,7 @@ BINARY = Path(os.environ.get("BATBOX_AUTONOMOUS_BIN", ROOT / "build/src/batbox")
 
 
 class WorkerBackend:
-    def __init__(self, directory, recovery_mode=False):
+    def __init__(self, directory, recovery_mode=False, progress_field="reasoning"):
         self.directory = directory
         self.requests = []
         self.tokenizations = []
@@ -31,6 +31,7 @@ class WorkerBackend:
         self.peak = 0
         self.errors = []
         self.recovery_mode = recovery_mode
+        self.progress_field = progress_field
         self.target = None
         self.peer_sender = None
         self.peer_sent = False
@@ -105,11 +106,13 @@ class WorkerBackend:
                             chunk = {"choices": [{"index": 0, "delta": delta, "finish_reason": finish}]}
                             self.wfile.write(("data: " + json.dumps(chunk) + "\n\n").encode())
                             self.wfile.flush()
-                        emit({"role": "assistant", "reasoning": "First observed reasoning chunk."})
+                        emit({"role": "assistant", owner.progress_field: "First observed stream chunk."})
+                        emit({owner.progress_field: ""})
+                        emit({owner.progress_field: "Immediate extra fragment."})
                         owner.coordinator_started.set()
                         if not owner.coordinator_pulse.wait(25):
                             raise RuntimeError("Coordinator reasoning pulse was not released")
-                        emit({"reasoning": "Second observed reasoning chunk."})
+                        emit({owner.progress_field: "Second observed stream chunk."})
                         owner.coordinator_pulsed.set()
                         if not owner.coordinator_release.wait(25):
                             raise RuntimeError("Blocked coordinator was not released")
@@ -187,9 +190,16 @@ class WorkerBackend:
 @unittest.skipUnless(BINARY.exists(), "Build native batbox first")
 class NativeWorkers(unittest.TestCase):
     def test_worker_recovers_during_blocked_coordinator_without_replaying_tools(self):
+        self.run_recovery_with_stream_progress("reasoning")
+
+    def test_content_only_stream_refreshes_coordinator_progress_but_silence_does_not(self):
+        self.run_recovery_with_stream_progress("content")
+
+    def run_recovery_with_stream_progress(self, progress_field):
         with tempfile.TemporaryDirectory(prefix="batbox-worker-recovery-") as temp:
             directory = Path(temp)
-            backend = WorkerBackend(directory, recovery_mode=True)
+            backend = WorkerBackend(directory, recovery_mode=True, progress_field=progress_field)
+            progress_operation = "reasoning_delta" if progress_field == "reasoning" else "content_delta"
             self.addCleanup(backend.close)
             state = directory / "state"
             env = {k: v for k, v in os.environ.items() if not k.startswith("BATBOX_")}
@@ -221,9 +231,14 @@ class NativeWorkers(unittest.TestCase):
             def marker():
                 p = state / "running.json"
                 return json.loads(p.read_text()) if p.exists() else {}
+            def stream_progress_events():
+                p = state / "events.jsonl"
+                events = [json.loads(line) for line in p.read_text().splitlines()]
+                return [event for event in events if event.get("event") == "context_progress"
+                        and event.get("operation") == progress_operation]
             try:
                 self.assertTrue(backend.coordinator_started.wait(10))
-                wait_until(lambda: marker().get("last_operation") == "reasoning_delta")
+                wait_until(lambda: marker().get("last_operation") == progress_operation)
                 first_marker = marker()
                 initial = wait_until(lambda: manifest() if manifest().get("phase") == "retry_wait" else None)
                 sid = initial["session_id"]
@@ -236,10 +251,13 @@ class NativeWorkers(unittest.TestCase):
                 # progress while its stream is silent.
                 time.sleep(2.1)
                 self.assertEqual(marker(), first_marker)
+                self.assertEqual(len(stream_progress_events()), 1,
+                    "Immediate fragment bursts, empty SSE fields and silent waits must not add heartbeats")
                 backend.coordinator_pulse.set()
                 self.assertTrue(backend.coordinator_pulsed.wait(5))
                 wait_until(lambda: marker().get("updated_at") != first_marker["updated_at"])
-                self.assertEqual(marker()["last_operation"], "reasoning_delta")
+                self.assertEqual(marker()["last_operation"], progress_operation)
+                self.assertEqual(len(stream_progress_events()), 2)
                 second = wait_until(lambda: manifest() if manifest().get("retry_delay_seconds") == 4 else None)
                 self.assertEqual(second["phase"], "retry_wait")
                 recovered = wait_until(lambda: manifest() if manifest().get("completed_turns", 0) >= 1 else None)

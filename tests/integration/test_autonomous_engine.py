@@ -28,6 +28,8 @@ class FakeServices:
         self.fail_memory = False
         self.token_count = None
         self.summary_handler = None
+        self.recall_handler = None
+        self.memory_recall_tool = False
         owner = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -56,6 +58,8 @@ class FakeServices:
                     owner.memories.append(body)
                     return self.send_json({"status": "pending", "id": body.get("id")}, 202)
                 if self.path == "/recall":
+                    if owner.recall_handler:
+                        return self.send_json(owner.recall_handler(body))
                     return self.send_json({"backend": "test", "results": [
                         {"source": "file:///fixture", "content": "A source-backed fixture observation"}]})
                 if self.path != "/v1/chat/completions":
@@ -74,6 +78,13 @@ class FakeServices:
                     {"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
                      "usage": {"prompt_tokens": 250, "completion_tokens": 6, "total_tokens": 256}},
                 ]
+                if owner.memory_recall_tool and not any(m.get("tool_call_id") == "delayed_recall"
+                                                       for m in body["messages"]):
+                    chunks = [{"choices": [{"index": 0, "delta": {"role": "assistant", "tool_calls": [{
+                        "index": 0, "id": "delayed_recall", "type": "function", "function": {
+                            "name": "MemoryRecall", "arguments": json.dumps({"query": "DELAYED_TOOL_RECALL", "limit": 1})}}]},
+                        "finish_reason": None}]},
+                        {"choices": [{"index": 0, "delta": {}, "finish_reason": "tool_calls"}]}]
                 payload = "".join("data: " + json.dumps(chunk) + "\n\n" for chunk in chunks) + "data: [DONE]\n\n"
                 self.send_response(200)
                 self.send_header("Content-Type", "text/event-stream")
@@ -131,6 +142,37 @@ class AutonomousLifecycle(unittest.TestCase):
 
     def read_state(self):
         return json.loads((self.state / "state.json").read_text())
+
+    def exercise_delayed_recall(self, tool):
+        self.services.memory_recall_tool = tool
+        elapsed = []
+        def recall(body):
+            if tool and body.get("query") != "DELAYED_TOOL_RECALL":
+                return {"results": []}
+            started = time.monotonic()
+            time.sleep(47)  # Deliberately exceeds the former 45-second RPC timeout.
+            elapsed.append(time.monotonic() - started)
+            return {"results": [{"source": "fixture://delayed-recall",
+                                 "content": "DELAYED_RECALL_VERIFIED_RESULT"}]}
+        self.services.recall_handler = recall
+        result = subprocess.run(self.engine_command(), env=self.environment, text=True,
+                                capture_output=True, timeout=65, cwd=ROOT)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        messages = self.services.requests[-1]["messages"]
+        self.assertTrue(any("DELAYED_RECALL_VERIFIED_RESULT" in (m.get("content") or "")
+                            and (m["role"] == "tool" if tool else m["role"] == "user") for m in messages),
+                        "Delayed recall did not reach the native model request after the legacy 45-second limit")
+        self.assertEqual(len(elapsed), 1)
+        self.assertGreaterEqual(elapsed[0], 47)
+        events = [json.loads(line) for line in (self.state / "events.jsonl").read_text().splitlines()]
+        self.assertFalse(any(event["event"] == "recall_failed" for event in events))
+        self.assertEqual(self.read_state()["cycle"], 1)
+
+    def test_delayed_direct_recall_exceeds_legacy_timeout(self):
+        self.exercise_delayed_recall(tool=False)
+
+    def test_delayed_native_memory_recall_tool_exceeds_legacy_timeout(self):
+        self.exercise_delayed_recall(tool=True)
 
     def test_completed_compaction_work_refreshes_marker_before_later_chunks_finish(self):
         self.run_engine()
