@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "status": "experimental shape-generalization of measured Q4K/Q6K shard results; requires whole-model validation",
+  "rules": [
+    {
+      "qtype": 12,
+      "min_m": 128,
+      "op": "dequant_cublas",
+      "precision": "bf16"
+    },
+    {
+      "qtype": 12,
+      "min_m": 3,
+      "max_m": 48,
+      "op": "direct",
+      "precision": "bf16",
+      "split_k": 8
+    },
+    {
+      "qtype": 12,
+      "min_m": 49,
+      "max_m": 127,
+      "op": "direct",
+      "precision": "bf16",
+      "block_m": 64
+    },
+    {
+      "qtype": 14,
+      "min_m": 128,
+      "op": "dequant_cublas",
+      "precision": "bf16"
+    },
+    {
+      "qtype": 14,
+      "min_m": 3,
+      "max_m": 48,
+      "op": "direct",
+      "precision": "bf16",
+      "split_k": 8
+    },
+    {
+      "qtype": 14,
+      "min_m": 49,
+      "max_m": 127,
+      "op": "direct",
+      "precision": "bf16",
+      "block_m": 64
+    }
+  ]
+}

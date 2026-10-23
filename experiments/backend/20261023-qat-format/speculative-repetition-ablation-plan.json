@@ -1,0 +1,128 @@
+{
+  "status": "NOT RUN; deferred to prioritize converted/MTP2 restoration",
+  "prepared_at": "2026-10-23T16:40:32.845291+00:00",
+  "implementation_status": "Request/test plan only; existing incident_replay.py is an earlier OpenAI4096-token runner and does not implement this expanded native-path ablation.",
+  "modes_in_planned_order": [
+    "converted_without_speculation",
+    "converted_MTP2_restored"
+  ],
+  "settings_held_fixed": {
+    "max_model_len": 200000,
+    "kv_cache_dtype": "turboquant_4bit_nc",
+    "kv_offload_gib": 80,
+    "temperature": 0.6,
+    "top_p": 0.9,
+    "top_k": 64,
+    "min_p": 0.05,
+    "repetition_penalty": 1.1,
+    "max_tokens": 64000
+  },
+  "native_seed_support": false,
+  "native_seed_reason": "Installed AnthropicMessagesRequest has no seed and _build_base_request does not forward one; native repetitions must not be described as paired seeded runs.",
+  "cases": [
+    {
+      "name": "native_approx_incident_repeat_1",
+      "endpoint": "/v1/messages",
+      "seed": null,
+      "thinking": {
+        "type": "adaptive"
+      },
+      "output_config": {
+        "effort": "max"
+      },
+      "sampler_fields": "omitted; inherit independently verified server defaults",
+      "max_tokens": 64000
+    },
+    {
+      "name": "native_approx_incident_repeat_2",
+      "endpoint": "/v1/messages",
+      "seed": null,
+      "thinking": {
+        "type": "adaptive"
+      },
+      "output_config": {
+        "effort": "max"
+      },
+      "sampler_fields": "omitted; inherit independently verified server defaults",
+      "max_tokens": 64000
+    },
+    {
+      "name": "native_approx_incident_repeat_3",
+      "endpoint": "/v1/messages",
+      "seed": null,
+      "thinking": {
+        "type": "adaptive"
+      },
+      "output_config": {
+        "effort": "max"
+      },
+      "sampler_fields": "omitted; inherit independently verified server defaults",
+      "max_tokens": 64000
+    },
+    {
+      "name": "native_approx_incident_repeat_4",
+      "endpoint": "/v1/messages",
+      "seed": null,
+      "thinking": {
+        "type": "adaptive"
+      },
+      "output_config": {
+        "effort": "max"
+      },
+      "sampler_fields": "omitted; inherit independently verified server defaults",
+      "max_tokens": 64000
+    },
+    {
+      "name": "visible_prefix_conditioned_seed_17",
+      "endpoint": "/v1/chat/completions",
+      "seed": 17,
+      "prefix_chars": 4800,
+      "continue_final_message": true,
+      "add_generation_prompt": false,
+      "max_tokens": 64000
+    },
+    {
+      "name": "visible_prefix_conditioned_seed_53",
+      "endpoint": "/v1/chat/completions",
+      "seed": 53,
+      "prefix_chars": 4800,
+      "continue_final_message": true,
+      "add_generation_prompt": false,
+      "max_tokens": 64000
+    }
+  ],
+  "private_source_directory": "/home/isnotreal/.batbox/diagnostics/repetition-20261022",
+  "exact_incident_replay": false,
+  "limitations": [
+    "Original request system prompt/full tools and effective per-request sampler were not captured.",
+    "Historical input was32344tokens; reconstructed prior replay input was18636tokens.",
+    "Visible-output prefix conditioning is a diagnostic intervention, not the original request.",
+    "Native endpoint trials are unseeded replicates.",
+    "Zero reproduced loops would not exclude a rare failure or identify/exonerate speculative decoding."
+  ],
+  "loop_abort": {
+    "same_word_tail_threshold": 256,
+    "short_cycle_tail_tokens_threshold": 512,
+    "max_cycle_period_words": 32
+  },
+  "planned_deadlines": {
+    "per_request_seconds": 240,
+    "per_mode_seconds": 1800,
+    "timed_out_generations_label": "early-censored; not successful no-loop completions"
+  },
+  "required_result_fields": [
+    "mode order",
+    "per-request UTC start/end",
+    "SSE request ID",
+    "exact sent sampler fields and separately verified effective defaults",
+    "request payload SHA256",
+    "endpoint",
+    "prompt/output usage",
+    "cold/warm state",
+    "normal stop versus max_tokens versus loop abort versus time censor versus error",
+    "separate reasoning/content repeated8grams and tail cycles",
+    "private raw result path"
+  ],
+  "GPU_or_backend_requests_from_plan": 0,
+  "causal_conclusion": "No controlled MTP-on/off experiment was run; current evidence cannot attribute the incident to speculative decoding."
+}

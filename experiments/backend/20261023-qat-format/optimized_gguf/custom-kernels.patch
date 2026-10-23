@@ -1,0 +1,371 @@
+diff --git a/vllm_gguf_plugin/kernel_policy.py b/vllm_gguf_plugin/kernel_policy.py
+new file mode 100644
+index 0000000..6123303
+--- /dev/null
++++ b/vllm_gguf_plugin/kernel_policy.py
+@@ -0,0 +1,97 @@
++# SPDX-License-Identifier: Apache-2.0
++"""Immutable experimental dispatch policy; default preserves legacy behavior.
++
++Pure Python so policy validation can be tested without importing torch/vLLM.
++Explicit policies are loaded once before CUDA graph capture. No autotuning,
++tensor inspection or device synchronization occurs in the selection path.
++"""
++from dataclasses import dataclass
++from functools import lru_cache
++import json
++import os
++from pathlib import Path
++
++
++@dataclass(frozen=True, slots=True)
++class Decision:
++    op: str = 'legacy'
++    precision: str = 'bf16_pair'
++    block_m: int = 16
++    block_n: int = 64
++    block_k: int = 128
++    num_warps: int = 4
++    num_stages: int = 3
++    split_k: int = 1
++
++    def kwargs(self):
++        return {k: getattr(self, k) for k in self.__dataclass_fields__ if k != 'op'}
++
++
++class KernelPolicy:
++    def __init__(self, mode='legacy', rules=(), trace_path=None):
++        self.mode = mode
++        self.trace_path = trace_path
++        if mode not in ('legacy', 'rules'):
++            raise ValueError(f'unknown GGUF kernel policy mode: {mode}')
++        self.rules = tuple(self._rule(r) for r in rules)
++
++    @staticmethod
++    def _rule(raw):
++        raw = dict(raw)
++        selectors = {'qtype', 'n', 'k', 'min_m', 'max_m'}
++        choices = set(Decision.__dataclass_fields__)
++        extra = set(raw) - selectors - choices - {'evidence'}
++        if extra:
++            raise ValueError(f'unknown GGUF rule keys: {sorted(extra)}')
++        select = {k: raw[k] for k in selectors if k in raw}
++        for k,v in select.items():
++            if isinstance(v,bool) or not isinstance(v,int) or v < 1:
++                raise ValueError(f'{k} must be a positive integer')
++        if select.get('qtype') not in (None,12,14):
++            raise ValueError('only Q4_K/Q6_K candidate rules are supported')
++        if select.get('min_m',1)>select.get('max_m',2**31-1):
++            raise ValueError('min_m exceeds max_m')
++        decision = Decision(**{k:raw[k] for k in choices if k in raw})
++        if decision.op not in ('legacy','cuda_mmvq','cuda_mmq','plugin_triton','direct','dequant_cublas','cuda_dequant_cublas'):
++            raise ValueError(f'unknown GGUF kernel: {decision.op}')
++        if decision.precision not in ('bf16','bf16_pair','tf32x3','ieee'):
++            raise ValueError('unknown precision mode')
++        if decision.op=='dequant_cublas' and decision.precision not in ('bf16','bf16_pair'):
++            raise ValueError('cuBLAS policy supports explicit BF16 or BF16-pair precision')
++        if decision.block_m not in (16,32,64) or decision.block_n not in (32,64,128,256):
++            raise ValueError('unsupported tile M/N')
++        if decision.block_k not in (32,64,128,256) or decision.num_warps not in (2,4,8):
++            raise ValueError('unsupported tile K/warp count')
++        if decision.num_stages not in (1,2,3,4,5) or decision.split_k not in (1,2,4,8,16):
++            raise ValueError('unsupported stage/split count')
++        return select,decision
++
++    @classmethod
++    def from_env(cls):
++        value = os.environ.get('VLLM_GGUF_KERNEL_POLICY','legacy')
++        trace = os.environ.get('VLLM_GGUF_TRACE_SHAPES')
++        if value == 'legacy':
++            return cls(trace_path=trace)
++        raw = json.loads(Path(value).read_text())
++        if raw.get('version') != 1 or not isinstance(raw.get('rules'),list):
++            raise ValueError('GGUF policy must contain version1 and a rules array')
++        return cls('rules',raw['rules'],trace)
++
++    @lru_cache(maxsize=8192)
++    def select(self,qtype,m,n,k,dtype):
++        decision = Decision()
++        if self.mode != 'legacy' and qtype in (12,14) and dtype == 'torch.bfloat16' and m > 0:
++            for selectors, candidate in self.rules:
++                if any(selectors.get(key,value) != value for key,value in (('qtype',qtype),('n',n),('k',k))):
++                    continue
++                if not selectors.get('min_m',1) <= m <= selectors.get('max_m',2**31-1):
++                    continue
++                decision = candidate
++                break
++        if self.trace_path:
++            path = Path(f'{self.trace_path}.{os.getpid()}.jsonl')
++            path.parent.mkdir(parents=True,exist_ok=True)
++            with path.open('a') as f:
++                f.write(json.dumps({'qtype':qtype,'m':m,'n':n,'k':k,'dtype':dtype,
++                                    'op':decision.op,**decision.kwargs()})+'\n')
++        return decision
+diff --git a/vllm_gguf_plugin/quantization/linear.py b/vllm_gguf_plugin/quantization/linear.py
+index dcd7933..bb139ae 100644
+--- a/vllm_gguf_plugin/quantization/linear.py
++++ b/vllm_gguf_plugin/quantization/linear.py
+@@ -12,6 +12,7 @@ from vllm.model_executor.utils import set_weight_attrs
+ from vllm.utils.torch_utils import direct_register_custom_op
+ 
+ from .. import ops
++from ..kernel_policy import KernelPolicy
+ from .layout import GGUFLinearLayout
+ from .params import (
+     GGUFUninitializedWeightParameter,
+@@ -32,6 +33,9 @@ from .utils import (
+ )
+ 
+ 
++_KERNEL_POLICY = KernelPolicy.from_env()
++
++
+ def _fused_mul_mat_gguf(
+     x: torch.Tensor, weight: torch.Tensor, weight_type: int
+ ) -> torch.Tensor:
+@@ -43,6 +47,29 @@ def _fused_mul_mat_gguf(
+         return torch.empty(x.shape[0], weight.shape[0], dtype=x.dtype, device=x.device)
+     if weight_type in UNQUANTIZED_TYPES:
+         return x @ weight.T
++    decision = _KERNEL_POLICY.select(int(weight_type), int(x.shape[0]),
++                                     int(weight.shape[0]), int(x.shape[1]), str(x.dtype))
++    if decision.op == 'direct':
++        from ..triton.gemm.direct_kquant import direct_gemm
++        return direct_gemm(weight, x, weight_type, **decision.kwargs())
++    if decision.op == 'dequant_cublas':
++        from ..triton.gemm.dequant_cublas import dequant_cublas
++        return dequant_cublas(weight,x,weight_type,precision=decision.precision)
++    # Mixed-type QKV uses padded rows. The candidate kernels honor row stride;
++    # legacy CUDA kernels require contiguous rows and receive the same copy as
++    # before, now after dispatch so compatible kernels can avoid it.
++    if not weight.is_contiguous():
++        weight = weight.contiguous()
++    if decision.op == 'cuda_mmvq':
++        return ops.ggml_mul_mat_vec_a8(weight, x, weight_type, weight.shape[0])
++    if decision.op == 'cuda_mmq':
++        return ops.ggml_mul_mat_a8(weight, x, weight_type, weight.shape[0])
++    if decision.op == 'plugin_triton':
++        from ..triton.gemm.interface import ggml_mul_mat_a8_triton
++        return ggml_mul_mat_a8_triton(weight, x, weight_type, weight.shape[0])
++    if decision.op == 'cuda_dequant_cublas':
++        dequant=ops.ggml_dequantize(weight,weight_type,weight.shape[0],x.shape[1],x.dtype)
++        return torch.mm(x,dequant.T)
+     if x.shape[0] <= mmvq_safe and weight_type in MMVQ_QUANT_TYPES:
+         y = ops.ggml_mul_mat_vec_a8(weight, x, weight_type, weight.shape[0])
+     elif weight_type in MMQ_QUANT_TYPES:
+@@ -251,7 +278,7 @@ class GGUFLinearMethod(LinearMethodBase):
+                 )
+                 result.append(
+                     fused_mul_mat_gguf_op(
+-                        x, weight[start:end, :offset].contiguous(), weight_type
++                        x, weight[start:end, :offset], weight_type
+                     )
+                 )
+             out = torch.cat(result, axis=1)
+diff --git a/vllm_gguf_plugin/triton/gemm/dequant_cublas.py b/vllm_gguf_plugin/triton/gemm/dequant_cublas.py
+new file mode 100644
+index 0000000..c1aee73
+--- /dev/null
++++ b/vllm_gguf_plugin/triton/gemm/dequant_cublas.py
+@@ -0,0 +1,79 @@
++"""Decode original weights once per GEMM, then use cuBLAS Tensor Cores.
++
++For prefill, amortize decoding over all M rows rather than repeating it in
++every M tile. Temporary weights are released each call. No saved conversion.
++"""
++import torch
++import triton
++import triton.language as tl
++
++
++@triton.jit
++def _half(W, offset, valid):
++    lo=tl.load(W+offset,mask=valid,other=0).to(tl.uint16)
++    hi=tl.load(W+offset+1,mask=valid,other=0).to(tl.uint16)
++    return (lo|(hi<<8)).to(tl.float16,bitcast=True).to(tl.float32)
++
++
++@triton.jit
++def _decode(W, Hi, Lo, N:tl.constexpr,K:tl.constexpr,STRIDE:tl.constexpr,
++            QTYPE:tl.constexpr,PRECISION:tl.constexpr,BLOCK:tl.constexpr):
++    z=tl.program_id(0)*BLOCK+tl.arange(0,BLOCK)
++    valid=z<N*K
++    row,k=z//K,z%K
++    pos=k%256
++    if QTYPE==12:
++        base=row*STRIDE+(k//256)*144
++        g=pos//32
++        a=tl.load(W+base+4+tl.where(g<4,g,g-4),mask=valid,other=0)
++        b=tl.load(W+base+4+tl.where(g<4,g+4,g),mask=valid,other=0)
++        c=tl.load(W+base+4+tl.where(g<4,g,g+4),mask=valid,other=0)
++        sc=tl.where(g<4,a&63,(c&15)|((a>>6)<<4))
++        mn=tl.where(g<4,b&63,(c>>4)|((b>>6)<<4))
++        q=tl.load(W+base+16+(pos//64)*32+pos%32,mask=valid,other=0)
++        q=(q>>((g%2)*4))&15
++        value=(_half(W,base,valid)*sc.to(tl.float32))*q.to(tl.float32)-_half(W,base+2,valid)*mn.to(tl.float32)
++    else:
++        base=row*STRIDE+(k//256)*210
++        h,g,lane=pos//128,(pos%128)//32,pos%32
++        low=tl.load(W+base+h*64+(g%2)*32+lane,mask=valid,other=0)
++        high=tl.load(W+base+128+h*32+lane,mask=valid,other=0)
++        q=((low>>(4*(g//2)))&15)|(((high>>(2*g))&3)<<4)
++        sc=tl.load(W+base+192+pos//16,mask=valid,other=0).to(tl.int8,bitcast=True)
++        value=(_half(W,base+208,valid)*sc.to(tl.float32))*(q.to(tl.float32)-32.0)
++    if PRECISION=='bf16_pair':
++        hi=value.to(tl.bfloat16)
++        lo=(value-hi.to(tl.float32)).to(tl.bfloat16)
++        tl.store(Hi+z,hi,mask=valid)
++        tl.store(Lo+z,lo,mask=valid)
++    else:
++        tl.store(Hi+z,value,mask=valid)
++
++
++def decode_weights(w,k,qtype,precision='bf16'):
++    if int(qtype) not in (12,14) or precision not in ('bf16','bf16_pair','fp32'):
++        raise ValueError('unsupported type/precision')
++    width=144 if int(qtype)==12 else 210
++    if w.dtype!=torch.uint8 or w.ndim!=2 or w.stride(1)!=1 or k%256 or w.shape[1]!=k//256*width:
++        raise ValueError('invalid GGUF block layout')
++    hi=torch.empty((w.shape[0],k),device=w.device,dtype=torch.float32 if precision=='fp32' else torch.bfloat16)
++    lo=torch.empty_like(hi) if precision=='bf16_pair' else hi
++    _decode[(triton.cdiv(w.shape[0]*k,512),)](w,hi,lo,w.shape[0],k,w.stride(0),int(qtype),precision,512,
++                                           num_warps=4,enable_fp_fusion=False)
++    return hi,lo
++
++
++def dequant_cublas(w,x,qtype,precision='bf16',**unused):
++    if x.dtype!=torch.bfloat16 or x.ndim!=2:
++        raise ValueError('expected BF16 X[M,K]')
++    hi,lo=decode_weights(w,x.shape[1],qtype,precision)
++    if precision=='bf16':
++        return torch.mm(x,hi.T)
++    if precision=='bf16_pair':
++        # Preserve FP32 partial outputs; round only the final combined result.
++        y=torch.mm(x,hi.T,out_dtype=torch.float32)
++        y.add_(torch.mm(x,lo.T,out_dtype=torch.float32))
++        return y.to(torch.bfloat16)
++    # This reference arm requires the caller to choose/check torch's FP32
++    # precision policy; production dispatch policies use the explicit BF16 arms.
++    return torch.mm(x.float(),hi.T).to(torch.bfloat16)
+diff --git a/vllm_gguf_plugin/triton/gemm/direct_kquant.py b/vllm_gguf_plugin/triton/gemm/direct_kquant.py
+new file mode 100644
+index 0000000..595adb7
+--- /dev/null
++++ b/vllm_gguf_plugin/triton/gemm/direct_kquant.py
+@@ -0,0 +1,116 @@
++"""Isolated GGUF Tensor Core candidate. Never installs or patches a backend.
++
++Loads original Q4_K/Q6_K bytes. All scale/min reconstruction is FP32 before
++the selected tensor-core operand conversion. Unlike the plugin fallback,
++one dot spans BLOCK_K values instead of looping over each16/32-value group.
++The CPU offset mirror is exhaustively tested separately. GPU compilation,
++numerical checks and timing are separate gates; this module claims no speedup.
++"""
++import torch
++import triton
++import triton.language as tl
++
++
++@triton.jit
++def _load_half_as_float(w, offsets, mask):
++    lo = tl.load(w + offsets, mask=mask, other=0).to(tl.uint16)
++    hi = tl.load(w + offsets + 1, mask=mask, other=0).to(tl.uint16)
++    return (lo | (hi << 8)).to(tl.float16, bitcast=True).to(tl.float32)
++
++
++@triton.jit
++def _direct_gemm(
++    X, W, Y,
++    M, N: tl.constexpr, K: tl.constexpr,
++    SXM: tl.constexpr, SXK: tl.constexpr, SWN: tl.constexpr,
++    QTYPE: tl.constexpr, PRECISION: tl.constexpr,
++    BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr, BLOCK_K: tl.constexpr,
++    SPLIT_K: tl.constexpr,
++):
++    rm = tl.program_id(0) * BLOCK_M + tl.arange(0, BLOCK_M)
++    rn = tl.program_id(1) * BLOCK_N + tl.arange(0, BLOCK_N)
++    rk = tl.arange(0, BLOCK_K)
++    acc = tl.zeros((BLOCK_M, BLOCK_N), tl.float32)
++    part = tl.program_id(2)
++    for start in range(part, tl.cdiv(K, BLOCK_K), SPLIT_K):
++        kk = start * BLOCK_K + rk
++        pos = kk % 256
++        valid = (rn[:, None] < N) & (kk[None, :] < K)
++        x = tl.load(X + rm[:, None] * SXM + kk[None, :] * SXK,
++                    mask=(rm[:, None] < M) & (kk[None, :] < K), other=0)
++        if QTYPE == 12:
++            base = rn[:, None] * SWN + (kk[None, :] // 256) * 144
++            group = pos // 32
++            a = tl.load(W + base + 4 + tl.where(group < 4, group, group - 4)[None, :], mask=valid, other=0)
++            b = tl.load(W + base + 4 + tl.where(group < 4, group + 4, group)[None, :], mask=valid, other=0)
++            c = tl.load(W + base + 4 + tl.where(group < 4, group, group + 4)[None, :], mask=valid, other=0)
++            sc = tl.where(group[None, :] < 4, a & 63, (c & 15) | ((a >> 6) << 4))
++            mn = tl.where(group[None, :] < 4, b & 63, (c >> 4) | ((b >> 6) << 4))
++            q = tl.load(W + base + 16 + ((pos // 64) * 32 + pos % 32)[None, :], mask=valid, other=0)
++            q = (q >> ((group % 2) * 4)[None, :]) & 15
++            d = _load_half_as_float(W, base, valid)
++            dm = _load_half_as_float(W, base + 2, valid)
++            value = (d * sc.to(tl.float32)) * q.to(tl.float32) - dm * mn.to(tl.float32)
++        else:
++            base = rn[:, None] * SWN + (kk[None, :] // 256) * 210
++            half, group, lane = pos // 128, (pos % 128) // 32, pos % 32
++            lo = tl.load(W + base + (half * 64 + (group % 2) * 32 + lane)[None, :], mask=valid, other=0)
++            hi = tl.load(W + base + 128 + (half * 32 + lane)[None, :], mask=valid, other=0)
++            q = ((lo >> (4 * (group // 2))[None, :]) & 15) | (((hi >> (2 * group)[None, :]) & 3) << 4)
++            sc = tl.load(W + base + 192 + (pos // 16)[None, :], mask=valid, other=0).to(tl.int8, bitcast=True)
++            d = _load_half_as_float(W, base + 208, valid)
++            value = (d * sc.to(tl.float32)) * (q.to(tl.float32) - 32.0)
++        if PRECISION == 'bf16':
++            acc = tl.dot(x.to(tl.bfloat16), tl.trans(value.to(tl.bfloat16)), acc)
++        elif PRECISION == 'bf16_pair':
++            high = value.to(tl.bfloat16)
++            low = (value - high.to(tl.float32)).to(tl.bfloat16)
++            acc = tl.dot(x.to(tl.bfloat16), tl.trans(high), acc)
++            acc = tl.dot(x.to(tl.bfloat16), tl.trans(low), acc)
++        elif PRECISION == 'tf32x3':
++            acc = tl.dot(x.to(tl.float32), tl.trans(value), acc, input_precision='tf32x3')
++        else:
++            acc = tl.dot(x.to(tl.float32), tl.trans(value), acc, input_precision='ieee')
++    tl.store(Y + part * M * N + rm[:, None] * N + rn[None, :], acc,
++             mask=(rm[:, None] < M) & (rn[None, :] < N))
++
++
++@triton.jit
++def _reduce_splits(Parts, Y, SIZE, SPLIT_K: tl.constexpr, BLOCK: tl.constexpr):
++    offs = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
++    acc = tl.zeros((BLOCK,), tl.float32)
++    for part in range(SPLIT_K):
++        acc += tl.load(Parts + part * SIZE + offs, mask=offs < SIZE, other=0)
++    tl.store(Y + offs, acc, mask=offs < SIZE)
++
++
++def direct_gemm(w, x, qtype, *, precision='bf16', block_m=16,
++                block_n=64, block_k=128, num_warps=4, num_stages=3, split_k=1):
++    if int(qtype) not in (12, 14):
++        raise ValueError('only Q4_K and Q6_K')
++    if precision not in ('bf16', 'bf16_pair', 'tf32x3', 'ieee'):
++        raise ValueError(precision)
++    if not x.is_cuda or not w.is_cuda or w.device != x.device:
++        raise ValueError('GPU probe only; tensors must share a CUDA device')
++    if w.dtype != torch.uint8 or x.ndim != 2 or w.ndim != 2:
++        raise ValueError('expected X[M,K] and packed uint8 W[N,rowbytes]')
++    if x.dtype != torch.bfloat16:
++        raise ValueError('current candidate contract requires BF16 activations')
++    if split_k not in (1, 2, 4, 8, 16):
++        raise ValueError('split_k must be1,2,4,8 or16')
++    m, k = x.shape
++    n = w.shape[0]
++    width = 144 if int(qtype) == 12 else 210
++    if k % 256 or w.shape[1] != (k // 256) * width or w.stride(1) != 1:
++        raise ValueError('incompatible or incomplete GGUF block rows')
++    y = torch.empty((m, n), device=x.device, dtype=x.dtype)
++    if m == 0 or n == 0:
++        return y
++    target = y if split_k == 1 else torch.empty((split_k, m, n), device=x.device, dtype=torch.float32)
++    _direct_gemm[(triton.cdiv(m, block_m), triton.cdiv(n, block_n), split_k)](
++        x, w, target, m, n, k, x.stride(0), x.stride(1), w.stride(0),
++        int(qtype), precision, block_m, block_n, block_k, split_k,
++        num_warps=num_warps, num_stages=num_stages, enable_fp_fusion=False)
++    if split_k != 1:
++        _reduce_splits[(triton.cdiv(m*n, 256),)](target, y, m*n, split_k, 256)
++    return y

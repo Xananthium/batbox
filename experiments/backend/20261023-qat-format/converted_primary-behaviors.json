@@ -1,0 +1,171 @@
+{
+  "checkpoint": "/home/isnotreal/models/gemma4-31b-qat-hauhau-balanced-native-mixed-w4w8a16",
+  "records": [
+    {
+      "test": "forced_tool_call",
+      "passed": true,
+      "response": {
+        "id": "chatcmpl-800a9d67e2a69385",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "chatcmpl-tool-ad82cf66bd2fabbf",
+            "name": "add",
+            "input": {
+              "a": 3,
+              "b": 4
+            }
+          }
+        ],
+        "model": "qwen3.6-35b-hauhau-w4a16-vision",
+        "stop_reason": "tool_use",
+        "usage": {
+          "input_tokens": 81,
+          "output_tokens": 15
+        }
+      }
+    },
+    {
+      "test": "tool_result_roundtrip",
+      "passed": true,
+      "response": {
+        "id": "chatcmpl-8b59ff62be032e2d",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "The sum of 3 and 4 is 7."
+          }
+        ],
+        "model": "qwen3.6-35b-hauhau-w4a16-vision",
+        "stop_reason": "end_turn",
+        "usage": {
+          "input_tokens": 103,
+          "output_tokens": 17
+        }
+      }
+    },
+    {
+      "test": "automatic_tool_choice",
+      "passed": true,
+      "response": {
+        "id": "chatcmpl-a6445954f84a6f7c",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "chatcmpl-tool-9d01b9539a1425b2",
+            "name": "add",
+            "input": {
+              "a": 19,
+              "b": 23
+            }
+          }
+        ],
+        "model": "qwen3.6-35b-hauhau-w4a16-vision",
+        "stop_reason": "tool_use",
+        "usage": {
+          "input_tokens": 84,
+          "output_tokens": 17
+        }
+      }
+    },
+    {
+      "test": "pivot_after_two_errors",
+      "passed": true,
+      "response": {
+        "id": "chatcmpl-ad268ff85268d3fe",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "thought// The PDF was encrypted and unsupported, so I need to read the text version mentioned in the response.",
+            "signature": "315c2935f8134f63833984234730c085"
+          },
+          {
+            "type": "tool_use",
+            "id": "chatcmpl-tool-8de9bcb7d8792f38",
+            "name": "read_text",
+            "input": {
+              "path": "/reports/quarterly.txt"
+            }
+          }
+        ],
+        "model": "qwen3.6-35b-hauhau-w4a16-vision",
+        "stop_reason": "tool_use",
+        "usage": {
+          "input_tokens": 236,
+          "output_tokens": 45
+        }
+      }
+    },
+    {
+      "test": "workflow_completion",
+      "passed": true,
+      "response": {
+        "id": "chatcmpl-91348fa34456bcfb",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "The revenue for the quarter was USD 47 million."
+          }
+        ],
+        "model": "qwen3.6-35b-hauhau-w4a16-vision",
+        "stop_reason": "end_turn",
+        "usage": {
+          "input_tokens": 315,
+          "output_tokens": 17
+        }
+      }
+    },
+    {
+      "test": "vision_red",
+      "passed": true,
+      "response": {
+        "id": "chatcmpl-bcb4438fa27f8cd0",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "Red"
+          }
+        ],
+        "model": "qwen3.6-35b-hauhau-w4a16-vision",
+        "stop_reason": "end_turn",
+        "usage": {
+          "input_tokens": 284,
+          "output_tokens": 2
+        }
+      }
+    },
+    {
+      "test": "vision_blue",
+      "passed": true,
+      "response": {
+        "id": "chatcmpl-ae3e989f51c3ec32",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "Blue"
+          }
+        ],
+        "model": "qwen3.6-35b-hauhau-w4a16-vision",
+        "stop_reason": "end_turn",
+        "usage": {
+          "input_tokens": 284,
+          "output_tokens": 2
+        }
+      }
+    }
+  ]
+}

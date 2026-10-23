@@ -1,0 +1,68 @@
+[
+  {
+    "qtype": 12,
+    "precision": "bf16",
+    "target": "sm86",
+    "ptx_sha256": "b2f71554aa9978e3bed37188bfc7939166ec88f68c188c8f79deb44c77f2a6e2",
+    "shared_memory_bytes": 20480,
+    "mma_instructions": [
+      "mma.sync.aligned.m16n8k16.row.col.f32.bf16.bf16.f32"
+    ],
+    "scope": "offline compilation only; not executed"
+  },
+  {
+    "qtype": 12,
+    "precision": "bf16_pair",
+    "target": "sm86",
+    "ptx_sha256": "c11d5b2474bab0e143505aa1be76e4fa24169c1a3ce1d9b728d46c2d7ecb2c1e",
+    "shared_memory_bytes": 36864,
+    "mma_instructions": [
+      "mma.sync.aligned.m16n8k16.row.col.f32.bf16.bf16.f32"
+    ],
+    "scope": "offline compilation only; not executed"
+  },
+  {
+    "qtype": 12,
+    "precision": "tf32x3",
+    "target": "sm86",
+    "ptx_sha256": "973fa220dfad5de72780af1a0a5875d3a6dea81cce10aa400fc21fa83ae7bf8e",
+    "shared_memory_bytes": 65536,
+    "mma_instructions": [
+      "mma.sync.aligned.m16n8k8.row.col.f32.tf32.tf32.f32"
+    ],
+    "scope": "offline compilation only; not executed"
+  },
+  {
+    "qtype": 14,
+    "precision": "bf16",
+    "target": "sm86",
+    "ptx_sha256": "5dd07e5c4c2b8c23a9c3e5492a9d21859798c680296c37612ba9fba85fffbd78",
+    "shared_memory_bytes": 20480,
+    "mma_instructions": [
+      "mma.sync.aligned.m16n8k16.row.col.f32.bf16.bf16.f32"
+    ],
+    "scope": "offline compilation only; not executed"
+  },
+  {
+    "qtype": 14,
+    "precision": "bf16_pair",
+    "target": "sm86",
+    "ptx_sha256": "71477a5295c9250e0d10cecad58ecc03557aff2d3e182deccd4c26d5aba92006",
+    "shared_memory_bytes": 36864,
+    "mma_instructions": [
+      "mma.sync.aligned.m16n8k16.row.col.f32.bf16.bf16.f32"
+    ],
+    "scope": "offline compilation only; not executed"
+  },
+  {
+    "qtype": 14,
+    "precision": "tf32x3",
+    "target": "sm86",
+    "ptx_sha256": "5355c2b190abc0eb8270982fe2957c2aa8fe48425aac16f3b6787447dc5d3c6c",
+    "shared_memory_bytes": 65536,
+    "mma_instructions": [
+      "mma.sync.aligned.m16n8k8.row.col.f32.tf32.tf32.f32"
+    ],
+    "scope": "offline compilation only; not executed"
+  }
+]

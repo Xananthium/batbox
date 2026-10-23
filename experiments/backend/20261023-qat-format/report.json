@@ -1,0 +1,3615 @@
+{
+  "utc": "2026-10-23T15:29:43.928660+00:00",
+  "comparison": "Original published Hauhau Q4_K_M GGUF vs its local native mixed INT4/INT8 compressed-tensors conversion.",
+  "converted": {
+    "performance": {
+      "1": {
+        "median_aggregate_tps": 90.2545655137834,
+        "median_decode_tps_per_client": 92.9107362822499,
+        "median_ttft_seconds": 0.1712575365017983
+      },
+      "4": {
+        "median_aggregate_tps": 242.1799312021867,
+        "median_decode_tps_per_client": 64.37505569624268,
+        "median_ttft_seconds": 0.31495434049429605
+      }
+    },
+    "short_semantic_checks": {
+      "passed": 10,
+      "total": 10
+    },
+    "short_raw_json_format_checks": {
+      "passed": 2,
+      "total": 9,
+      "note": "Semantic grading permits Markdown JSON fences. Raw JSON grading records their presence separately."
+    },
+    "vision_and_tool_recovery": {
+      "passed": 7,
+      "total": 7
+    },
+    "long_semantic_checks": {
+      "passed": 5,
+      "total": 5
+    },
+    "cold_long": {
+      "usage": {
+        "prompt_tokens": 63460,
+        "total_tokens": 63920,
+        "completion_tokens": 460,
+        "completion_tokens_details": {
+          "reasoning_tokens": 394
+        }
+      },
+      "wall_seconds": 119.55419665800582,
+      "first_output_seconds": 111.04455672400945,
+      "first_visible_seconds": 118.45697150401247,
+      "decode_tokens_per_second": 53.938827442777665,
+      "finish_reason": "stop",
+      "metrics_delta": {
+        "vllm:prefix_cache_queries_total": 63460.0,
+        "vllm:spec_decode_num_draft_tokens_total": 324.0,
+        "vllm:num_requests_kv_fetch_by_stage": 0.0,
+        "vllm:num_preemptions_total": 0.0,
+        "vllm:request_num_preemptions_sum": 0.0,
+        "vllm:request_num_preemptions_count": 1.0,
+        "vllm:spec_decode_num_drafts_total": 162.0,
+        "vllm:num_requests_waiting": 0.0,
+        "vllm:prefix_cache_hits_total": 0.0,
+        "vllm:external_prefix_cache_queries_total": 63460.0,
+        "vllm:spec_decode_num_accepted_tokens_per_pos_total": 298.0,
+        "vllm:external_prefix_cache_hits_total": 0.0,
+        "vllm:num_requests_running": 0.0,
+        "vllm:request_num_preemptions_bucket": 8.0,
+        "vllm:num_requests_waiting_by_reason": 0.0,
+        "vllm:spec_decode_num_accepted_tokens_total": 298.0
+      }
+    },
+    "first_shared_batch": {
+      "wall_seconds": 131.77953319800145,
+      "metrics_delta": {
+        "vllm:prefix_cache_queries_total": 253851.0,
+        "vllm:spec_decode_num_draft_tokens_total": 1410.0,
+        "vllm:num_requests_kv_fetch_by_stage": 0.0,
+        "vllm:num_preemptions_total": 0.0,
+        "vllm:request_num_preemptions_sum": 0.0,
+        "vllm:request_num_preemptions_count": 4.0,
+        "vllm:spec_decode_num_drafts_total": 705.0,
+        "vllm:num_requests_waiting": 0.0,
+        "vllm:prefix_cache_hits_total": 190272.0,
+        "vllm:external_prefix_cache_queries_total": 63579.0,
+        "vllm:spec_decode_num_accepted_tokens_per_pos_total": 1256.0,
+        "vllm:external_prefix_cache_hits_total": 0.0,
+        "vllm:num_requests_running": 0.0,
+        "vllm:request_num_preemptions_bucket": 32.0,
+        "vllm:num_requests_waiting_by_reason": 0.0,
+        "vllm:spec_decode_num_accepted_tokens_total": 1256.0
+      }
+    },
+    "warm_shared_batch": {
+      "wall_seconds": 15.170494983001845,
+      "median_first_output_seconds": 1.261850211500132,
+      "request_identity": "Repeat of the same four previously seen full prompts; each has the common dossier and a different suffix.",
+      "aggregate_output_tokens_per_second": 120.23338737752103,
+      "cached_tokens": 253760.0,
+      "queried_tokens": 253851.0,
+      "cache_hit_fraction": 0.9996415219951862,
+      "external_cached_tokens": 0.0,
+      "preemptions": 0.0,
+      "passed": 4,
+      "total": 4
+    },
+    "draft_acceptance_fraction_including_all_suite_requests": 0.7750361097737121,
+    "repetition": {
+      "median_repeated_8gram_fraction": 0.09909909909909909,
+      "maximum_repeated_8gram_fraction": 0.21084337349397586,
+      "duplicate_consecutive_lines": 1,
+      "answers_cut_off_at_token_limit": 0,
+      "note": "Repetition includes thinking and repeated evidence/answer formatting. This is not a standalone loop detector; forced-length throughput fixtures are excluded."
+    },
+    "fixtures_sha256": "7fa09cf5ba9cd7f91a5faa758e0bcda755bd937a1036198f1e328fe4a5538d9d",
+    "sampling": {
+      "temperature": 0.6,
+      "top_k": 64,
+      "top_p": 0.9,
+      "min_p": 0.05,
+      "repetition_penalty": 1.1,
+      "seed": 20261023
+    }
+  },
+  "original": {
+    "performance": {
+      "1": {
+        "median_aggregate_tps": 59.23531061375631,
+        "median_decode_tps_per_client": 60.63091640235288,
+        "median_ttft_seconds": 0.21369442400464322
+      },
+      "4": {
+        "median_aggregate_tps": 72.83752571366554,
+        "median_decode_tps_per_client": 18.884008004412102,
+        "median_ttft_seconds": 0.7688903459929861
+      }
+    },
+    "short_semantic_checks": {
+      "passed": 10,
+      "total": 10
+    },
+    "short_raw_json_format_checks": {
+      "passed": 3,
+      "total": 9,
+      "note": "Semantic grading permits Markdown JSON fences. Raw JSON grading records their presence separately."
+    },
+    "vision_and_tool_recovery": {
+      "passed": 7,
+      "total": 7
+    },
+    "long_semantic_checks": {
+      "passed": 4,
+      "total": 5
+    },
+    "cold_long": {
+      "usage": {
+        "prompt_tokens": 63460,
+        "total_tokens": 63960,
+        "completion_tokens": 500,
+        "completion_tokens_details": {
+          "reasoning_tokens": 434
+        }
+      },
+      "wall_seconds": 459.6103597379988,
+      "first_output_seconds": 445.0525560389942,
+      "first_visible_seconds": 458.09523203299614,
+      "decode_tokens_per_second": 34.27714855326152,
+      "finish_reason": "stop",
+      "metrics_delta": {
+        "vllm:request_num_preemptions_count": 1.0,
+        "vllm:num_requests_kv_fetch_by_stage": 0.0,
+        "vllm:external_prefix_cache_queries_total": 63460.0,
+        "vllm:spec_decode_num_accepted_tokens_total": 320.0,
+        "vllm:spec_decode_num_drafts_total": 180.0,
+        "vllm:num_requests_waiting_by_reason": 0.0,
+        "vllm:prefix_cache_queries_total": 63460.0,
+        "vllm:num_preemptions_total": 0.0,
+        "vllm:request_num_preemptions_bucket": 8.0,
+        "vllm:external_prefix_cache_hits_total": 0.0,
+        "vllm:num_requests_running": 0.0,
+        "vllm:spec_decode_num_accepted_tokens_per_pos_total": 320.0,
+        "vllm:request_num_preemptions_sum": 0.0,
+        "vllm:prefix_cache_hits_total": 0.0,
+        "vllm:num_requests_waiting": 0.0,
+        "vllm:spec_decode_num_draft_tokens_total": 360.0
+      }
+    },
+    "first_shared_batch": {
+      "wall_seconds": 496.3227098030038,
+      "metrics_delta": {
+        "vllm:request_num_preemptions_count": 4.0,
+        "vllm:num_requests_kv_fetch_by_stage": 0.0,
+        "vllm:external_prefix_cache_queries_total": 63579.0,
+        "vllm:spec_decode_num_accepted_tokens_total": 1120.0,
+        "vllm:spec_decode_num_drafts_total": 636.0,
+        "vllm:num_requests_waiting_by_reason": 0.0,
+        "vllm:prefix_cache_queries_total": 253851.0,
+        "vllm:num_preemptions_total": 0.0,
+        "vllm:request_num_preemptions_bucket": 32.0,
+        "vllm:external_prefix_cache_hits_total": 0.0,
+        "vllm:num_requests_running": 0.0,
+        "vllm:spec_decode_num_accepted_tokens_per_pos_total": 1120.0,
+        "vllm:request_num_preemptions_sum": 0.0,
+        "vllm:prefix_cache_hits_total": 190272.0,
+        "vllm:num_requests_waiting": 0.0,
+        "vllm:spec_decode_num_draft_tokens_total": 1272.0
+      }
+    },
+    "warm_shared_batch": {
+      "wall_seconds": 31.03842045800411,
+      "median_first_output_seconds": 1.5657125935031218,
+      "request_identity": "Repeat of the same four previously seen full prompts; each has the common dossier and a different suffix.",
+      "aggregate_output_tokens_per_second": 61.536636588330445,
+      "cached_tokens": 253760.0,
+      "queried_tokens": 253851.0,
+      "cache_hit_fraction": 0.9996415219951862,
+      "external_cached_tokens": 0.0,
+      "preemptions": 0.0,
+      "passed": 4,
+      "total": 4
+    },
+    "draft_acceptance_fraction_including_all_suite_requests": 0.764109455167359,
+    "repetition": {
+      "median_repeated_8gram_fraction": 0.08823529411764708,
+      "maximum_repeated_8gram_fraction": 0.2215189873417721,
+      "duplicate_consecutive_lines": 0,
+      "answers_cut_off_at_token_limit": 0,
+      "note": "Repetition includes thinking and repeated evidence/answer formatting. This is not a standalone loop detector; forced-length throughput fixtures are excluded."
+    },
+    "fixtures_sha256": "7fa09cf5ba9cd7f91a5faa758e0bcda755bd937a1036198f1e328fe4a5538d9d",
+    "sampling": {
+      "temperature": 0.6,
+      "top_k": 64,
+      "top_p": 0.9,
+      "min_p": 0.05,
+      "repetition_penalty": 1.1,
+      "seed": 20261023
+    }
+  },
+  "provenance": {
+    "source_repo": "HauhauCS/Gemma4-31B-QAT-Uncensored-HauhauCS-Balanced-MTP",
+    "source_revision": "9654466e82d83f5ebfe1518a369bc5900873abb1",
+    "source_verification": {
+      "utc": "2026-10-21T16:50:22.662998+00:00",
+      "source_revision": "9654466e82d83f5ebfe1518a369bc5900873abb1",
+      "files": [
+        {
+          "file": "Gemma4-31B-QAT-Uncensored-HauhauCS-Balanced-Q4_K_M.gguf",
+          "bytes": 18687062176,
+          "sha256": "71667f9e601a4b914a98425c59150b731f6e15d260d661dbd1f1ee07469fc7db"
+        },
+        {
+          "file": "mmproj-Gemma4-31B-QAT-Uncensored-HauhauCS-Balanced-BF16.gguf",
+          "bytes": 1200726016,
+          "sha256": "7bef0d0fb3e85fc2941ec5f1c375febf3742645f158132a43ced557093aea841"
+        },
+        {
+          "file": "mtp-gemma-4-31B-it.gguf",
+          "bytes": 279954368,
+          "sha256": "b5c4e583fc5982439080114bbc1b7edaec361f9d4c9193d6bed606a3de401b62"
+        }
+      ],
+      "qat_backbone_requantized": false,
+      "published_template_preserved": true
+    },
+    "conversion_receipt": {
+      "source": "/home/isnotreal/models/gemma4-31b-qat-hauhau-balanced-mtp-gguf",
+      "output": "/home/isnotreal/models/gemma4-31b-qat-hauhau-balanced-native-mixed-w4w8a16",
+      "seconds": 1121.8009016920005,
+      "format": "compressed-tensors affine INT4 and symmetric INT8 group32; symmetric INT4 assistant",
+      "Q4_K": "Non-QKV Q4_K linear codes retained; QKV companions use symmetric INT8 for fused-kernel compatibility. BF16 group parameters introduce the recorded rounding error.",
+      "Q6_K_linears_and_fused_QKV": "INT8 group32; error per tensor in export-progress.json",
+      "vision_and_embeddings": "BF16",
+      "runtime_requires": "vLLM CompressedTensorsWNA16 floating-zero-point support",
+      "tested_for_inference": true,
+      "inference_validation": {
+        "vllm": "0.32.0 with local patches",
+        "trial": "/home/isnotreal/model-tools/gemma31-qat-mtp-20261021/native-qat-tq4/trials/20261022T154216Z",
+        "report": "/home/isnotreal/model-tools/gemma31-qat-mtp-20261021/native-qat-tq4/RESULTS.md",
+        "scope": "Vision, thinking, benign tools/pivot workflow, native API, unchanged Claude Code, short-context throughput and 195k retrieval/continuation passed. Not broad model-quality retention."
+      }
+    },
+    "matching_support_files": {
+      "tokenizer.json": {
+        "converted_sha256": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+        "source_sha256": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+        "identical": true
+      },
+      "tokenizer_config.json": {
+        "converted_sha256": "243e040a23c3b67854d8dd107d5794553598c6837ca1e76022f805a22f467363",
+        "source_sha256": "243e040a23c3b67854d8dd107d5794553598c6837ca1e76022f805a22f467363",
+        "identical": true
+      },
+      "chat_template.jinja": {
+        "converted_sha256": "94899c0f917d93f6fe81c95744d1e8ddab2d21d39228d2e4aec1fb2a25bff413",
+        "source_sha256": "94899c0f917d93f6fe81c95744d1e8ddab2d21d39228d2e4aec1fb2a25bff413",
+        "identical": true
+      },
+      "generation_config.json": {
+        "converted_sha256": "d4226bbe3117d2d253ba4609720ba82c6c4ce4627a9a6ae05387c78983ac03de",
+        "source_sha256": "d4226bbe3117d2d253ba4609720ba82c6c4ce4627a9a6ae05387c78983ac03de",
+        "identical": true
+      },
+      "processor_config.json": {
+        "converted_sha256": "32bdf45d2ad4cc29a0822ddd157a182de76644f0419a6228d151495256e9813c",
+        "source_sha256": "32bdf45d2ad4cc29a0822ddd157a182de76644f0419a6228d151495256e9813c",
+        "identical": true
+      }
+    },
+    "model_config_equal_except_quantization": true,
+    "versions": {
+      "vllm": "0.32.0",
+      "torch": "2.13.0",
+      "transformers": "5.16.1",
+      "compressed-tensors": "0.17.0",
+      "gguf": "0.19.0",
+      "vllm-gguf-plugin": "0.0.5",
+      "triton": "3.7.1"
+    },
+    "source_interpretation": "Matching original published Hauhau GGUF. Official Google QAT is a different checkpoint and is not a fair quantization-only comparator.",
+    "kernel_numerics_note": "Native conversion uses BF16 activations with packed INT4/INT8 Marlin and affine correction. Original GGUF dispatch uses GGML A8 GEMV/GEMM kernels; original file preservation does not imply identical floating-point execution.",
+    "isolated_plugin_changes": [
+      "Use transformers Qwen3_5Config import instead of removed vLLM config shim.",
+      "Use transformers Qwen3_5MoeConfig import instead of removed vLLM config shim.",
+      "Use installed CUDA extension through symlink; preserve isolated Gemma vision/MTP-capable plugin implementation."
+    ],
+    "runtime_binary_changed": false
+  },
+  "same_fixture_bytes": true,
+  "same_request_sampling": true,
+  "original_over_converted_aggregate_tps": {
+    "1": 0.656313730796367,
+    "4": 0.30075789249793905
+  },
+  "original_over_converted_cold_long_first_output": 4.007873678537251,
+  "preserved_settings": {
+    "vllm": "0.32.0",
+    "max_model_len": 200000,
+    "tensor_parallel_size": 2,
+    "kv_cache_dtype": "turboquant_4bit_nc",
+    "kv_cache_memory_bytes_per_gpu": 6442450944,
+    "kv_offloading_backend": "native",
+    "kv_offloading_size_gib": 80,
+    "max_num_seqs": 16,
+    "max_num_batched_tokens": 4096,
+    "mtp_draft_tokens": 2,
+    "prefix_caching": true,
+    "compilation_mode": "NONE",
+    "cuda_graphs": "FULL_DECODE_ONLY"
+  },
+  "format_specific_changes": [
+    "target model path, quantization and loader",
+    "GGUF vision-projector loader path",
+    "same supplied MTP weights in original vs converted storage",
+    "isolated GGUF loader plugin and two compatibility imports"
+  ],
+  "limitations": [
+    "Two timed batches per concurrency after warmup; synthetic fixed-length throughput is not broad task throughput.",
+    "One fixed seed and a small functional suite do not establish broad quality equivalence or explain rare loops.",
+    "All tests preserve configured200000 context; the new matched long workload is63460 input tokens, not a new full200000-token stress test.",
+    "Warm prefix reuse measured GPU-resident cache hits; it is not a RAM-offload restore benchmark.",
+    "The original published Hauhau GGUF is itself quantized. Google official QAT would change the checkpoint and is not this comparison.",
+    "GGUF used the currently available default CUDA dispatch with compatibility fixes; this is not an optimized GGUF speed ceiling. Separate kernel probes found faster large-batch paths that require full validation.",
+    "A preliminary512-output-token long fixture truncated correct answers; it is retained separately and excluded from primary quality conclusions."
+  ],
+  "selected_configuration": "converted original production configuration; restoration record is separate",
+  "raw_artifacts_directory": "/home/isnotreal/batbox/experiments/backend/20261023-qat-format",
+  "kernel_probe": {
+    "cuda_kernels_enabled": true,
+    "rows": [
+      {
+        "name": "blk.0.ffn_down.weight",
+        "weight_type": 14,
+        "shape": [
+          5376,
+          10752
+        ],
+        "batch": 1,
+        "gemv_ms": 0.07705599784851075,
+        "gemm_ms": 0.21174272537231445,
+        "relative_rms_difference": 1.5938171316065564e-07,
+        "best": "gemv"
+      },
+      {
+        "name": "blk.0.ffn_down.weight",
+        "weight_type": 14,
+        "shape": [
+          5376,
+          10752
+        ],
+        "batch": 2,
+        "gemv_ms": 0.13851648330688476,
+        "gemm_ms": 0.21496831893920898,
+        "relative_rms_difference": 1.2070952237763777e-08,
+        "best": "gemv"
+      },
+      {
+        "name": "blk.0.ffn_down.weight",
+        "weight_type": 14,
+        "shape": [
+          5376,
+          10752
+        ],
+        "batch": 3,
+        "gemv_ms": 0.19979263305664063,
+        "gemm_ms": 0.21542911529541015,
+        "relative_rms_difference": 2.1269626813591458e-05,
+        "best": "gemv"
+      },
+      {
+        "name": "blk.0.ffn_down.weight",
+        "weight_type": 14,
+        "shape": [
+          5376,
+          10752
+        ],
+        "batch": 4,
+        "gemv_ms": 0.2668544006347656,
+        "gemm_ms": 0.251146240234375,
+        "triton_ms": 1.3708595275878905,
+        "relative_rms_difference": 1.9221382899559103e-05,
+        "best": "gemm",
+        "triton_relative_rms_difference": 0.006266540847718716
+      },
+      {
+        "name": "blk.0.ffn_down.weight",
+        "weight_type": 14,
+        "shape": [
+          5376,
+          10752
+        ],
+        "batch": 8,
+        "gemv_ms": 0.5421670532226562,
+        "gemm_ms": 0.3584511947631836,
+        "relative_rms_difference": 5.897077789995819e-05,
+        "best": "gemm"
+      },
+      {
+        "name": "blk.0.ffn_down.weight",
+        "weight_type": 14,
+        "shape": [
+          5376,
+          10752
+        ],
+        "batch": 12,
+        "gemv_ms": 0.8549785614013672,
+        "gemm_ms": 0.4598681640625,
+        "relative_rms_difference": 2.6662824893719517e-05,
+        "best": "gemm"
+      },
+      {
+        "name": "blk.0.ffn_down.weight",
+        "weight_type": 14,
+        "shape": [
+          5376,
+          10752
+        ],
+        "batch": 16,
+        "gemv_ms": 1.1627827453613282,
+        "gemm_ms": 0.5553766250610351,
+        "triton_ms": 1.1905023956298828,
+        "relative_rms_difference": 2.146295810234733e-05,
+        "best": "gemm",
+        "triton_relative_rms_difference": 0.006245420314371586
+      },
+      {
+        "name": "blk.0.ffn_down.weight",
+        "weight_type": 14,
+        "shape": [
+          5376,
+          10752
+        ],
+        "batch": 32,
+        "gemv_ms": 2.3765802001953125,
+        "gemm_ms": 0.9486643218994141,
+        "relative_rms_difference": 2.6705336495069787e-05,
+        "best": "gemm"
+      },
+      {
+        "name": "blk.0.ffn_down.weight",
+        "weight_type": 14,
+        "shape": [
+          5376,
+          10752
+        ],
+        "batch": 256,
+        "gemm_ms": 6.77195078531901,
+        "triton_ms": 3.1180798848470053,
+        "triton_relative_rms_difference": 0.006201182492077351
+      },
+      {
+        "name": "blk.0.ffn_down.weight",
+        "weight_type": 14,
+        "shape": [
+          5376,
+          10752
+        ],
+        "batch": 4096,
+        "gemm_ms": 110.3215576171875,
+        "triton_ms": 32.58647867838542,
+        "triton_relative_rms_difference": 0.006191698368638754
+      },
+      {
+        "name": "blk.0.ffn_gate.weight",
+        "weight_type": 12,
+        "shape": [
+          10752,
+          5376
+        ],
+        "batch": 1,
+        "gemv_ms": 0.054886398315429685,
+        "gemm_ms": 0.09051136016845703,
+        "relative_rms_difference": 0.013854903168976307,
+        "best": "gemv"
+      },
+      {
+        "name": "blk.0.ffn_gate.weight",
+        "weight_type": 12,
+        "shape": [
+          10752,
+          5376
+        ],
+        "batch": 2,
+        "gemv_ms": 0.09373696327209473,
+        "gemm_ms": 0.08713215827941895,
+        "relative_rms_difference": 0.015680257230997086,
+        "best": "gemm"
+      },
+      {
+        "name": "blk.0.ffn_gate.weight",
+        "weight_type": 12,
+        "shape": [
+          10752,
+          5376
+        ],
+        "batch": 3,
+        "gemv_ms": 0.14036992073059082,
+        "gemm_ms": 0.09739263534545899,
+        "relative_rms_difference": 0.0041213370859622955,
+        "best": "gemm"
+      },
+      {
+        "name": "blk.0.ffn_gate.weight",
+        "weight_type": 12,
+        "shape": [
+          10752,
+          5376
+        ],
+        "batch": 4,
+        "gemv_ms": 0.1861734390258789,
+        "gemm_ms": 0.09754624366760253,
+        "triton_ms": 0.2718003273010254,
+        "relative_rms_difference": 0.011325303465127945,
+        "best": "gemm",
+        "triton_relative_rms_difference": 0.014293398708105087
+      },
+      {
+        "name": "blk.0.ffn_gate.weight",
+        "weight_type": 12,
+        "shape": [
+          10752,
+          5376
+        ],
+        "batch": 8,
+        "gemv_ms": 0.34762752532958985,
+        "gemm_ms": 0.23212032318115233,
+        "relative_rms_difference": 0.00947626680135727,
+        "best": "gemm"
+      },
+      {
+        "name": "blk.0.ffn_gate.weight",
+        "weight_type": 12,
+        "shape": [
+          10752,
+          5376
+        ],
+        "batch": 12,
+        "gemv_ms": 0.5862297439575195,
+        "gemm_ms": 0.2721174430847168,
+        "relative_rms_difference": 0.010865263640880585,
+        "best": "gemm"
+      },
+      {
+        "name": "blk.0.ffn_gate.weight",
+        "weight_type": 12,
+        "shape": [
+          10752,
+          5376
+        ],
+        "batch": 16,
+        "gemv_ms": 0.7828173065185546,
+        "gemm_ms": 0.3547238540649414,
+        "triton_ms": 0.2713599967956543,
+        "relative_rms_difference": 0.009431011974811554,
+        "best": "gemm",
+        "triton_relative_rms_difference": 0.013125874102115631
+      },
+      {
+        "name": "blk.0.ffn_gate.weight",
+        "weight_type": 12,
+        "shape": [
+          10752,
+          5376
+        ],
+        "batch": 32,
+        "gemv_ms": 1.5899853515625,
+        "gemm_ms": 0.642375717163086,
+        "relative_rms_difference": 0.011499806307256222,
+        "best": "gemm"
+      },
+      {
+        "name": "blk.0.ffn_gate.weight",
+        "weight_type": 12,
+        "shape": [
+          10752,
+          5376
+        ],
+        "batch": 256,
+        "gemm_ms": 4.707157389322917,
+        "triton_ms": 1.0587135950724285,
+        "triton_relative_rms_difference": 0.014804927632212639
+      },
+      {
+        "name": "blk.0.ffn_gate.weight",
+        "weight_type": 12,
+        "shape": [
+          10752,
+          5376
+        ],
+        "batch": 4096,
+        "gemm_ms": 77.18526204427083,
+        "triton_ms": 16.065433756510416,
+        "triton_relative_rms_difference": 0.014920287765562534
+      },
+      {
+        "name": "blk.10.attn_q.weight",
+        "weight_type": 12,
+        "shape": [
+          4096,
+          5376
+        ],
+        "batch": 1,
+        "gemv_ms": 0.03058687925338745,
+        "gemm_ms": 0.05633024215698242,
+        "relative_rms_difference": 0.00419667549431324,
+        "best": "gemv"
+      },
+      {
+        "name": "blk.10.attn_q.weight",
+        "weight_type": 12,
+        "shape": [
+          4096,
+          5376
+        ],
+        "batch": 2,
+        "gemv_ms": 0.04761600017547608,
+        "gemm_ms": 0.052101120948791504,
+        "relative_rms_difference": 0.009756975807249546,
+        "best": "gemv"
+      },
+      {
+        "name": "blk.10.attn_q.weight",
+        "weight_type": 12,
+        "shape": [
+          4096,
+          5376
+        ],
+        "batch": 3,
+        "gemv_ms": 0.06080512046813965,
+        "gemm_ms": 0.047411198616027835,
+        "relative_rms_difference": 0.010860267095267773,
+        "best": "gemm"
+      },
+      {
+        "name": "blk.10.attn_q.weight",
+        "weight_type": 12,
+        "shape": [
+          4096,
+          5376
+        ],
+        "batch": 4,
+        "gemv_ms": 0.07756800174713135,
+        "gemm_ms": 0.045311999320983884,
+        "triton_ms": 0.2830950355529785,
+        "relative_rms_difference": 0.008760450407862663,
+        "best": "gemm",
+        "triton_relative_rms_difference": 0.012540845200419426
+      },
+      {
+        "name": "blk.10.attn_q.weight",
+        "weight_type": 12,
+        "shape": [
+          4096,
+          5376
+        ],
+        "batch": 8,
+        "gemv_ms": 0.13758463859558107,
+        "gemm_ms": 0.07245823860168457,
+        "relative_rms_difference": 0.01682261936366558,
+        "best": "gemm"
+      },
+      {
+        "name": "blk.10.attn_q.weight",
+        "weight_type": 12,
+        "shape": [
+          4096,
+          5376
+        ],
+        "batch": 12,
+        "gemv_ms": 0.2152448081970215,
+        "gemm_ms": 0.09492480278015136,
+        "relative_rms_difference": 0.011574041098356247,
+        "best": "gemm"
+      },
+      {
+        "name": "blk.10.attn_q.weight",
+        "weight_type": 12,
+        "shape": [
+          4096,
+          5376
+        ],
+        "batch": 16,
+        "gemv_ms": 0.29704191207885744,
+        "gemm_ms": 0.14272512435913087,
+        "triton_ms": 0.3184025573730469,
+        "relative_rms_difference": 0.00893972534686327,
+        "best": "gemm",
+        "triton_relative_rms_difference": 0.012732680886983871
+      },
+      {
+        "name": "blk.10.attn_q.weight",
+        "weight_type": 12,
+        "shape": [
+          4096,
+          5376
+        ],
+        "batch": 32,
+        "gemv_ms": 0.5813248062133789,
+        "gemm_ms": 0.2900787162780762,
+        "relative_rms_difference": 0.0105349225923419,
+        "best": "gemm"
+      },
+      {
+        "name": "blk.10.attn_q.weight",
+        "weight_type": 12,
+        "shape": [
+          4096,
+          5376
+        ],
+        "batch": 256,
+        "gemm_ms": 1.7635669708251953,
+        "triton_ms": 0.48165547053019203,
+        "triton_relative_rms_difference": 0.014214499853551388
+      },
+      {
+        "name": "blk.10.attn_q.weight",
+        "weight_type": 12,
+        "shape": [
+          4096,
+          5376
+        ],
+        "batch": 4096,
+        "gemm_ms": 29.215606689453125,
+        "triton_ms": 6.010094706217448,
+        "triton_relative_rms_difference": 0.01482837088406086
+      },
+      {
+        "name": "blk.10.ffn_down.weight",
+        "weight_type": 12,
+        "shape": [
+          5376,
+          10752
+        ],
+        "batch": 1,
+        "gemv_ms": 0.061399040222167967,
+        "gemm_ms": 0.12548095703125,
+        "relative_rms_difference": 0.005523862782865763,
+        "best": "gemv"
+      },
+      {
+        "name": "blk.10.ffn_down.weight",
+        "weight_type": 12,
+        "shape": [
+          5376,
+          10752
+        ],
+        "batch": 2,
+        "gemv_ms": 0.09772031784057617,
+        "gemm_ms": 0.11356160163879395,
+        "relative_rms_difference": 0.010811375454068184,
+        "best": "gemv"
+      },
+      {
+        "name": "blk.10.ffn_down.weight",
+        "weight_type": 12,
+        "shape": [
+          5376,
+          10752
+        ],
+        "batch": 3,
+        "gemv_ms": 0.1389465618133545,
+        "gemm_ms": 0.12126208305358886,
+        "relative_rms_difference": 0.01496945321559906,
+        "best": "gemm"
+      },
+      {
+        "name": "blk.10.ffn_down.weight",
+        "weight_type": 12,
+        "shape": [
+          5376,
+          10752
+        ],
+        "batch": 4,
+        "gemv_ms": 0.1827123260498047,
+        "gemm_ms": 0.1175449562072754,
+        "triton_ms": 0.5703372955322266,
+        "relative_rms_difference": 0.0101332301273942,
+        "best": "gemm",
+        "triton_relative_rms_difference": 0.014089847914874554
+      },
+      {
+        "name": "blk.10.ffn_down.weight",
+        "weight_type": 12,
+        "shape": [
+          5376,
+          10752
+        ],
+        "batch": 8,
+        "gemv_ms": 0.34213886260986326,
+        "gemm_ms": 0.2649292755126953,
+        "relative_rms_difference": 0.010626135393977165,
+        "best": "gemm"
+      },
+      {
+        "name": "blk.10.ffn_down.weight",
+        "weight_type": 12,
+        "shape": [
+          5376,
+          10752
+        ],
+        "batch": 12,
+        "gemv_ms": 0.5751705551147461,
+        "gemm_ms": 0.3161702346801758,
+        "relative_rms_difference": 0.012048457749187946,
+        "best": "gemm"
+      },
+      {
+        "name": "blk.10.ffn_down.weight",
+        "weight_type": 12,
+        "shape": [
+          5376,
+          10752
+        ],
+        "batch": 16,
+        "gemv_ms": 0.7637401580810547,
+        "gemm_ms": 0.38937599182128907,
+        "triton_ms": 0.5755190277099609,
+        "relative_rms_difference": 0.010562148876488209,
+        "best": "gemm",
+        "triton_relative_rms_difference": 0.014064356684684753
+      },
+      {
+        "name": "blk.10.ffn_down.weight",
+        "weight_type": 12,
+        "shape": [
+          5376,
+          10752
+        ],
+        "batch": 32,
+        "gemv_ms": 1.579683837890625,
+        "gemm_ms": 0.6871347045898437,
+        "relative_rms_difference": 0.010217183269560337,
+        "best": "gemm"
+      },
+      {
+        "name": "blk.10.ffn_down.weight",
+        "weight_type": 12,
+        "shape": [
+          5376,
+          10752
+        ],
+        "batch": 256,
+        "gemm_ms": 4.758459981282552,
+        "triton_ms": 1.2256256103515626,
+        "triton_relative_rms_difference": 0.014267925173044205
+      },
+      {
+        "name": "blk.10.ffn_down.weight",
+        "weight_type": 12,
+        "shape": [
+          5376,
+          10752
+        ],
+        "batch": 4096,
+        "gemm_ms": 77.7551513671875,
+        "triton_ms": 16.364817301432293,
+        "triton_relative_rms_difference": 0.014734368771314621
+      }
+    ]
+  },
+  "restoration": {
+    "utc": "2026-10-23T15:25:39.964957+00:00",
+    "pid": 143896,
+    "healthy": true,
+    "model_info": {
+      "object": "list",
+      "data": [
+        {
+          "id": "qwen3.6-35b-hauhau-w4a16-vision",
+          "object": "model",
+          "created": 1792769139,
+          "owned_by": "vllm",
+          "root": "/home/isnotreal/models/gemma4-31b-qat-hauhau-balanced-native-mixed-w4w8a16",
+          "parent": null,
+          "max_model_len": 200000,
+          "permission": [
+            {
+              "id": "modelperm-bc19473d668cde10",
+              "object": "model_permission",
+              "created": 1792769139,
+              "allow_create_engine": false,
+              "allow_sampling": true,
+              "allow_logprobs": true,
+              "allow_search_indices": false,
+              "allow_view": true,
+              "allow_fine_tuning": false,
+              "organization": "*",
+              "group": null,
+              "is_blocking": false
+            }
+          ]
+        }
+      ]
+    },
+    "args_identical_to_before": true,
+    "environment_matches_before": true,
+    "persistent_unit_files_unchanged": true,
+    "unit_file_checks": {
+      "/etc/systemd/system/qwen-vllm.service": true,
+      "/etc/systemd/system/qwen-vllm.service.d/zz-basic-logging.conf": true,
+      "/etc/systemd/system/qwen-vllm.service.d/privacy.conf": true,
+      "/etc/systemd/system/qwen-vllm.service.d/restart.conf": true,
+      "/etc/systemd/system/qwen-vllm.service.d/runtime.conf": true,
+      "/etc/systemd/system/qwen-vllm.service.d/zzzzzzzzzzzzz-gemma31-qat-mtp.conf": true,
+      "/etc/systemd/system/qwen-vllm.service.d/native-anthropic.conf": true,
+      "/etc/systemd/system/qwen-vllm.service.d/zzzzzzzzzzzz-qwen36-return.conf": true,
+      "/etc/systemd/system/qwen-vllm.service.d/zzz-qwen38.conf": true,
+      "/etc/systemd/system/qwen-vllm.service.d/zzzzzzzzzzz-redcell-w6a8-200k.conf": true,
+      "/etc/systemd/system/qwen-vllm.service.d/zzzzzzzz-evaluation-winner.conf": true,
+      "/etc/systemd/system/qwen-vllm.service.d/zzzzzzzzzzzzzz-gemma31-native-tq4.conf": true,
+      "/etc/systemd/system/qwen-vllm.service.d/zzzz-endy.conf": true,
+      "/etc/systemd/system/qwen-vllm.service.d/zzzzzz-stop-timeout.conf": true,
+      "/etc/systemd/system/qwen-vllm.service.d/zzzzzzzzzz-native-redcell-w8a16.conf": true
+    },
+    "temporary_override_removed": true,
+    "memory_resumed": true,
+    "utc_all_checks_finished": "2026-10-23T15:26:23.353932+00:00"
+  },
+  "fidelity_and_repetition": {
+    "teacher_forced_cases": [
+      {
+        "id": "canonical_facts",
+        "condition": "Canonical factual answer after thinking-disabled assistant prefix; teacher forcing, not a generation-quality score.",
+        "scored_tokens": 45,
+        "top1_agreement": 1,
+        "mean_top5_overlap_fraction": 0.768888888888889,
+        "mean_absolute_target_logprob_delta_nats": 0.03919633232724762,
+        "original_target_nll_nats_per_token": 0.5618245791622576,
+        "converted_target_nll_nats_per_token": 0.5952470355348508,
+        "positions": [
+          {
+            "position": 52,
+            "token_id": 14937,
+            "original_token_probability": 3.653384656523305e-08,
+            "converted_token_probability": 4.1398824450223246e-08,
+            "original_logprob": -17.12502670288086,
+            "converted_logprob": -17.00001335144043,
+            "absolute_logprob_delta": 0.1250133514404297,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 53,
+            "token_id": 41626,
+            "original_token_probability": 0.9917642712980482,
+            "converted_token_probability": 0.9887106808684089,
+            "original_logprob": -0.00826982967555523,
+            "converted_logprob": -0.011353527195751667,
+            "absolute_logprob_delta": 0.003083697520196438,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 54,
+            "token_id": 236779,
+            "original_token_probability": 0.9998132339339738,
+            "converted_token_probability": 0.9998527982038293,
+            "original_logprob": -0.0001867835089797154,
+            "converted_logprob": -0.0001472126314183697,
+            "absolute_logprob_delta": 3.9570877561345696e-05,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 55,
+            "token_id": 1340,
+            "original_token_probability": 0.9999921322487634,
+            "converted_token_probability": 0.9999988079084972,
+            "original_logprob": -7.867782187531702e-06,
+            "converted_logprob": -1.1920922133867862e-06,
+            "absolute_logprob_delta": 6.675689974144916e-06,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 56,
+            "token_id": 236779,
+            "original_token_probability": 0.9999889136593714,
+            "converted_token_probability": 0.9999991655356624,
+            "original_logprob": -1.1086402082582936e-05,
+            "converted_logprob": -8.344646857949556e-07,
+            "absolute_logprob_delta": 1.025193739678798e-05,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.6
+          },
+          {
+            "position": 57,
+            "token_id": 185661,
+            "original_token_probability": 0.9998303939575447,
+            "converted_token_probability": 0.9999793772183819,
+            "original_logprob": -0.00016962042718660086,
+            "converted_logprob": -2.062299427052494e-05,
+            "absolute_logprob_delta": 0.00014899743291607592,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 58,
+            "token_id": 722,
+            "original_token_probability": 0.99735662571209,
+            "converted_token_probability": 0.9993514455090279,
+            "original_logprob": -0.0026468741707503796,
+            "converted_logprob": -0.00064876489341259,
+            "absolute_logprob_delta": 0.0019981092773377895,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.6
+          },
+          {
+            "position": 59,
+            "token_id": 12375,
+            "original_token_probability": 0.00029588271683795984,
+            "converted_token_probability": 5.826387272111257e-05,
+            "original_logprob": -8.125547409057617,
+            "converted_logprob": -9.750528335571289,
+            "absolute_logprob_delta": 1.6249809265136719,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 60,
+            "token_id": 8574,
+            "original_token_probability": 0.998765801624179,
+            "converted_token_probability": 0.9983166231043905,
+            "original_logprob": -0.0012349606258794665,
+            "converted_logprob": -0.0016847953666001558,
+            "absolute_logprob_delta": 0.0004498347407206893,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 61,
+            "token_id": 65228,
+            "original_token_probability": 0.9999862911193472,
+            "converted_token_probability": 0.9999837877990074,
+            "original_logprob": -1.3708974620385561e-05,
+            "converted_logprob": -1.6212332411669195e-05,
+            "absolute_logprob_delta": 2.5033577912836336e-06,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 62,
+            "token_id": 4337,
+            "original_token_probability": 0.9950778770900465,
+            "converted_token_probability": 0.9932686887999927,
+            "original_logprob": -0.004934276454150677,
+            "converted_logprob": -0.006754068657755852,
+            "absolute_logprob_delta": 0.001819792203605175,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 63,
+            "token_id": 25510,
+            "original_token_probability": 0.9999997615814777,
+            "converted_token_probability": 0.9999997615814777,
+            "original_logprob": -2.3841855067985307e-07,
+            "converted_logprob": -2.3841855067985307e-07,
+            "absolute_logprob_delta": 0.0,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.6
+          },
+          {
+            "position": 64,
+            "token_id": 236779,
+            "original_token_probability": 0.9999986886995842,
+            "converted_token_probability": 0.9999996423722521,
+            "original_logprob": -1.311301275563892e-06,
+            "converted_logprob": -3.576278118089249e-07,
+            "absolute_logprob_delta": 9.536734637549671e-07,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 65,
+            "token_id": 29590,
+            "original_token_probability": 0.9999971389852362,
+            "converted_token_probability": 0.9999984502816872,
+            "original_logprob": -2.861018856492592e-06,
+            "converted_logprob": -1.5497195136049413e-06,
+            "absolute_logprob_delta": 1.3112993428876507e-06,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 66,
+            "token_id": 236779,
+            "original_token_probability": 0.9999998807907247,
+            "converted_token_probability": 1.0,
+            "original_logprob": -1.1920928244535389e-07,
+            "converted_logprob": 0.0,
+            "absolute_logprob_delta": 1.1920928244535389e-07,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 67,
+            "token_id": 5640,
+            "original_token_probability": 0.9999977350285647,
+            "converted_token_probability": 0.9999955892755635,
+            "original_logprob": -2.264974000354414e-06,
+            "converted_logprob": -4.410734163684538e-06,
+            "absolute_logprob_delta": 2.1457601633301238e-06,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 68,
+            "token_id": 1083,
+            "original_token_probability": 0.9968172604948815,
+            "converted_token_probability": 0.9948744199461215,
+            "original_logprob": -0.0031878151930868626,
+            "converted_logprob": -0.005138760898262262,
+            "absolute_logprob_delta": 0.0019509457051753998,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.6
+          },
+          {
+            "position": 69,
+            "token_id": 236825,
+            "original_token_probability": 0.9999327704835214,
+            "converted_token_probability": 0.9999229967324447,
+            "original_logprob": -6.723177648382261e-05,
+            "converted_logprob": -7.70062324590981e-05,
+            "absolute_logprob_delta": 9.774455975275487e-06,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 70,
+            "token_id": 2098,
+            "original_token_probability": 0.9998088248530639,
+            "converted_token_probability": 0.9997603275702208,
+            "original_logprob": -0.0001911934232339263,
+            "converted_logprob": -0.0002397011558059603,
+            "absolute_logprob_delta": 4.8507732572034e-05,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.6
+          },
+          {
+            "position": 71,
+            "token_id": 17102,
+            "original_token_probability": 0.9999977350285647,
+            "converted_token_probability": 0.9999980926550052,
+            "original_logprob": -2.264974000354414e-06,
+            "converted_logprob": -1.9073468138230965e-06,
+            "absolute_logprob_delta": 3.576271865313174e-07,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.4
+          },
+          {
+            "position": 72,
+            "token_id": 236779,
+            "original_token_probability": 0.9999885560391694,
+            "converted_token_probability": 0.9999957084838798,
+            "original_logprob": -1.1444026313256472e-05,
+            "converted_logprob": -4.291525328881107e-06,
+            "absolute_logprob_delta": 7.152500984375365e-06,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.4
+          },
+          {
+            "position": 73,
+            "token_id": 736,
+            "original_token_probability": 0.9994718243352931,
+            "converted_token_probability": 0.9997325658897344,
+            "original_logprob": -0.0005283151986077428,
+            "converted_logprob": -0.0002674698771443218,
+            "absolute_logprob_delta": 0.000260845321463421,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 74,
+            "token_id": 236779,
+            "original_token_probability": 0.9999914170043662,
+            "converted_token_probability": 0.9999976158197796,
+            "original_logprob": -8.583032467868179e-06,
+            "converted_logprob": -2.3841830625315197e-06,
+            "absolute_logprob_delta": 6.198849405336659e-06,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.6
+          },
+          {
+            "position": 75,
+            "token_id": 55817,
+            "original_token_probability": 0.9999886752461923,
+            "converted_token_probability": 0.9999920130413283,
+            "original_logprob": -1.1324817933200393e-05,
+            "converted_logprob": -7.986990567587782e-06,
+            "absolute_logprob_delta": 3.337827365612611e-06,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.6
+          },
+          {
+            "position": 76,
+            "token_id": 1083,
+            "original_token_probability": 0.9956683021225037,
+            "converted_token_probability": 0.997736938030073,
+            "original_logprob": -0.004341106861829758,
+            "converted_logprob": -0.0022656265646219254,
+            "absolute_logprob_delta": 0.0020754802972078323,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 77,
+            "token_id": 236778,
+            "original_token_probability": 0.9999154877575644,
+            "converted_token_probability": 0.9998990399290077,
+            "original_logprob": -8.451581379631534e-05,
+            "converted_logprob": -0.00010096516780322418,
+            "absolute_logprob_delta": 1.6449354006908834e-05,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 78,
+            "token_id": 236810,
+            "original_token_probability": 0.9995331560611515,
+            "converted_token_probability": 0.9990653199537421,
+            "original_logprob": -0.00046695294440723956,
+            "converted_logprob": -0.0009351171320304275,
+            "absolute_logprob_delta": 0.0004681641876231879,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 79,
+            "token_id": 236810,
+            "original_token_probability": 0.9967561431959009,
+            "converted_token_probability": 0.9969010128505781,
+            "original_logprob": -0.0032491295132786036,
+            "converted_logprob": -0.0031037989538162947,
+            "absolute_logprob_delta": 0.00014533055946230888,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 80,
+            "token_id": 2098,
+            "original_token_probability": 0.9998674568439967,
+            "converted_token_probability": 0.9999229967324447,
+            "original_logprob": -0.00013255194062367082,
+            "converted_logprob": -7.70062324590981e-05,
+            "absolute_logprob_delta": 5.5545708164572716e-05,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 81,
+            "token_id": 17300,
+            "original_token_probability": 0.9999997615814777,
+            "converted_token_probability": 0.9999997615814777,
+            "original_logprob": -2.3841855067985307e-07,
+            "converted_logprob": -2.3841855067985307e-07,
+            "absolute_logprob_delta": 0.0,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.6
+          },
+          {
+            "position": 82,
+            "token_id": 236779,
+            "original_token_probability": 0.9999994039539004,
+            "converted_token_probability": 0.9999994039539004,
+            "original_logprob": -5.960462772236497e-07,
+            "converted_logprob": -5.960462772236497e-07,
+            "absolute_logprob_delta": 0.0,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 83,
+            "token_id": 721,
+            "original_token_probability": 0.9999187058723578,
+            "converted_token_probability": 0.9998682910823691,
+            "original_logprob": -8.129743218887597e-05,
+            "converted_logprob": -0.00013171759201213717,
+            "absolute_logprob_delta": 5.04201598232612e-05,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 84,
+            "token_id": 236779,
+            "original_token_probability": 0.9999998807907247,
+            "converted_token_probability": 1.0,
+            "original_logprob": -1.1920928244535389e-07,
+            "converted_logprob": 0.0,
+            "absolute_logprob_delta": 1.1920928244535389e-07,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 85,
+            "token_id": 12247,
+            "original_token_probability": 0.9999942779868433,
+            "converted_token_probability": 0.9999729402230112,
+            "original_logprob": -5.722029527532868e-06,
+            "converted_logprob": -2.706014311115723e-05,
+            "absolute_logprob_delta": 2.1338113583624363e-05,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 86,
+            "token_id": 1083,
+            "original_token_probability": 0.9995249383629533,
+            "converted_token_probability": 0.9991238647256686,
+            "original_logprob": -0.0004751745145767927,
+            "converted_logprob": -0.0008765193051658571,
+            "absolute_logprob_delta": 0.00040134479058906436,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 87,
+            "token_id": 236828,
+            "original_token_probability": 0.9998039391642072,
+            "converted_token_probability": 0.9998326581596212,
+            "original_logprob": -0.00019608005823101848,
+            "converted_logprob": -0.00016735584358684719,
+            "absolute_logprob_delta": 2.8724214644171298e-05,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 88,
+            "token_id": 2098,
+            "original_token_probability": 0.9999399221272516,
+            "converted_token_probability": 0.9998998742228323,
+            "original_logprob": -6.007967749610543e-05,
+            "converted_logprob": -0.00010013079008786008,
+            "absolute_logprob_delta": 4.0051112591754645e-05,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.6
+          },
+          {
+            "position": 89,
+            "token_id": 7632,
+            "original_token_probability": 0.9999990463265931,
+            "converted_token_probability": 0.9999984502816872,
+            "original_logprob": -9.536738616588991e-07,
+            "converted_logprob": -1.5497195136049413e-06,
+            "absolute_logprob_delta": 5.960456519460422e-07,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 90,
+            "token_id": 236779,
+            "original_token_probability": 0.9999997615814777,
+            "converted_token_probability": 0.9999998807907247,
+            "original_logprob": -2.3841855067985307e-07,
+            "converted_logprob": -1.1920928244535389e-07,
+            "absolute_logprob_delta": 1.1920926823449918e-07,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 91,
+            "token_id": 54998,
+            "original_token_probability": 0.9999349159632668,
+            "converted_token_probability": 0.9999741322534375,
+            "original_logprob": -6.508615479106084e-05,
+            "converted_logprob": -2.586808113846928e-05,
+            "absolute_logprob_delta": 3.9218073652591556e-05,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 92,
+            "token_id": 12375,
+            "original_token_probability": 0.999838259157712,
+            "converted_token_probability": 0.9995225564471458,
+            "original_logprob": -0.00016175392374861985,
+            "converted_logprob": -0.00047755756531842053,
+            "absolute_logprob_delta": 0.0003158036415698007,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 93,
+            "token_id": 236814,
+            "original_token_probability": 0.9997289915340261,
+            "converted_token_probability": 0.9997848735274767,
+            "original_logprob": -0.00027104519540444016,
+            "converted_logprob": -0.00021514961554203182,
+            "absolute_logprob_delta": 5.589557986240834e-05,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.6
+          },
+          {
+            "position": 94,
+            "token_id": 236778,
+            "original_token_probability": 0.9995869912464536,
+            "converted_token_probability": 0.9993272780068878,
+            "original_logprob": -0.00041309406515210867,
+            "converted_logprob": -0.0006729483720846474,
+            "absolute_logprob_delta": 0.00025985430693253875,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 95,
+            "token_id": 236806,
+            "original_token_probability": 0.9999963045256735,
+            "converted_token_probability": 0.9999957084838798,
+            "original_logprob": -3.6954811548639555e-06,
+            "converted_logprob": -4.291525328881107e-06,
+            "absolute_logprob_delta": 5.960441740171518e-07,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.6
+          },
+          {
+            "position": 96,
+            "token_id": 25938,
+            "original_token_probability": 0.999967456924635,
+            "converted_token_probability": 0.9999819997211749,
+            "original_logprob": -3.2543604902457446e-05,
+            "converted_logprob": -1.8000440832111053e-05,
+            "absolute_logprob_delta": 1.4543164070346393e-05,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.6
+          }
+        ]
+      },
+      {
+        "id": "canonical_arithmetic",
+        "condition": "Canonical factual answer after thinking-disabled assistant prefix; teacher forcing, not a generation-quality score.",
+        "scored_tokens": 4,
+        "top1_agreement": 1,
+        "mean_top5_overlap_fraction": 0.8,
+        "mean_absolute_target_logprob_delta_nats": 0.6295301169157028,
+        "original_target_nll_nats_per_token": 1.9947573244571686,
+        "converted_target_nll_nats_per_token": 2.1756786555051804,
+        "positions": [
+          {
+            "position": 36,
+            "token_id": 236778,
+            "original_token_probability": 0.2676484849052004,
+            "converted_token_probability": 0.11865139121133078,
+            "original_logprob": -1.3180807828903198,
+            "converted_logprob": -2.131565570831299,
+            "absolute_logprob_delta": 0.813484787940979,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 37,
+            "token_id": 236832,
+            "original_token_probability": 0.5256793863987458,
+            "converted_token_probability": 0.7300109276932882,
+            "original_logprob": -0.6430637836456299,
+            "converted_logprob": -0.3146957755088806,
+            "absolute_logprob_delta": 0.32836800813674927,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 38,
+            "token_id": 236812,
+            "original_token_probability": 0.04352206830819935,
+            "converted_token_probability": 0.019411196114344158,
+            "original_logprob": -3.1344871520996094,
+            "converted_logprob": -3.9419052600860596,
+            "absolute_logprob_delta": 0.8074181079864502,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.6
+          },
+          {
+            "position": 39,
+            "token_id": 236819,
+            "original_token_probability": 0.05594436416235708,
+            "converted_token_probability": 0.09881083486708016,
+            "original_logprob": -2.8833975791931152,
+            "converted_logprob": -2.3145480155944824,
+            "absolute_logprob_delta": 0.5688495635986328,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          }
+        ]
+      },
+      {
+        "id": "canonical_extraction",
+        "condition": "Canonical factual answer after thinking-disabled assistant prefix; teacher forcing, not a generation-quality score.",
+        "scored_tokens": 25,
+        "top1_agreement": 0.96,
+        "mean_top5_overlap_fraction": 0.76,
+        "mean_absolute_target_logprob_delta_nats": 0.31417990312164307,
+        "original_target_nll_nats_per_token": 1.1831963567534944,
+        "converted_target_nll_nats_per_token": 1.2748561566293062,
+        "positions": [
+          {
+            "position": 70,
+            "token_id": 14937,
+            "original_token_probability": 2.2379694250729878e-07,
+            "converted_token_probability": 3.0286929380979795e-08,
+            "original_logprob": -15.31252670288086,
+            "converted_logprob": -17.312549591064453,
+            "absolute_logprob_delta": 2.0000228881835938,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.6
+          },
+          {
+            "position": 71,
+            "token_id": 6725,
+            "original_token_probability": 0.9999772315450165,
+            "converted_token_probability": 0.9999841454156853,
+            "original_logprob": -2.276871418871451e-05,
+            "converted_logprob": -1.585470999998506e-05,
+            "absolute_logprob_delta": 6.91400418872945e-06,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.6
+          },
+          {
+            "position": 72,
+            "token_id": 236779,
+            "original_token_probability": 0.999825508046893,
+            "converted_token_probability": 0.9997220811841415,
+            "original_logprob": -0.00017450717859901488,
+            "converted_logprob": -0.0002779574424494058,
+            "absolute_logprob_delta": 0.00010345026385039091,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 73,
+            "token_id": 2394,
+            "original_token_probability": 0.9974003836759562,
+            "converted_token_probability": 0.2540216706386964,
+            "original_logprob": -0.00260300119407475,
+            "converted_logprob": -1.3703356981277466,
+            "absolute_logprob_delta": 1.3677326969336718,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.4
+          },
+          {
+            "position": 74,
+            "token_id": 1083,
+            "original_token_probability": 0.9980885633354819,
+            "converted_token_probability": 0.9976735719976169,
+            "original_logprob": -0.0019132657907903194,
+            "converted_logprob": -0.0023291383404284716,
+            "absolute_logprob_delta": 0.0004158725496381521,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 75,
+            "token_id": 236770,
+            "original_token_probability": 0.019996794670253407,
+            "converted_token_probability": 0.14537666437191335,
+            "original_logprob": -3.9121832847595215,
+            "converted_logprob": -1.9284272193908691,
+            "absolute_logprob_delta": 1.9837560653686523,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 76,
+            "token_id": 236812,
+            "original_token_probability": 0.018963959534936924,
+            "converted_token_probability": 0.030521684096844682,
+            "original_logprob": -3.965214967727661,
+            "converted_logprob": -3.4893178939819336,
+            "absolute_logprob_delta": 0.47589707374572754,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 77,
+            "token_id": 236825,
+            "original_token_probability": 0.07016941767072901,
+            "converted_token_probability": 0.0963633197670595,
+            "original_logprob": -2.6568427085876465,
+            "converted_logprob": -2.339629650115967,
+            "absolute_logprob_delta": 0.3172130584716797,
+            "top1_agrees": false,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 78,
+            "token_id": 2098,
+            "original_token_probability": 0.06738853314269384,
+            "converted_token_probability": 0.04150917065138409,
+            "original_logprob": -2.6972804069519043,
+            "converted_logprob": -3.1818408966064453,
+            "absolute_logprob_delta": 0.484560489654541,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 79,
+            "token_id": 21050,
+            "original_token_probability": 0.9999847414437658,
+            "converted_token_probability": 0.9999763971175267,
+            "original_logprob": -1.5258672647178173e-05,
+            "converted_logprob": -2.3603161025675945e-05,
+            "absolute_logprob_delta": 8.344488378497772e-06,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 80,
+            "token_id": 236779,
+            "original_token_probability": 0.9999222815829679,
+            "converted_token_probability": 0.9999638808887751,
+            "original_logprob": -7.772143726469949e-05,
+            "converted_logprob": -3.611976353568025e-05,
+            "absolute_logprob_delta": 4.160167372901924e-05,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 81,
+            "token_id": 40835,
+            "original_token_probability": 0.9999977350285647,
+            "converted_token_probability": 0.9999933243243502,
+            "original_logprob": -2.264974000354414e-06,
+            "converted_logprob": -6.6756979322235566e-06,
+            "absolute_logprob_delta": 4.410723931869143e-06,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 82,
+            "token_id": 236779,
+            "original_token_probability": 0.9999986886995842,
+            "converted_token_probability": 0.999998927117538,
+            "original_logprob": -1.311301275563892e-06,
+            "converted_logprob": -1.0728830375228426e-06,
+            "absolute_logprob_delta": 2.3841823804104934e-07,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 83,
+            "token_id": 2003,
+            "original_token_probability": 0.999997854237364,
+            "converted_token_probability": 0.9999990463265931,
+            "original_logprob": -2.145764938177308e-06,
+            "converted_logprob": -9.536738616588991e-07,
+            "absolute_logprob_delta": 1.192091076518409e-06,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 84,
+            "token_id": 236779,
+            "original_token_probability": 0.999991059383269,
+            "converted_token_probability": 0.9999992847447459,
+            "original_logprob": -8.940656698541716e-06,
+            "converted_logprob": -7.152555099310121e-07,
+            "absolute_logprob_delta": 8.225401188610704e-06,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.6
+          },
+          {
+            "position": 85,
+            "token_id": 2394,
+            "original_token_probability": 0.999997854237364,
+            "converted_token_probability": 0.9999883176260755,
+            "original_logprob": -2.145764938177308e-06,
+            "converted_logprob": -1.168244216387393e-05,
+            "absolute_logprob_delta": 9.536677225696621e-06,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.4
+          },
+          {
+            "position": 86,
+            "token_id": 236779,
+            "original_token_probability": 0.9999464778947144,
+            "converted_token_probability": 0.9999113161575117,
+            "original_logprob": -5.352353764465079e-05,
+            "converted_logprob": -8.868777513271198e-05,
+            "absolute_logprob_delta": 3.516423748806119e-05,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 87,
+            "token_id": 18819,
+            "original_token_probability": 0.9999945164027223,
+            "converted_token_probability": 0.9999958276922101,
+            "original_logprob": -5.483612312673358e-06,
+            "converted_logprob": -4.172316494077677e-06,
+            "absolute_logprob_delta": 1.3112958185956813e-06,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 88,
+            "token_id": 138609,
+            "original_token_probability": 0.99476564440702,
+            "converted_token_probability": 0.986935116539455,
+            "original_logprob": -0.005248102825134993,
+            "converted_logprob": -0.01315097976475954,
+            "absolute_logprob_delta": 0.007902876939624548,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 89,
+            "token_id": 9503,
+            "original_token_probability": 0.3729783502173519,
+            "converted_token_probability": 0.11876938541683796,
+            "original_logprob": -0.9862349033355713,
+            "converted_logprob": -2.1305716037750244,
+            "absolute_logprob_delta": 1.1443367004394531,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 90,
+            "token_id": 4337,
+            "original_token_probability": 0.994735328720845,
+            "converted_token_probability": 0.9992971595077569,
+            "original_logprob": -0.005278578493744135,
+            "converted_logprob": -0.0007030876004137099,
+            "absolute_logprob_delta": 0.004575490893330425,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 91,
+            "token_id": 1192,
+            "original_token_probability": 0.9664133488325511,
+            "converted_token_probability": 0.9030481029382347,
+            "original_logprob": -0.034163638949394226,
+            "converted_logprob": -0.10197945684194565,
+            "absolute_logprob_delta": 0.06781581789255142,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 92,
+            "token_id": 4337,
+            "original_token_probability": 0.9999623312833917,
+            "converted_token_probability": 0.9999158453261717,
+            "original_logprob": -3.766942609217949e-05,
+            "converted_logprob": -8.415821503149346e-05,
+            "absolute_logprob_delta": 4.648878893931396e-05,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 93,
+            "token_id": 10671,
+            "original_token_probability": 0.9999996423722521,
+            "converted_token_probability": 0.9999997615814777,
+            "original_logprob": -3.576278118089249e-07,
+            "converted_logprob": -2.3841855067985307e-07,
+            "absolute_logprob_delta": 1.1920926112907182e-07,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 94,
+            "token_id": 99471,
+            "original_token_probability": 0.9999847414437658,
+            "converted_token_probability": 0.9999831917733143,
+            "original_logprob": -1.5258672647178173e-05,
+            "converted_logprob": -1.680836794548668e-05,
+            "absolute_logprob_delta": 1.5496952983085066e-06,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.4
+          }
+        ]
+      },
+      {
+        "id": "canonical_code",
+        "condition": "Canonical factual answer after thinking-disabled assistant prefix; teacher forcing, not a generation-quality score.",
+        "scored_tokens": 5,
+        "top1_agreement": 1,
+        "mean_top5_overlap_fraction": 0.88,
+        "mean_absolute_target_logprob_delta_nats": 0.43290213993459475,
+        "original_target_nll_nats_per_token": 3.6035211567679655,
+        "converted_target_nll_nats_per_token": 3.1864694545394743,
+        "positions": [
+          {
+            "position": 55,
+            "token_id": 236840,
+            "original_token_probability": 0.9887173226829823,
+            "converted_token_probability": 0.9514960466113748,
+            "original_logprob": -0.011346809566020966,
+            "converted_logprob": -0.04971974715590477,
+            "absolute_logprob_delta": 0.038372937589883804,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 56,
+            "token_id": 236812,
+            "original_token_probability": 0.9955828663654158,
+            "converted_token_probability": 0.9951670041317867,
+            "original_logprob": -0.004426917992532253,
+            "converted_logprob": -0.004844712559133768,
+            "absolute_logprob_delta": 0.0004177945666015148,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 57,
+            "token_id": 236764,
+            "original_token_probability": 0.999864954118506,
+            "converted_token_probability": 0.9992418081652724,
+            "original_logprob": -0.00013505500101018697,
+            "converted_logprob": -0.0007584794075228274,
+            "absolute_logprob_delta": 0.0006234244065126404,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 58,
+            "token_id": 236819,
+            "original_token_probability": 1.5229369730427644e-08,
+            "converted_token_probability": 1.2749923799015752e-07,
+            "original_logprob": -18.00004005432129,
+            "converted_logprob": -15.875155448913574,
+            "absolute_logprob_delta": 2.124884605407715,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 59,
+            "token_id": 236842,
+            "original_token_probability": 0.9983444250197685,
+            "converted_token_probability": 0.9981328606162935,
+            "original_logprob": -0.0016569469589740038,
+            "converted_logprob": -0.0018688846612349153,
+            "absolute_logprob_delta": 0.00021193770226091146,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          }
+        ]
+      },
+      {
+        "id": "incident_truncated_loop_onset",
+        "condition": "Truncated2048-character visible-text prefix immediately before actual repeated-word burst, plus256characters from burst. Original conversation/system/tool context absent; not causal reproduction.",
+        "scored_tokens": 64,
+        "top1_agreement": 0.984375,
+        "mean_top5_overlap_fraction": 0.821875,
+        "mean_absolute_target_logprob_delta_nats": 0.05229963663441595,
+        "original_target_nll_nats_per_token": 0.2653093618864659,
+        "converted_target_nll_nats_per_token": 0.2568190572055755,
+        "positions": [
+          {
+            "position": 529,
+            "token_id": 1023,
+            "original_token_probability": 0.03658295193530716,
+            "converted_token_probability": 0.018887742808608405,
+            "original_logprob": -3.3081729412078857,
+            "converted_logprob": -3.9692420959472656,
+            "absolute_logprob_delta": 0.6610691547393799,
+            "top1_agrees": false,
+            "top5_overlap_fraction": 0.4
+          },
+          {
+            "position": 530,
+            "token_id": 1023,
+            "original_token_probability": 0.8112052710984256,
+            "converted_token_probability": 0.8801457022353818,
+            "original_logprob": -0.20923414826393127,
+            "converted_logprob": -0.12766781449317932,
+            "absolute_logprob_delta": 0.08156633377075195,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 531,
+            "token_id": 1023,
+            "original_token_probability": 0.8422546584530519,
+            "converted_token_probability": 0.9402190446456704,
+            "original_logprob": -0.17167286574840546,
+            "converted_logprob": -0.06164240464568138,
+            "absolute_logprob_delta": 0.11003046110272408,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 532,
+            "token_id": 1023,
+            "original_token_probability": 0.8969377936954304,
+            "converted_token_probability": 0.9518449912807717,
+            "original_logprob": -0.1087687686085701,
+            "converted_logprob": -0.04935308173298836,
+            "absolute_logprob_delta": 0.05941568687558174,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 533,
+            "token_id": 1023,
+            "original_token_probability": 0.9582895527947435,
+            "converted_token_probability": 0.9749062361036814,
+            "original_logprob": -0.04260529950261116,
+            "converted_logprob": -0.025413980707526207,
+            "absolute_logprob_delta": 0.017191318795084953,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 534,
+            "token_id": 1023,
+            "original_token_probability": 0.8588057902274311,
+            "converted_token_probability": 0.9552438962019669,
+            "original_logprob": -0.1522124707698822,
+            "converted_logprob": -0.04578858241438866,
+            "absolute_logprob_delta": 0.10642388835549355,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 535,
+            "token_id": 1023,
+            "original_token_probability": 0.9394672169737991,
+            "converted_token_probability": 0.972004522231226,
+            "original_logprob": -0.0624423548579216,
+            "converted_logprob": -0.028394822031259537,
+            "absolute_logprob_delta": 0.034047532826662064,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 536,
+            "token_id": 1023,
+            "original_token_probability": 0.9248103641291807,
+            "converted_token_probability": 0.9631027929094323,
+            "original_logprob": -0.07816657423973083,
+            "converted_logprob": -0.03759513050317764,
+            "absolute_logprob_delta": 0.04057144373655319,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 537,
+            "token_id": 1023,
+            "original_token_probability": 0.9467529559658241,
+            "converted_token_probability": 0.9693328003470263,
+            "original_logprob": -0.05471708998084068,
+            "converted_logprob": -0.03114727884531021,
+            "absolute_logprob_delta": 0.023569811135530472,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 538,
+            "token_id": 1023,
+            "original_token_probability": 0.8856984843132234,
+            "converted_token_probability": 0.9617118966769104,
+            "original_logprob": -0.12137869745492935,
+            "converted_logprob": -0.03904035687446594,
+            "absolute_logprob_delta": 0.08233834058046341,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 539,
+            "token_id": 1023,
+            "original_token_probability": 0.9572849938613589,
+            "converted_token_probability": 0.9776518783207504,
+            "original_logprob": -0.04365413263440132,
+            "converted_logprob": -0.022601624950766563,
+            "absolute_logprob_delta": 0.021052507683634758,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 540,
+            "token_id": 1023,
+            "original_token_probability": 0.9715116862193001,
+            "converted_token_probability": 0.9845842976441264,
+            "original_logprob": -0.028901981189846992,
+            "converted_logprob": -0.01553575973957777,
+            "absolute_logprob_delta": 0.013366221450269222,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 541,
+            "token_id": 1023,
+            "original_token_probability": 0.974931728102529,
+            "converted_token_probability": 0.982723110449335,
+            "original_logprob": -0.025387832894921303,
+            "converted_logprob": -0.017427876591682434,
+            "absolute_logprob_delta": 0.007959956303238869,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 542,
+            "token_id": 1023,
+            "original_token_probability": 0.9495588527200038,
+            "converted_token_probability": 0.9834642721083074,
+            "original_logprob": -0.05175776779651642,
+            "converted_logprob": -0.016673969104886055,
+            "absolute_logprob_delta": 0.03508379869163036,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 543,
+            "token_id": 1023,
+            "original_token_probability": 0.9523215304160881,
+            "converted_token_probability": 0.9807462412919619,
+            "original_logprob": -0.04885255917906761,
+            "converted_logprob": -0.019441526383161545,
+            "absolute_logprob_delta": 0.029411032795906067,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 544,
+            "token_id": 1023,
+            "original_token_probability": 0.9223335516887403,
+            "converted_token_probability": 0.972217434941742,
+            "original_logprob": -0.08084835112094879,
+            "converted_logprob": -0.028175801038742065,
+            "absolute_logprob_delta": 0.052672550082206726,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.6
+          },
+          {
+            "position": 545,
+            "token_id": 1023,
+            "original_token_probability": 0.9412770114703761,
+            "converted_token_probability": 0.9834613906204132,
+            "original_logprob": -0.0605178028345108,
+            "converted_logprob": -0.016676899045705795,
+            "absolute_logprob_delta": 0.04384090378880501,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 546,
+            "token_id": 1023,
+            "original_token_probability": 0.9398444543573812,
+            "converted_token_probability": 0.9808005950497296,
+            "original_logprob": -0.062040891498327255,
+            "converted_logprob": -0.019386107102036476,
+            "absolute_logprob_delta": 0.04265478439629078,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 547,
+            "token_id": 1023,
+            "original_token_probability": 0.9649632596064385,
+            "converted_token_probability": 0.9839233791316546,
+            "original_logprob": -0.035665251314640045,
+            "converted_logprob": -0.016207251697778702,
+            "absolute_logprob_delta": 0.019457999616861343,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 548,
+            "token_id": 1023,
+            "original_token_probability": 0.9625786233815051,
+            "converted_token_probability": 0.9849379293099257,
+            "original_logprob": -0.03813952952623367,
+            "converted_logprob": -0.015176655724644661,
+            "absolute_logprob_delta": 0.022962873801589012,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.6
+          },
+          {
+            "position": 549,
+            "token_id": 1023,
+            "original_token_probability": 0.964310343553409,
+            "converted_token_probability": 0.9863344726120781,
+            "original_logprob": -0.03634210303425789,
+            "converted_logprob": -0.013759760186076164,
+            "absolute_logprob_delta": 0.022582342848181725,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 550,
+            "token_id": 1023,
+            "original_token_probability": 0.9654649176502914,
+            "converted_token_probability": 0.9826990492889043,
+            "original_logprob": -0.03514551371335983,
+            "converted_logprob": -0.017452361062169075,
+            "absolute_logprob_delta": 0.017693152651190758,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 551,
+            "token_id": 1023,
+            "original_token_probability": 0.9726198594767412,
+            "converted_token_probability": 0.9870044425599648,
+            "original_logprob": -0.02776196226477623,
+            "converted_logprob": -0.013080738484859467,
+            "absolute_logprob_delta": 0.014681223779916763,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 552,
+            "token_id": 1023,
+            "original_token_probability": 0.9653943649984635,
+            "converted_token_probability": 0.9908906796957276,
+            "original_logprob": -0.03521859273314476,
+            "converted_logprob": -0.009151063859462738,
+            "absolute_logprob_delta": 0.026067528873682022,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 553,
+            "token_id": 1023,
+            "original_token_probability": 0.954392601836373,
+            "converted_token_probability": 0.9834226516397843,
+            "original_logprob": -0.046680159866809845,
+            "converted_logprob": -0.01671629026532173,
+            "absolute_logprob_delta": 0.029963869601488113,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 554,
+            "token_id": 1023,
+            "original_token_probability": 0.964263676646092,
+            "converted_token_probability": 0.9885120317726042,
+            "original_logprob": -0.03639049828052521,
+            "converted_logprob": -0.01155446469783783,
+            "absolute_logprob_delta": 0.024836033582687378,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.6
+          },
+          {
+            "position": 555,
+            "token_id": 1023,
+            "original_token_probability": 0.9528305802782927,
+            "converted_token_probability": 0.9836723165916742,
+            "original_logprob": -0.04831816628575325,
+            "converted_logprob": -0.016462448984384537,
+            "absolute_logprob_delta": 0.03185571730136871,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 556,
+            "token_id": 1023,
+            "original_token_probability": 0.9345493037252464,
+            "converted_token_probability": 0.9836197201003933,
+            "original_logprob": -0.0676908940076828,
+            "converted_logprob": -0.01651591993868351,
+            "absolute_logprob_delta": 0.05117497406899929,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.6
+          },
+          {
+            "position": 557,
+            "token_id": 1023,
+            "original_token_probability": 0.9596584822083225,
+            "converted_token_probability": 0.9830887698008577,
+            "original_logprob": -0.04117780551314354,
+            "converted_logprob": -0.017055857926607132,
+            "absolute_logprob_delta": 0.024121947586536407,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 558,
+            "token_id": 1023,
+            "original_token_probability": 0.9605818963288358,
+            "converted_token_probability": 0.9880450269279869,
+            "original_logprob": -0.04021603614091873,
+            "converted_logprob": -0.012027008458971977,
+            "absolute_logprob_delta": 0.028189027681946754,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 559,
+            "token_id": 1023,
+            "original_token_probability": 0.9208942457599296,
+            "converted_token_probability": 0.9892448065881277,
+            "original_logprob": -0.08241007477045059,
+            "converted_logprob": -0.010813448578119278,
+            "absolute_logprob_delta": 0.07159662619233131,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 560,
+            "token_id": 1023,
+            "original_token_probability": 0.9376713953795182,
+            "converted_token_probability": 0.9891146318491553,
+            "original_logprob": -0.06435571610927582,
+            "converted_logprob": -0.010945047251880169,
+            "absolute_logprob_delta": 0.05341066885739565,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 561,
+            "token_id": 1023,
+            "original_token_probability": 0.9572147572621348,
+            "converted_token_probability": 0.9899409322662062,
+            "original_logprob": -0.04372750595211983,
+            "converted_logprob": -0.010110002011060715,
+            "absolute_logprob_delta": 0.03361750394105911,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 562,
+            "token_id": 1023,
+            "original_token_probability": 0.9593955121717285,
+            "converted_token_probability": 0.9881061284225872,
+            "original_logprob": -0.041451867669820786,
+            "converted_logprob": -0.011965169571340084,
+            "absolute_logprob_delta": 0.0294866980984807,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 563,
+            "token_id": 1023,
+            "original_token_probability": 0.9778980509201419,
+            "converted_token_probability": 0.986141762742992,
+            "original_logprob": -0.022349856793880463,
+            "converted_logprob": -0.013955159112811089,
+            "absolute_logprob_delta": 0.008394697681069374,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 564,
+            "token_id": 1023,
+            "original_token_probability": 0.9779715867138209,
+            "converted_token_probability": 0.9873365729145607,
+            "original_logprob": -0.02227466180920601,
+            "converted_logprob": -0.012744291685521603,
+            "absolute_logprob_delta": 0.009530370123684406,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 565,
+            "token_id": 1023,
+            "original_token_probability": 0.9716120580338709,
+            "converted_token_probability": 0.984934691264152,
+            "original_logprob": -0.028798671439290047,
+            "converted_logprob": -0.015179943293333054,
+            "absolute_logprob_delta": 0.013618728145956993,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 566,
+            "token_id": 1023,
+            "original_token_probability": 0.9451228526641284,
+            "converted_token_probability": 0.9864316684854055,
+            "original_logprob": -0.056440357118844986,
+            "converted_logprob": -0.013661222532391548,
+            "absolute_logprob_delta": 0.04277913458645344,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 567,
+            "token_id": 1023,
+            "original_token_probability": 0.9648047756946613,
+            "converted_token_probability": 0.9894332463556805,
+            "original_logprob": -0.03582950308918953,
+            "converted_logprob": -0.010622978210449219,
+            "absolute_logprob_delta": 0.02520652487874031,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 568,
+            "token_id": 1023,
+            "original_token_probability": 0.9747555676345835,
+            "converted_token_probability": 0.992549790251334,
+            "original_logprob": -0.025568539276719093,
+            "converted_logprob": -0.0074781011790037155,
+            "absolute_logprob_delta": 0.018090438097715378,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 569,
+            "token_id": 1023,
+            "original_token_probability": 0.9706669917407051,
+            "converted_token_probability": 0.9897559188533908,
+            "original_logprob": -0.029771823436021805,
+            "converted_logprob": -0.010296912863850594,
+            "absolute_logprob_delta": 0.01947491057217121,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 570,
+            "token_id": 1023,
+            "original_token_probability": 0.9804798376389503,
+            "converted_token_probability": 0.9890604031874414,
+            "original_logprob": -0.01971319690346718,
+            "converted_logprob": -0.010999874211847782,
+            "absolute_logprob_delta": 0.008713322691619396,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 571,
+            "token_id": 1023,
+            "original_token_probability": 0.9679847384500454,
+            "converted_token_probability": 0.9909626692787059,
+            "original_logprob": -0.03253895789384842,
+            "converted_logprob": -0.009078415110707283,
+            "absolute_logprob_delta": 0.023460542783141136,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 572,
+            "token_id": 1023,
+            "original_token_probability": 0.9608194379189234,
+            "converted_token_probability": 0.9829644721763101,
+            "original_logprob": -0.03996877744793892,
+            "converted_logprob": -0.017182301729917526,
+            "absolute_logprob_delta": 0.022786475718021393,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 573,
+            "token_id": 1023,
+            "original_token_probability": 0.9744524473715713,
+            "converted_token_probability": 0.988944267869298,
+            "original_logprob": -0.02587955817580223,
+            "converted_logprob": -0.01111730094999075,
+            "absolute_logprob_delta": 0.014762257225811481,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 574,
+            "token_id": 1023,
+            "original_token_probability": 0.972336550306584,
+            "converted_token_probability": 0.9916655534661417,
+            "original_logprob": -0.028053289279341698,
+            "converted_logprob": -0.008369372226297855,
+            "absolute_logprob_delta": 0.019683917053043842,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.4
+          },
+          {
+            "position": 575,
+            "token_id": 1023,
+            "original_token_probability": 0.9694485214200123,
+            "converted_token_probability": 0.9852830201472038,
+            "original_logprob": -0.03102790378034115,
+            "converted_logprob": -0.01482634898275137,
+            "absolute_logprob_delta": 0.01620155479758978,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 576,
+            "token_id": 1023,
+            "original_token_probability": 0.9447018941934089,
+            "converted_token_probability": 0.9783024550657421,
+            "original_logprob": -0.05688585713505745,
+            "converted_logprob": -0.02193639799952507,
+            "absolute_logprob_delta": 0.03494945913553238,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 577,
+            "token_id": 1023,
+            "original_token_probability": 0.9459469091565678,
+            "converted_token_probability": 0.9819234077325742,
+            "original_logprob": -0.05556883290410042,
+            "converted_logprob": -0.018241969868540764,
+            "absolute_logprob_delta": 0.037326863035559654,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 578,
+            "token_id": 1023,
+            "original_token_probability": 0.9510500917246334,
+            "converted_token_probability": 0.985941247897532,
+            "original_logprob": -0.050188545137643814,
+            "converted_logprob": -0.014158512465655804,
+            "absolute_logprob_delta": 0.03603003267198801,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 579,
+            "token_id": 1023,
+            "original_token_probability": 0.970404236939768,
+            "converted_token_probability": 0.990273288969335,
+            "original_logprob": -0.030042555183172226,
+            "converted_logprob": -0.009774324484169483,
+            "absolute_logprob_delta": 0.020268230699002743,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 580,
+            "token_id": 1023,
+            "original_token_probability": 0.938420978357711,
+            "converted_token_probability": 0.9870384698954238,
+            "original_logprob": -0.06355662643909454,
+            "converted_logprob": -0.013046263717114925,
+            "absolute_logprob_delta": 0.05051036272197962,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 581,
+            "token_id": 1023,
+            "original_token_probability": 0.9591023045130294,
+            "converted_token_probability": 0.9863860834166946,
+            "original_logprob": -0.041757531464099884,
+            "converted_logprob": -0.013707435689866543,
+            "absolute_logprob_delta": 0.02805009577423334,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 582,
+            "token_id": 1023,
+            "original_token_probability": 0.9434363828165651,
+            "converted_token_probability": 0.9812033867935125,
+            "original_logprob": -0.058226343244314194,
+            "converted_logprob": -0.01897551491856575,
+            "absolute_logprob_delta": 0.039250828325748444,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 583,
+            "token_id": 1023,
+            "original_token_probability": 0.9563638726435992,
+            "converted_token_probability": 0.9893150402391271,
+            "original_logprob": -0.04461681842803955,
+            "converted_logprob": -0.01074245385825634,
+            "absolute_logprob_delta": 0.03387436456978321,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 584,
+            "token_id": 1023,
+            "original_token_probability": 0.9757689960695063,
+            "converted_token_probability": 0.9890876912458163,
+            "original_logprob": -0.024529404938220978,
+            "converted_logprob": -0.010972284711897373,
+            "absolute_logprob_delta": 0.013557120226323605,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 1.0
+          },
+          {
+            "position": 585,
+            "token_id": 1023,
+            "original_token_probability": 0.9778216793693497,
+            "converted_token_probability": 0.9833915249084302,
+            "original_logprob": -0.022427957504987717,
+            "converted_logprob": -0.016747942194342613,
+            "absolute_logprob_delta": 0.0056800153106451035,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.6
+          },
+          {
+            "position": 586,
+            "token_id": 1023,
+            "original_token_probability": 0.9509436820018283,
+            "converted_token_probability": 0.9857542507813071,
+            "original_logprob": -0.050300437957048416,
+            "converted_logprob": -0.014348194003105164,
+            "absolute_logprob_delta": 0.03595224395394325,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 587,
+            "token_id": 1023,
+            "original_token_probability": 0.9753445686325191,
+            "converted_token_probability": 0.9877195141390938,
+            "original_logprob": -0.02496446669101715,
+            "converted_logprob": -0.012356514111161232,
+            "absolute_logprob_delta": 0.012607952579855919,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 588,
+            "token_id": 1023,
+            "original_token_probability": 0.9725478039396953,
+            "converted_token_probability": 0.9913312079738023,
+            "original_logprob": -0.02783604897558689,
+            "converted_logprob": -0.008706584572792053,
+            "absolute_logprob_delta": 0.019129464402794838,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 589,
+            "token_id": 1023,
+            "original_token_probability": 0.9820567545412296,
+            "converted_token_probability": 0.9875228907130474,
+            "original_logprob": -0.01810617744922638,
+            "converted_logprob": -0.012555602006614208,
+            "absolute_logprob_delta": 0.005550575442612171,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 590,
+            "token_id": 1023,
+            "original_token_probability": 0.9842140589750201,
+            "converted_token_probability": 0.9884515790331799,
+            "original_logprob": -0.01591186597943306,
+            "converted_logprob": -0.011615621857345104,
+            "absolute_logprob_delta": 0.0042962441220879555,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 591,
+            "token_id": 1023,
+            "original_token_probability": 0.9579309478054155,
+            "converted_token_probability": 0.9798723712313426,
+            "original_logprob": -0.04297958314418793,
+            "converted_logprob": -0.020332949236035347,
+            "absolute_logprob_delta": 0.02264663390815258,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          },
+          {
+            "position": 592,
+            "token_id": 236743,
+            "original_token_probability": 2.6946401225749703e-05,
+            "converted_token_probability": 1.2845843364624637e-05,
+            "original_logprob": -10.521660804748535,
+            "converted_logprob": -11.262490272521973,
+            "absolute_logprob_delta": 0.7408294677734375,
+            "top1_agrees": true,
+            "top5_overlap_fraction": 0.8
+          }
+        ]
+      }
+    ],
+    "scored_canonical_tokens": 79,
+    "scored_truncated_incident_tokens": 64,
+    "teacher_forcing_interpretation": [
+      "Token-aligned fixed prefixes establish numerical distribution differences, not a broad accuracy score.",
+      "Canonical targets use thinking-disabled prefixes and forced JSON; format preferences affect their NLL.",
+      "The incident probe contains only a truncated visible-text prefix and forced repeated words; it cannot establish the cause of the original incident.",
+      "Top5 overlap is a truncated-distribution statistic; no full-distribution KL is claimed."
+    ],
+    "repetition": {
+      "original": {
+        "primary_cases": [
+          {
+            "id": "facts",
+            "content": {
+              "word_tokens": 42,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "reasoning": {
+              "word_tokens": 123,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 301
+          },
+          {
+            "id": "arithmetic",
+            "content": {
+              "word_tokens": 1,
+              "consecutive_same_word_at_tail": 1,
+              "repeated_8gram_fraction": 0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "reasoning": {
+              "word_tokens": 185,
+              "consecutive_same_word_at_tail": 1,
+              "repeated_8gram_fraction": 0.0449438202247191,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 468
+          },
+          {
+            "id": "extraction",
+            "content": {
+              "word_tokens": 32,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "reasoning": {
+              "word_tokens": 100,
+              "consecutive_same_word_at_tail": 1,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 213
+          },
+          {
+            "id": "code",
+            "content": {
+              "word_tokens": 5,
+              "consecutive_same_word_at_tail": 1,
+              "repeated_8gram_fraction": 0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "reasoning": {
+              "word_tokens": 228,
+              "consecutive_same_word_at_tail": 1,
+              "repeated_8gram_fraction": 0.05882352941176472,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 263
+          },
+          {
+            "id": "constraints",
+            "content": {
+              "word_tokens": 29,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "reasoning": {
+              "word_tokens": 143,
+              "consecutive_same_word_at_tail": 1,
+              "repeated_8gram_fraction": 0.02941176470588236,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 200
+          },
+          {
+            "id": "precedence",
+            "content": {
+              "word_tokens": 24,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "reasoning": {
+              "word_tokens": 146,
+              "consecutive_same_word_at_tail": 1,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 225
+          },
+          {
+            "id": "planning_constraints",
+            "content": {
+              "word_tokens": 17,
+              "consecutive_same_word_at_tail": 1,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "reasoning": {
+              "word_tokens": 114,
+              "consecutive_same_word_at_tail": 1,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 142
+          },
+          {
+            "id": "limited_evidence",
+            "content": {
+              "word_tokens": 20,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "reasoning": {
+              "word_tokens": 157,
+              "consecutive_same_word_at_tail": 1,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 269
+          },
+          {
+            "id": "tool_lookup",
+            "content": {
+              "word_tokens": 0,
+              "consecutive_same_word_at_tail": 0,
+              "repeated_8gram_fraction": 0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "reasoning": {
+              "word_tokens": 111,
+              "consecutive_same_word_at_tail": 1,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "tool_calls",
+            "output_tokens": 152
+          },
+          {
+            "id": "tool_result",
+            "content": {
+              "word_tokens": 22,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "reasoning": {
+              "word_tokens": 70,
+              "consecutive_same_word_at_tail": 1,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 106
+          },
+          {
+            "id": "long_seals",
+            "content": {
+              "word_tokens": 44,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "reasoning": {
+              "word_tokens": 301,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.013605442176870763,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 500
+          },
+          {
+            "id": "long_owners",
+            "content": {
+              "word_tokens": 38,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "reasoning": {
+              "word_tokens": 271,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.03409090909090906,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 406
+          },
+          {
+            "id": "long_budgets",
+            "content": {
+              "word_tokens": 32,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "reasoning": {
+              "word_tokens": 281,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.007299270072992692,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 438
+          },
+          {
+            "id": "long_windows",
+            "content": {
+              "word_tokens": 44,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "reasoning": {
+              "word_tokens": 333,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.024539877300613466,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 512
+          },
+          {
+            "id": "long_current_revision",
+            "content": {
+              "word_tokens": 32,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "reasoning": {
+              "word_tokens": 263,
+              "consecutive_same_word_at_tail": 1,
+              "repeated_8gram_fraction": 0.10546875,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 400
+          }
+        ],
+        "primary_denominator": 15,
+        "primary_clear_tail_loops": 0,
+        "primary_token_limit_finishes": 0,
+        "incident_replay": {
+          "variant": "original",
+          "exact_incident_replay": false,
+          "limitations": [
+            "Original system prompt and full tool schemas were not recovered.",
+            "Original per-request sampler overrides/seed are unknown.",
+            "Uses recovered preceding messages and minimal Bash/Read schemas.",
+            "Tool calls are recorded but never executed;4096 output allowance with clear-loop early abort."
+          ],
+          "fixture_sha256": "f1a2f185fca0ac111c3647267d5409067265277aa828a3d44c5d9af723acb12f",
+          "sampling": {
+            "temperature": 0.6,
+            "top_k": 64,
+            "top_p": 0.9,
+            "min_p": 0.05,
+            "repetition_penalty": 1.1
+          },
+          "thinking_enabled": true,
+          "max_tokens": 4096,
+          "results": [
+            {
+              "seed": 17,
+              "wall_seconds": 162.82261033800023,
+              "first_output_seconds": 105.78311933200166,
+              "usage": {
+                "prompt_tokens": 18636,
+                "total_tokens": 20352,
+                "completion_tokens": 1716,
+                "completion_tokens_details": {
+                  "reasoning_tokens": 0
+                }
+              },
+              "finish_reason": "stop",
+              "aborted_for_clear_repetition": false,
+              "content_repetition": {
+                "word_tokens": 1584,
+                "consecutive_same_word_at_tail": 1,
+                "repeated_8gram_fraction": 0.02853519340519972,
+                "tail_cycle": {
+                  "period_words": 0,
+                  "repetitions": 0,
+                  "tail_words": 0
+                }
+              },
+              "reasoning_repetition": {
+                "word_tokens": 0,
+                "consecutive_same_word_at_tail": 0,
+                "repeated_8gram_fraction": 0,
+                "tail_cycle": {
+                  "period_words": 0,
+                  "repetitions": 0,
+                  "tail_words": 0
+                }
+              },
+              "payload_sha256": "9e7e0c9077bd124cbb1e04d125abc1fa9d57e33c49f2bf7dedc5c62a52c835fc",
+              "content_chars": 6706,
+              "reasoning_chars": 0,
+              "tool_call_delta_count": 0
+            },
+            {
+              "seed": 53,
+              "wall_seconds": 158.90462233900325,
+              "first_output_seconds": 105.64505195300444,
+              "usage": {
+                "prompt_tokens": 18636,
+                "total_tokens": 20194,
+                "completion_tokens": 1558,
+                "completion_tokens_details": {
+                  "reasoning_tokens": 0
+                }
+              },
+              "finish_reason": "stop",
+              "aborted_for_clear_repetition": false,
+              "content_repetition": {
+                "word_tokens": 1372,
+                "consecutive_same_word_at_tail": 1,
+                "repeated_8gram_fraction": 0.00659340659340657,
+                "tail_cycle": {
+                  "period_words": 0,
+                  "repetitions": 0,
+                  "tail_words": 0
+                }
+              },
+              "reasoning_repetition": {
+                "word_tokens": 0,
+                "consecutive_same_word_at_tail": 0,
+                "repeated_8gram_fraction": 0,
+                "tail_cycle": {
+                  "period_words": 0,
+                  "repetitions": 0,
+                  "tail_words": 0
+                }
+              },
+              "payload_sha256": "c5dc15257919ed09309804c6c3f06a2acc676af438c725e8c1a3f60504317506",
+              "content_chars": 6135,
+              "reasoning_chars": 0,
+              "tool_call_delta_count": 0
+            }
+          ],
+          "private_raw_result": "/home/isnotreal/.batbox/diagnostics/repetition-20261022/original-replay.json"
+        },
+        "incident_replay_clear_loops": 0,
+        "incident_replay_denominator": 2
+      },
+      "converted": {
+        "primary_cases": [
+          {
+            "id": "facts",
+            "content": {
+              "word_tokens": 42,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "reasoning": {
+              "word_tokens": 131,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 312
+          },
+          {
+            "id": "arithmetic",
+            "content": {
+              "word_tokens": 1,
+              "consecutive_same_word_at_tail": 1,
+              "repeated_8gram_fraction": 0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "reasoning": {
+              "word_tokens": 205,
+              "consecutive_same_word_at_tail": 1,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 490
+          },
+          {
+            "id": "extraction",
+            "content": {
+              "word_tokens": 32,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "reasoning": {
+              "word_tokens": 77,
+              "consecutive_same_word_at_tail": 1,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 186
+          },
+          {
+            "id": "code",
+            "content": {
+              "word_tokens": 5,
+              "consecutive_same_word_at_tail": 1,
+              "repeated_8gram_fraction": 0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "reasoning": {
+              "word_tokens": 291,
+              "consecutive_same_word_at_tail": 1,
+              "repeated_8gram_fraction": 0.07042253521126762,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 343
+          },
+          {
+            "id": "constraints",
+            "content": {
+              "word_tokens": 29,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "reasoning": {
+              "word_tokens": 145,
+              "consecutive_same_word_at_tail": 1,
+              "repeated_8gram_fraction": 0.02898550724637683,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 205
+          },
+          {
+            "id": "precedence",
+            "content": {
+              "word_tokens": 24,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "reasoning": {
+              "word_tokens": 156,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 248
+          },
+          {
+            "id": "planning_constraints",
+            "content": {
+              "word_tokens": 24,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "reasoning": {
+              "word_tokens": 94,
+              "consecutive_same_word_at_tail": 1,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 122
+          },
+          {
+            "id": "limited_evidence",
+            "content": {
+              "word_tokens": 20,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "reasoning": {
+              "word_tokens": 150,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 266
+          },
+          {
+            "id": "tool_lookup",
+            "content": {
+              "word_tokens": 0,
+              "consecutive_same_word_at_tail": 0,
+              "repeated_8gram_fraction": 0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "reasoning": {
+              "word_tokens": 94,
+              "consecutive_same_word_at_tail": 1,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "tool_calls",
+            "output_tokens": 133
+          },
+          {
+            "id": "tool_result",
+            "content": {
+              "word_tokens": 22,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "reasoning": {
+              "word_tokens": 81,
+              "consecutive_same_word_at_tail": 1,
+              "repeated_8gram_fraction": 0.10810810810810811,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 109
+          },
+          {
+            "id": "long_seals",
+            "content": {
+              "word_tokens": 44,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "reasoning": {
+              "word_tokens": 269,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.03816793893129766,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 460
+          },
+          {
+            "id": "long_owners",
+            "content": {
+              "word_tokens": 38,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "reasoning": {
+              "word_tokens": 216,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 332
+          },
+          {
+            "id": "long_budgets",
+            "content": {
+              "word_tokens": 32,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "reasoning": {
+              "word_tokens": 316,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.029126213592232997,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 487
+          },
+          {
+            "id": "long_windows",
+            "content": {
+              "word_tokens": 47,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "reasoning": {
+              "word_tokens": 353,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.020231213872832332,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 565
+          },
+          {
+            "id": "long_current_revision",
+            "content": {
+              "word_tokens": 32,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.0,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "reasoning": {
+              "word_tokens": 356,
+              "consecutive_same_word_at_tail": 3,
+              "repeated_8gram_fraction": 0.022922636103151817,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 3,
+                "tail_words": 3
+              }
+            },
+            "clear_tail_loop": false,
+            "finish_reason": "stop",
+            "output_tokens": 578
+          }
+        ],
+        "primary_denominator": 15,
+        "primary_clear_tail_loops": 0,
+        "primary_token_limit_finishes": 0,
+        "incident_replay": {
+          "variant": "converted",
+          "exact_incident_replay": false,
+          "limitations": [
+            "Original system prompt and full tool schemas were not recovered.",
+            "Original per-request sampler overrides/seed are unknown.",
+            "Uses recovered preceding messages and minimal Bash/Read schemas.",
+            "Tool calls are recorded but never executed;4096 output allowance with clear-loop early abort."
+          ],
+          "fixture_sha256": "f1a2f185fca0ac111c3647267d5409067265277aa828a3d44c5d9af723acb12f",
+          "sampling": {
+            "temperature": 0.6,
+            "top_k": 64,
+            "top_p": 0.9,
+            "min_p": 0.05,
+            "repetition_penalty": 1.1
+          },
+          "thinking_enabled": true,
+          "max_tokens": 4096,
+          "results": [
+            {
+              "seed": 17,
+              "wall_seconds": 41.448904552002205,
+              "first_output_seconds": 17.850448564000544,
+              "usage": {
+                "prompt_tokens": 18636,
+                "total_tokens": 20149,
+                "completion_tokens": 1513,
+                "completion_tokens_details": {
+                  "reasoning_tokens": 0
+                }
+              },
+              "finish_reason": "stop",
+              "aborted_for_clear_repetition": false,
+              "content_repetition": {
+                "word_tokens": 1415,
+                "consecutive_same_word_at_tail": 1,
+                "repeated_8gram_fraction": 0.013494318181818232,
+                "tail_cycle": {
+                  "period_words": 0,
+                  "repetitions": 0,
+                  "tail_words": 0
+                }
+              },
+              "reasoning_repetition": {
+                "word_tokens": 0,
+                "consecutive_same_word_at_tail": 0,
+                "repeated_8gram_fraction": 0,
+                "tail_cycle": {
+                  "period_words": 0,
+                  "repetitions": 0,
+                  "tail_words": 0
+                }
+              },
+              "payload_sha256": "9e7e0c9077bd124cbb1e04d125abc1fa9d57e33c49f2bf7dedc5c62a52c835fc",
+              "content_chars": 6042,
+              "reasoning_chars": 0,
+              "tool_call_delta_count": 0
+            },
+            {
+              "seed": 53,
+              "wall_seconds": 40.45816259999992,
+              "first_output_seconds": 17.74464347299363,
+              "usage": {
+                "prompt_tokens": 18636,
+                "total_tokens": 20095,
+                "completion_tokens": 1459,
+                "completion_tokens_details": {
+                  "reasoning_tokens": 0
+                }
+              },
+              "finish_reason": "stop",
+              "aborted_for_clear_repetition": false,
+              "content_repetition": {
+                "word_tokens": 1294,
+                "consecutive_same_word_at_tail": 1,
+                "repeated_8gram_fraction": 0.009324009324009341,
+                "tail_cycle": {
+                  "period_words": 0,
+                  "repetitions": 0,
+                  "tail_words": 0
+                }
+              },
+              "reasoning_repetition": {
+                "word_tokens": 0,
+                "consecutive_same_word_at_tail": 0,
+                "repeated_8gram_fraction": 0,
+                "tail_cycle": {
+                  "period_words": 0,
+                  "repetitions": 0,
+                  "tail_words": 0
+                }
+              },
+              "payload_sha256": "c5dc15257919ed09309804c6c3f06a2acc676af438c725e8c1a3f60504317506",
+              "content_chars": 5612,
+              "reasoning_chars": 0,
+              "tool_call_delta_count": 0
+            }
+          ],
+          "private_raw_result": "/home/isnotreal/.batbox/diagnostics/repetition-20261022/converted-replay.json"
+        },
+        "incident_replay_clear_loops": 0,
+        "incident_replay_denominator": 2
+      }
+    },
+    "identical_replay_payloads": true,
+    "conclusion": "No clear loop appeared in the15small primary cases or2approximate incident replays per format. The real recorded incident remains valid; this small replay does not identify its cause or rule out quantization effects."
+  },
+  "independent_saved_weight_audit": {
+    "matrices": 33,
+    "sample_values": 9194752,
+    "types": {
+      "Q4_K->INT8": 12,
+      "Q6_K->INT8": 3,
+      "Q4_K->INT4": 18
+    },
+    "retained_code_mismatches": 0,
+    "max_sample_weight_relative_rms": 0.005677050447604466,
+    "max_synthetic_linear_relative_rms": 0.006053405787765842
+  },
+  "long_answer_format_note": "Original initial shared-batch window values had correct times but omitted the requested UTC suffix, accounting for its4/5 exact long-answer score. Warm repeat passed4/4."
+}

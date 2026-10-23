@@ -1,0 +1,126 @@
+{
+  "scope": "actual Triton code run on CPU interpreter in IEEE mode; no GPU",
+  "cases": [
+    {
+      "qtype": 12,
+      "shape": [
+        1,
+        1,
+        256
+      ],
+      "block_k": 128,
+      "split_k": 1,
+      "strided_inputs": true,
+      "relative_rms_to_fp64": 1.6023660958574562e-07
+    },
+    {
+      "qtype": 12,
+      "shape": [
+        7,
+        37,
+        512
+      ],
+      "block_k": 128,
+      "split_k": 1,
+      "strided_inputs": true,
+      "relative_rms_to_fp64": 7.81317316852492e-08
+    },
+    {
+      "qtype": 12,
+      "shape": [
+        17,
+        65,
+        768
+      ],
+      "block_k": 256,
+      "split_k": 1,
+      "strided_inputs": true,
+      "relative_rms_to_fp64": 1.0074760892316071e-07
+    },
+    {
+      "qtype": 12,
+      "shape": [
+        7,
+        37,
+        768
+      ],
+      "block_k": 128,
+      "split_k": 4,
+      "strided_inputs": true,
+      "relative_rms_to_fp64": 9.069269764727622e-08
+    },
+    {
+      "qtype": 12,
+      "shape": [
+        17,
+        65,
+        1024
+      ],
+      "block_k": 256,
+      "split_k": 8,
+      "strided_inputs": true,
+      "relative_rms_to_fp64": 9.527265804863888e-08
+    },
+    {
+      "qtype": 14,
+      "shape": [
+        1,
+        1,
+        256
+      ],
+      "block_k": 128,
+      "split_k": 1,
+      "strided_inputs": true,
+      "relative_rms_to_fp64": 1.7425504935366116e-08
+    },
+    {
+      "qtype": 14,
+      "shape": [
+        7,
+        37,
+        512
+      ],
+      "block_k": 128,
+      "split_k": 1,
+      "strided_inputs": true,
+      "relative_rms_to_fp64": 8.812136566283608e-08
+    },
+    {
+      "qtype": 14,
+      "shape": [
+        17,
+        65,
+        768
+      ],
+      "block_k": 256,
+      "split_k": 1,
+      "strided_inputs": true,
+      "relative_rms_to_fp64": 1.0035954552160592e-07
+    },
+    {
+      "qtype": 14,
+      "shape": [
+        7,
+        37,
+        768
+      ],
+      "block_k": 128,
+      "split_k": 4,
+      "strided_inputs": true,
+      "relative_rms_to_fp64": 9.148810561111019e-08
+    },
+    {
+      "qtype": 14,
+      "shape": [
+        17,
+        65,
+        1024
+      ],
+      "block_k": 256,
+      "split_k": 8,
+      "strided_inputs": true,
+      "relative_rms_to_fp64": 1.0580143233797148e-07
+    }
+  ],
+  "passed": 10
+}

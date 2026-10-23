@@ -1,0 +1,13 @@
+__pycache__/
+.triton-cache/
+/plugin/
+/upstream-pr141/
+/upstream_reference/
+*.ptx
+*.cubin
+*.so
+*.log
+*.jsonl
+*.pid
+/gpu-window.json
+/service-before-kernel-window.txt

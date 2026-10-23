@@ -1,0 +1,15 @@
+{
+  "plugin_revision": "e62877c30519305f3c82dc0d616cf62b5ed67133",
+  "llama_revision": "002a12ad25503a93501b2e188c360029830a241a",
+  "model_revision": "9654466e82d83f5ebfe1518a369bc5900873abb1",
+  "extension_sha256": "e3cefbcc99a4008b96d52daeaddae770dad20b28f27432e18a4fdc894a912548",
+  "persistent_override": "/etc/systemd/system/qwen-vllm.service.d/zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-gguf-pr141-release.conf",
+  "transient_override": "/run/systemd/system/qwen-vllm.service.d/zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-qat-format-trial.conf",
+  "rollback": "/home/isnotreal/model-tools/gguf-pr141-releases/20261023-e62877c-e3cefbc/restore-converted.py",
+  "compiler_note": "Measured incremental SM86 build combines nvcc13.3 upstream TUs and final6 objects from nvcc13.0.88; runtime13.0. See build-manifest.json.",
+  "path": "/home/isnotreal/model-tools/gguf-pr141-releases/20261023-e62877c-e3cefbc",
+  "release_manifest_sha256": "2267b055a309ceb8f5fcde0f8a8dc65db8613f19e72896cd0ccafdd943df0628",
+  "status": "active and verified after persistent restart",
+  "verified_utc": "2026-10-23T17:01:41.586758+00:00",
+  "pid": 162873
+}

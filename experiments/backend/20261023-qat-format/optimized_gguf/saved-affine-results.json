@@ -1,0 +1,196 @@
+{
+  "scope": "CPU actual saved coefficient audit; not GPU or complete runtime rounding",
+  "source": "/home/isnotreal/models/gemma4-31b-qat-hauhau-balanced-mtp-gguf/Gemma4-31B-QAT-Uncensored-HauhauCS-Balanced-Q4_K_M.gguf",
+  "native": "/home/isnotreal/models/gemma4-31b-qat-hauhau-balanced-native-mixed-w4w8a16",
+  "matrices": [
+    {
+      "source_tensor": "blk.0.attn_output.weight",
+      "converted_tensor": "model.language_model.layers.0.self_attn.o_proj",
+      "sample_values": 262144,
+      "receipt_relative_rms_to_source": 0.0037551934181251317,
+      "runtime_offset_coeff_relative_rms_to_source": 0.003783429511298736,
+      "runtime_offset_coeff_relative_rms_to_receipt": 0.0004511000162737932,
+      "runtime_offset_changed_groups": 7818,
+      "groups": 8192
+    },
+    {
+      "source_tensor": "blk.0.ffn_gate.weight",
+      "converted_tensor": "model.language_model.layers.0.mlp.gate_proj",
+      "sample_values": 172032,
+      "receipt_relative_rms_to_source": 0.00391990509788391,
+      "runtime_offset_coeff_relative_rms_to_source": 0.003960613840648336,
+      "runtime_offset_coeff_relative_rms_to_receipt": 0.0005411554762829686,
+      "runtime_offset_changed_groups": 5140,
+      "groups": 5376
+    },
+    {
+      "source_tensor": "blk.0.ffn_up.weight",
+      "converted_tensor": "model.language_model.layers.0.mlp.up_proj",
+      "sample_values": 166656,
+      "receipt_relative_rms_to_source": 0.003913767083725305,
+      "runtime_offset_coeff_relative_rms_to_source": 0.003956386684167937,
+      "runtime_offset_coeff_relative_rms_to_receipt": 0.0005812729696767213,
+      "runtime_offset_changed_groups": 4984,
+      "groups": 5208
+    },
+    {
+      "source_tensor": "blk.14.attn_output.weight",
+      "converted_tensor": "model.language_model.layers.14.self_attn.o_proj",
+      "sample_values": 262144,
+      "receipt_relative_rms_to_source": 0.00383495400787525,
+      "runtime_offset_coeff_relative_rms_to_source": 0.0038692466529629483,
+      "runtime_offset_coeff_relative_rms_to_receipt": 0.0004947808122047425,
+      "runtime_offset_changed_groups": 7818,
+      "groups": 8192
+    },
+    {
+      "source_tensor": "blk.14.ffn_down.weight",
+      "converted_tensor": "model.language_model.layers.14.mlp.down_proj",
+      "sample_values": 688128,
+      "receipt_relative_rms_to_source": 0.003947987837261868,
+      "runtime_offset_coeff_relative_rms_to_source": 0.003980502996410359,
+      "runtime_offset_coeff_relative_rms_to_receipt": 0.0005113596387110935,
+      "runtime_offset_changed_groups": 20451,
+      "groups": 21504
+    },
+    {
+      "source_tensor": "blk.14.ffn_gate.weight",
+      "converted_tensor": "model.language_model.layers.14.mlp.gate_proj",
+      "sample_values": 172032,
+      "receipt_relative_rms_to_source": 0.003937138706332351,
+      "runtime_offset_coeff_relative_rms_to_source": 0.003972076596750784,
+      "runtime_offset_coeff_relative_rms_to_receipt": 0.000546433890034181,
+      "runtime_offset_changed_groups": 5128,
+      "groups": 5376
+    },
+    {
+      "source_tensor": "blk.14.ffn_up.weight",
+      "converted_tensor": "model.language_model.layers.14.mlp.up_proj",
+      "sample_values": 172032,
+      "receipt_relative_rms_to_source": 0.0038582948220318627,
+      "runtime_offset_coeff_relative_rms_to_source": 0.003899699912047202,
+      "runtime_offset_coeff_relative_rms_to_receipt": 0.0005363952260707464,
+      "runtime_offset_changed_groups": 5127,
+      "groups": 5376
+    },
+    {
+      "source_tensor": "blk.28.attn_output.weight",
+      "converted_tensor": "model.language_model.layers.28.self_attn.o_proj",
+      "sample_values": 262144,
+      "receipt_relative_rms_to_source": 0.0037760779839979856,
+      "runtime_offset_coeff_relative_rms_to_source": 0.0038047548581566725,
+      "runtime_offset_coeff_relative_rms_to_receipt": 0.00048661007907945013,
+      "runtime_offset_changed_groups": 7775,
+      "groups": 8192
+    },
+    {
+      "source_tensor": "blk.28.ffn_down.weight",
+      "converted_tensor": "model.language_model.layers.28.mlp.down_proj",
+      "sample_values": 666624,
+      "receipt_relative_rms_to_source": 0.004034436115274492,
+      "runtime_offset_coeff_relative_rms_to_source": 0.004079849308637563,
+      "runtime_offset_coeff_relative_rms_to_receipt": 0.0006322141335261542,
+      "runtime_offset_changed_groups": 19908,
+      "groups": 20832
+    },
+    {
+      "source_tensor": "blk.28.ffn_gate.weight",
+      "converted_tensor": "model.language_model.layers.28.mlp.gate_proj",
+      "sample_values": 172032,
+      "receipt_relative_rms_to_source": 0.004000287723282941,
+      "runtime_offset_coeff_relative_rms_to_source": 0.004059290839513463,
+      "runtime_offset_coeff_relative_rms_to_receipt": 0.0005665325623614535,
+      "runtime_offset_changed_groups": 5138,
+      "groups": 5376
+    },
+    {
+      "source_tensor": "blk.28.ffn_up.weight",
+      "converted_tensor": "model.language_model.layers.28.mlp.up_proj",
+      "sample_values": 172032,
+      "receipt_relative_rms_to_source": 0.003918250909610939,
+      "runtime_offset_coeff_relative_rms_to_source": 0.003962299895967882,
+      "runtime_offset_coeff_relative_rms_to_receipt": 0.0005323486826294467,
+      "runtime_offset_changed_groups": 5169,
+      "groups": 5376
+    },
+    {
+      "source_tensor": "blk.41.attn_output.weight",
+      "converted_tensor": "model.language_model.layers.41.self_attn.o_proj",
+      "sample_values": 524288,
+      "receipt_relative_rms_to_source": 0.003942425706463345,
+      "runtime_offset_coeff_relative_rms_to_source": 0.003966772404772142,
+      "runtime_offset_coeff_relative_rms_to_receipt": 0.0005532918074446946,
+      "runtime_offset_changed_groups": 15674,
+      "groups": 16384
+    },
+    {
+      "source_tensor": "blk.41.ffn_down.weight",
+      "converted_tensor": "model.language_model.layers.41.mlp.down_proj",
+      "sample_values": 688128,
+      "receipt_relative_rms_to_source": 0.004016711407084162,
+      "runtime_offset_coeff_relative_rms_to_source": 0.004065173417806816,
+      "runtime_offset_coeff_relative_rms_to_receipt": 0.0006390083213122567,
+      "runtime_offset_changed_groups": 20563,
+      "groups": 21504
+    },
+    {
+      "source_tensor": "blk.41.ffn_gate.weight",
+      "converted_tensor": "model.language_model.layers.41.mlp.gate_proj",
+      "sample_values": 172032,
+      "receipt_relative_rms_to_source": 0.004001250105626762,
+      "runtime_offset_coeff_relative_rms_to_source": 0.004035875514299245,
+      "runtime_offset_coeff_relative_rms_to_receipt": 0.0005588111708758698,
+      "runtime_offset_changed_groups": 5141,
+      "groups": 5376
+    },
+    {
+      "source_tensor": "blk.41.ffn_up.weight",
+      "converted_tensor": "model.language_model.layers.41.mlp.up_proj",
+      "sample_values": 172032,
+      "receipt_relative_rms_to_source": 0.0038429128229307925,
+      "runtime_offset_coeff_relative_rms_to_source": 0.0038778842633979114,
+      "runtime_offset_coeff_relative_rms_to_receipt": 0.0005618783604908169,
+      "runtime_offset_changed_groups": 5164,
+      "groups": 5376
+    },
+    {
+      "source_tensor": "blk.59.attn_output.weight",
+      "converted_tensor": "model.language_model.layers.59.self_attn.o_proj",
+      "sample_values": 524288,
+      "receipt_relative_rms_to_source": 0.003990838614364675,
+      "runtime_offset_coeff_relative_rms_to_source": 0.004031240160998049,
+      "runtime_offset_coeff_relative_rms_to_receipt": 0.0005410783317583365,
+      "runtime_offset_changed_groups": 15698,
+      "groups": 16384
+    },
+    {
+      "source_tensor": "blk.59.ffn_gate.weight",
+      "converted_tensor": "model.language_model.layers.59.mlp.gate_proj",
+      "sample_values": 172032,
+      "receipt_relative_rms_to_source": 0.003977162281088592,
+      "runtime_offset_coeff_relative_rms_to_source": 0.004010395641190873,
+      "runtime_offset_coeff_relative_rms_to_receipt": 0.00048158390374236876,
+      "runtime_offset_changed_groups": 5139,
+      "groups": 5376
+    },
+    {
+      "source_tensor": "blk.59.ffn_up.weight",
+      "converted_tensor": "model.language_model.layers.59.mlp.up_proj",
+      "sample_values": 172032,
+      "receipt_relative_rms_to_source": 0.0038757187555161898,
+      "runtime_offset_coeff_relative_rms_to_source": 0.003896738953800244,
+      "runtime_offset_coeff_relative_rms_to_receipt": 0.00048607474751233976,
+      "runtime_offset_changed_groups": 5118,
+      "groups": 5376
+    }
+  ],
+  "summary": {
+    "matrices": 18,
+    "sample_values": 5592832,
+    "runtime_offset_changed_groups": 166953,
+    "groups": 174776,
+    "max_additional_coefficient_relative_rms": 0.0006390083213122567,
+    "max_receipt_relative_rms_to_source": 0.004034436115274492,
+    "max_runtime_offset_coeff_relative_rms_to_source": 0.004079849308637563
+  }
+}

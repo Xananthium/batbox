@@ -1,0 +1,22 @@
+{
+  "recorded_at": "2026-10-23T16:42:35.137901+00:00",
+  "source_pin": "e62877c30519305f3c82dc0d616cf62b5ed67133",
+  "llama_pin": "002a12ad25503a93501b2e188c360029830a241a",
+  "extension_path": "/home/isnotreal/batbox/experiments/backend/20261023-qat-format/optimized_gguf/upstream-pr141/vllm_gguf_plugin/_C_gguf.abi3.so",
+  "extension_sha256": "e3cefbcc99a4008b96d52daeaddae770dad20b28f27432e18a4fdc894a912548",
+  "extension_bytes": 87161728,
+  "build_returncode": 0,
+  "final_attempt_seconds": 28.828905827002018,
+  "compiler_provenance": "Incremental build: successful upstream objects from first nvcc13.3 attempt reused; six final objects compiled with matched nvcc13.0/CRT13.0/NVVM13.0. All SM86. This is not a clean uniform13.0 build.",
+  "toolchain_scope": "Isolated symlink toolkit in checkout; no installed environment or system toolkit modified.",
+  "runtime_headers": "CUDA13.0",
+  "logs": [
+    "/home/isnotreal/batbox/experiments/backend/20261023-qat-format/optimized_gguf/upstream-pr141/build-sm86-attempt1.log",
+    "/home/isnotreal/batbox/experiments/backend/20261023-qat-format/optimized_gguf/upstream-pr141/build-sm86-attempt2.log",
+    "/home/isnotreal/batbox/experiments/backend/20261023-qat-format/optimized_gguf/upstream-pr141/build-sm86.log"
+  ],
+  "gpu_evidence_owner": "worker_runtime",
+  "gpu_smoke_result_reported_by_owner": "10 of10 passed; reviewer made no GPU/backend requests",
+  "checkpoint_conversion": "none",
+  "future_clean_rebuild": "Only after current attempt/production restoration, if requested; not a new serving variant."
+}

@@ -1,0 +1,111 @@
+{
+  "reviewed_at": "2026-10-23T16:18:26.151247+00:00",
+  "scope": "Independent source/evidence review; CPU and offline compiler only. No GPU contexts, backend requests, or service changes by reviewer.",
+  "verdict": "Promising experimental kernels. Broad automatic/default upstream dispatch is not ready until address ranges, full-model memory and serving results are validated. Existing legacy default remains opt-in safe.",
+  "source_sha256": {
+    "plugin/vllm_gguf_plugin/triton/gemm/direct_kquant.py": "5b5cdcf8812bc0e7855885ad4ce7bb03c82df4f88dcca948ac902f0cfcb72ff3",
+    "plugin/vllm_gguf_plugin/triton/gemm/dequant_cublas.py": "9820460840643752d67964b592fd257cbe06886f81af6b1a04a42ccf4ec6b4b4",
+    "plugin/vllm_gguf_plugin/kernel_policy.py": "ae3bdc4e532c9f33aee47d7b63f35f062e66cc713fc091a7af0669519ce23809",
+    "plugin/vllm_gguf_plugin/quantization/linear.py": "7f9888c11dfe1d4abe163ba1881ef3f637b57ab6e31267505b807aa6e44ec566",
+    "probe_gpu.py": "dbf96182d564a548b22d667cfeaa9296c2a6046e46cb63ab618c9a9956497b77",
+    "verify_gpu_decode.py": "0e9c8cf987568eb5dc3c42ced7931e1e86622101ba2896ef7bced8021e4625fd",
+    "verify_gpu_strides.py": "6d61f9bae21e7f42f64e66c0dc42cd98dc8123f0088747a6268788a35d399262",
+    "policy-lab-fast-v1.json": "8cc110d70680597b0e0559112d2f2d9f8d620880c0117d0cbd5cab747c765cf4",
+    "launch-optimized.py": "e712600be1c360f2c5dab3f71aec551d2dbdce5ef2f32cd76f92af883a7dd3d5"
+  },
+  "positive_findings": [
+    "Q4_K group32 scale/min bit packing, alternating nibble layout and FP32 arithmetic match the GGUF definition; Q6_K preserves signed group16 scales and all six code bits.",
+    "FP32 scale reconstruction is followed by an explicit precision choice; BF16-pair retains an FP32 sum of partial GEMMs before the final BF16 output cast.",
+    "No saved checkpoint conversion or persistent decoded-weight allocation is introduced by the new direct/dequant functions.",
+    "Current launch script reuses original-gguf-args.json unchanged and changes only plugin, policy, trace and compiler-cache environment settings. Active process/effective settings were not queried in this CPU-only review.",
+    "New padded-weight views are passed only to the stride-aware candidate kernels; legacy CUDA retains contiguous copies."
+  ],
+  "reviewed_gpu_evidence": {
+    "decoder": {
+      "tensors": 411,
+      "values": 13712384,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_bit_mismatches": 12571059,
+      "max_legacy_fp32_relative_rms": 0.0007815776454764216,
+      "elapsed_seconds": 22.76810781599488
+    },
+    "strided_all_output_cases": 8,
+    "stride_case_shape": [
+      33,
+      129,
+      768
+    ],
+    "max_stride_relative_rms": 0.002870183627904288,
+    "performed_by": "worker_runtime; reviewer inspected artifacts/code only"
+  },
+  "independent_checks": {
+    "policy_unittests": 5,
+    "policy_unittests_passed": 5,
+    "offline_compiler_target": "sm86",
+    "large_address_shape": [
+      262144,
+      16384
+    ],
+    "large_address_evidence": [
+      "decode-large-offset-sm86.ptx",
+      "decode-large-offset.ttir"
+    ]
+  },
+  "findings": [
+    {
+      "id": "R1",
+      "priority": "P1 before general upstream use",
+      "state": "open; sent to implementation owner",
+      "title": "Guard or widen 32-bit address arithmetic",
+      "locations": [
+        "plugin/vllm_gguf_plugin/triton/gemm/dequant_cublas.py:21",
+        "plugin/vllm_gguf_plugin/triton/gemm/dequant_cublas.py:26",
+        "plugin/vllm_gguf_plugin/triton/gemm/direct_kquant.py:42",
+        "plugin/vllm_gguf_plugin/triton/gemm/direct_kquant.py:55"
+      ],
+      "evidence": "The decoder accepts N=262144,K=16384. Offline SM86 compilation emits shl.b32 for flattened z, signed row division and mul.lo.s32 for row*stride, then sign-extends results into pointer offsets. Offsets wrap above 2^31 elements/bytes. No large tensor was allocated or kernel executed.",
+      "recommendation": "Use int64 before multiplying indices and strides, including output/split buffers, or reject every unsafe derived range at the public entry point. Gemma TP2 shapes tested here remain below these limits."
+    },
+    {
+      "id": "R2",
+      "priority": "P2 before default dispatch",
+      "state": "pending whole-model evidence",
+      "title": "Broad rules exceed measured shape and architecture coverage",
+      "evidence": "Initial/sweep/cuBLAS timing artifacts cover only Q4_K and Q6_K N=5376,K=10752, M in {4,16,256,4096}, while lab policy applies all N/K and intermediate M values. No architecture key or allocation budget is part of selection.",
+      "recommendation": "Keep the policy explicitly experimental; benchmark actual attention/gate/head and MTP-verification shapes, validate selected tiles on supported architectures, and retain a bounded fallback."
+    },
+    {
+      "id": "R3",
+      "priority": "P2 before serving promotion",
+      "state": "implementation owner measuring",
+      "title": "Measure temporary memory in the full model and CUDA graph lifecycle",
+      "evidence": "BF16 decode allocates 2*N*K bytes per call, BF16-pair twice that plus FP32 output intermediates. The Gemma TP2 token-head shard [131072,5376] requires 1344 MiB for one BF16 weight tensor versus 110.25 MiB for the timed FFN shard. Split-K also allocates split_k*M*N FP32 values.",
+      "recommendation": "Record peak allocated/reserved memory and actual captured/prefill/MTP shapes with 200000 max context, unchanged KV allocation/offload and concurrent workloads; verify scratch lifetime/reuse across replay. Small standalone captured GEMMs do not establish full-model headroom."
+    },
+    {
+      "id": "R4",
+      "priority": "P2 evidence completeness",
+      "state": "tile/stride gap resolved; historical artifacts remain limited",
+      "title": "Earlier numerical timing checks sampled only the first M tile",
+      "evidence": "Earlier reference code selected X[:8], and odd GPU smoke inputs were M7,N37. Updated probe now samples first/middle/tail rows. Eight new GPU cases compare every output at M33,N129,K768 with padded/skipped W rows, X stride2, nonzero storage offsets and split-K8; all passed.",
+      "recommendation": "Retain the historical sampling limitation in reported results. Change finite label to sampled_finite or check full-output finiteness outside timing."
+    },
+    {
+      "id": "R5",
+      "priority": "P3 reproducibility",
+      "state": "open; sent to implementation owner",
+      "title": "Freeze complete benchmark provenance and repetitions",
+      "evidence": "Timing correctly captures the complete chosen function including dequantization and reductions. Results store the direct-kernel hash but not every cuBLAS/decode/dispatch source hash, exact invocation/repeat count, software versions, memory high-water mark or independent repeated timing distribution. Candidate order is fixed.",
+      "recommendation": "Record all implementation hashes, invocation, CUDA/Torch/Triton and matmul precision flags, multiple randomized/repeated runs and peak memory. Current roughly 10x FFN large-M result is a kernel result, not a serving speed guarantee."
+    }
+  ],
+  "numerical_contract": "The fast BF16 path keeps original GGUF codes and metadata, reconstructs weights in FP32, then rounds weights once for Tensor Core multiplication. It changes accumulation/activation rounding versus legacy A8 kernels. Exact packed-weight decoding does not establish bitwise logits, whole-model quality, or rare-loop equivalence.",
+  "upstream": {
+    "main_dispatch": "https://raw.githubusercontent.com/vllm-project/vllm-gguf-plugin/main/vllm_gguf_plugin/quantization/linear.py",
+    "existing_kernel_bridge_pr": "https://github.com/vllm-project/vllm-gguf-plugin/pull/141",
+    "related_embedding_pr": "https://github.com/vllm-project/vllm-gguf-plugin/pull/145",
+    "related_range_guards_pr": "https://github.com/vllm-project/vllm-gguf-plugin/pull/128",
+    "recommendation": "Account for the existing open kernel bridge before proposing duplicate integration. RTX3090 numerical, memory and serving measurements can add missing Ampere evidence; exact decoding and stride-copy removal may be separable contributions."
+  }
+}

@@ -1,0 +1,1567 @@
+{
+  "scope": "standalone kernel probe; not end-to-end serving",
+  "source": "/home/isnotreal/models/gemma4-31b-qat-hauhau-balanced-mtp-gguf/Gemma4-31B-QAT-Uncensored-HauhauCS-Balanced-Q4_K_M.gguf",
+  "device": "NVIDIA GeForce RTX 3090",
+  "utc_unix_started": 1792771099.1356738,
+  "cuda_baseline_enabled": true,
+  "candidate_sha256": "5b5cdcf8812bc0e7855885ad4ce7bb03c82df4f88dcca948ac902f0cfcb72ff3",
+  "torch_float32_matmul_precision": "highest",
+  "shared_host_conditions": "exclusive GPU window; other agents may run CPU-only graph recovery and tiny-model experiments",
+  "small_checks": [
+    {
+      "name": "blk.0.ffn_down.weight",
+      "precision": "bf16",
+      "relative_rms_to_cpu_fp64": 0.002366501871211692,
+      "limit": 0.006
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "precision": "bf16_pair",
+      "relative_rms_to_cpu_fp64": 0.0017331366909070108,
+      "limit": 0.003
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "precision": "tf32x3",
+      "relative_rms_to_cpu_fp64": 0.0017331366909070108,
+      "limit": 0.003
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "precision": "cublas_bf16",
+      "relative_rms_to_cpu_fp64": 0.002366501871211692,
+      "limit": 0.006
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "precision": "cublas_bf16_pair",
+      "relative_rms_to_cpu_fp64": 0.0017331366909070108,
+      "limit": 0.003
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "precision": "cublas_fp32",
+      "relative_rms_to_cpu_fp64": 0.0017331366909070108,
+      "limit": 0.003
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "precision": "bf16",
+      "relative_rms_to_cpu_fp64": 0.002574846813279836,
+      "limit": 0.006
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "precision": "bf16_pair",
+      "relative_rms_to_cpu_fp64": 0.001877613291480236,
+      "limit": 0.003
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "precision": "tf32x3",
+      "relative_rms_to_cpu_fp64": 0.001877613291480236,
+      "limit": 0.003
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "precision": "cublas_bf16",
+      "relative_rms_to_cpu_fp64": 0.002574846813279836,
+      "limit": 0.006
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "precision": "cublas_bf16_pair",
+      "relative_rms_to_cpu_fp64": 0.001877613291480236,
+      "limit": 0.003
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "precision": "cublas_fp32",
+      "relative_rms_to_cpu_fp64": 0.001877613291480236,
+      "limit": 0.003
+    }
+  ],
+  "rows": [
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "cuda_mmvq",
+      "milliseconds": 0.26403839588165284,
+      "relative_rms_to_cpu_fp64": 0.004970866475861482,
+      "max_abs_error_to_cpu_fp64": 0.010068480389236356,
+      "finite": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "cuda_mmq",
+      "milliseconds": 0.2169343948364258,
+      "relative_rms_to_cpu_fp64": 0.004970866475861482,
+      "max_abs_error_to_cpu_fp64": 0.010068480389236356,
+      "finite": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "plugin_triton",
+      "milliseconds": 1.3708800315856933,
+      "relative_rms_to_cpu_fp64": 0.0024231471658338172,
+      "max_abs_error_to_cpu_fp64": 0.006828304221613735,
+      "finite": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_64_128",
+      "milliseconds": 0.3517951965332031,
+      "relative_rms_to_cpu_fp64": 0.0021380342107765295,
+      "max_abs_error_to_cpu_fp64": 0.006828304221613735,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_32_64_128",
+      "milliseconds": 0.3868160009384155,
+      "relative_rms_to_cpu_fp64": 0.0021380342107765295,
+      "max_abs_error_to_cpu_fp64": 0.006828304221613735,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_128_128",
+      "milliseconds": 1.2816896438598633,
+      "relative_rms_to_cpu_fp64": 0.0021380342107765295,
+      "max_abs_error_to_cpu_fp64": 0.006828304221613735,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_64_256",
+      "milliseconds": 0.8324080467224121,
+      "relative_rms_to_cpu_fp64": 0.0021380342107765295,
+      "max_abs_error_to_cpu_fp64": 0.006828304221613735,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_pair",
+      "milliseconds": 0.3996671915054321,
+      "relative_rms_to_cpu_fp64": 0.001668639538151704,
+      "max_abs_error_to_cpu_fp64": 0.006828304221613735,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "direct_tf32x3",
+      "milliseconds": 0.700108814239502,
+      "relative_rms_to_cpu_fp64": 0.0016686319916191618,
+      "max_abs_error_to_cpu_fp64": 0.006828304221613735,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "cuda_dequant_cublas_bf16",
+      "milliseconds": 0.5035007953643799,
+      "relative_rms_to_cpu_fp64": 0.002675237261387462,
+      "max_abs_error_to_cpu_fp64": 0.006828304221613735,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_bf16",
+      "milliseconds": 0.6311423778533936,
+      "relative_rms_to_cpu_fp64": 0.002629426053236232,
+      "max_abs_error_to_cpu_fp64": 0.006828304221613735,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_bf16_pair",
+      "milliseconds": 0.8172543525695801,
+      "relative_rms_to_cpu_fp64": 0.0016686394835903433,
+      "max_abs_error_to_cpu_fp64": 0.006828304221613735,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_fp32",
+      "milliseconds": 0.7677440166473388,
+      "relative_rms_to_cpu_fp64": 0.0016686319916191618,
+      "max_abs_error_to_cpu_fp64": 0.006828304221613735,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "cuda_mmvq",
+      "milliseconds": 1.0243071556091308,
+      "relative_rms_to_cpu_fp64": 0.005790446336975781,
+      "max_abs_error_to_cpu_fp64": 0.01106853286869125,
+      "finite": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "cuda_mmq",
+      "milliseconds": 0.47518720626831057,
+      "relative_rms_to_cpu_fp64": 0.005790446336975781,
+      "max_abs_error_to_cpu_fp64": 0.01106853286869125,
+      "finite": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "plugin_triton",
+      "milliseconds": 1.5111167907714844,
+      "relative_rms_to_cpu_fp64": 0.002673945674922457,
+      "max_abs_error_to_cpu_fp64": 0.005890096706025361,
+      "finite": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_64_128",
+      "milliseconds": 0.3421695947647095,
+      "relative_rms_to_cpu_fp64": 0.002404921941382684,
+      "max_abs_error_to_cpu_fp64": 0.005290748071388407,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_32_64_128",
+      "milliseconds": 0.3733504056930542,
+      "relative_rms_to_cpu_fp64": 0.002404921941382684,
+      "max_abs_error_to_cpu_fp64": 0.005290748071388407,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_128_128",
+      "milliseconds": 1.160038375854492,
+      "relative_rms_to_cpu_fp64": 0.002404921941382684,
+      "max_abs_error_to_cpu_fp64": 0.005290748071388407,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_64_256",
+      "milliseconds": 0.7769087791442871,
+      "relative_rms_to_cpu_fp64": 0.002404921941382684,
+      "max_abs_error_to_cpu_fp64": 0.005290748071388407,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_pair",
+      "milliseconds": 0.38323040008544923,
+      "relative_rms_to_cpu_fp64": 0.0016687156605731856,
+      "max_abs_error_to_cpu_fp64": 0.003929517771666724,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "direct_tf32x3",
+      "milliseconds": 0.714137601852417,
+      "relative_rms_to_cpu_fp64": 0.001668069188808287,
+      "max_abs_error_to_cpu_fp64": 0.003882982228333276,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "cuda_dequant_cublas_bf16",
+      "milliseconds": 0.5095424175262451,
+      "relative_rms_to_cpu_fp64": 0.0029554407989780696,
+      "max_abs_error_to_cpu_fp64": 0.00653381617848936,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_bf16",
+      "milliseconds": 0.6383615970611572,
+      "relative_rms_to_cpu_fp64": 0.002956039741907313,
+      "max_abs_error_to_cpu_fp64": 0.006971476292847001,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_bf16_pair",
+      "milliseconds": 0.9004544258117676,
+      "relative_rms_to_cpu_fp64": 0.001668069188808287,
+      "max_abs_error_to_cpu_fp64": 0.003882982228333276,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_fp32",
+      "milliseconds": 0.8334336280822754,
+      "relative_rms_to_cpu_fp64": 0.001668069188808287,
+      "max_abs_error_to_cpu_fp64": 0.003882982228333276,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "cuda_mmq",
+      "milliseconds": 6.560153961181641,
+      "relative_rms_to_cpu_fp64": 0.0059959560755245235,
+      "max_abs_error_to_cpu_fp64": 0.012275209151368927,
+      "finite": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "plugin_triton",
+      "milliseconds": 3.2194049835205076,
+      "relative_rms_to_cpu_fp64": 0.0028533023336733874,
+      "max_abs_error_to_cpu_fp64": 0.006591425883470947,
+      "finite": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_64_128",
+      "milliseconds": 2.8216320037841798,
+      "relative_rms_to_cpu_fp64": 0.002370295495173459,
+      "max_abs_error_to_cpu_fp64": 0.00540985347659273,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_32_64_128",
+      "milliseconds": 1.7014783859252929,
+      "relative_rms_to_cpu_fp64": 0.002370295495173459,
+      "max_abs_error_to_cpu_fp64": 0.00540985347659273,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_128_128",
+      "milliseconds": 9.89854736328125,
+      "relative_rms_to_cpu_fp64": 0.002370295495173459,
+      "max_abs_error_to_cpu_fp64": 0.00540985347659273,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_64_256",
+      "milliseconds": 8.976127624511719,
+      "relative_rms_to_cpu_fp64": 0.002370295495173459,
+      "max_abs_error_to_cpu_fp64": 0.00540985347659273,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_pair",
+      "milliseconds": 3.6552192687988283,
+      "relative_rms_to_cpu_fp64": 0.0016976704434851083,
+      "max_abs_error_to_cpu_fp64": 0.0037747241177612523,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "direct_tf32x3",
+      "milliseconds": 6.3271934509277346,
+      "relative_rms_to_cpu_fp64": 0.0016975445814626153,
+      "max_abs_error_to_cpu_fp64": 0.0037747241177612523,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "cuda_dequant_cublas_bf16",
+      "milliseconds": 0.8477184295654296,
+      "relative_rms_to_cpu_fp64": 0.0029790942265614647,
+      "max_abs_error_to_cpu_fp64": 0.007869881457054362,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_bf16",
+      "milliseconds": 1.0361856460571288,
+      "relative_rms_to_cpu_fp64": 0.0028282800910462416,
+      "max_abs_error_to_cpu_fp64": 0.007869881457054362,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_bf16_pair",
+      "milliseconds": 1.6235519409179688,
+      "relative_rms_to_cpu_fp64": 0.0016975445833319024,
+      "max_abs_error_to_cpu_fp64": 0.0037747241177612523,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_fp32",
+      "milliseconds": 2.180300712585449,
+      "relative_rms_to_cpu_fp64": 0.0016975445833319024,
+      "max_abs_error_to_cpu_fp64": 0.0037747241177612523,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "cuda_mmq",
+      "milliseconds": 108.79923095703126,
+      "relative_rms_to_cpu_fp64": 0.00546903676914215,
+      "max_abs_error_to_cpu_fp64": 0.01127067171728413,
+      "finite": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "plugin_triton",
+      "milliseconds": 31.862271118164063,
+      "relative_rms_to_cpu_fp64": 0.0025986875276715797,
+      "max_abs_error_to_cpu_fp64": 0.006427714658684636,
+      "finite": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_64_128",
+      "milliseconds": 46.419866943359374,
+      "relative_rms_to_cpu_fp64": 0.002348625382334639,
+      "max_abs_error_to_cpu_fp64": 0.005727491218124214,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_32_64_128",
+      "milliseconds": 27.353753662109376,
+      "relative_rms_to_cpu_fp64": 0.002348625382334639,
+      "max_abs_error_to_cpu_fp64": 0.005727491218124214,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_128_128",
+      "milliseconds": 144.964453125,
+      "relative_rms_to_cpu_fp64": 0.002348625382334639,
+      "max_abs_error_to_cpu_fp64": 0.005727491218124214,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_64_256",
+      "milliseconds": 144.694482421875,
+      "relative_rms_to_cpu_fp64": 0.002348625382334639,
+      "max_abs_error_to_cpu_fp64": 0.005727491218124214,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_pair",
+      "milliseconds": 56.792266845703125,
+      "relative_rms_to_cpu_fp64": 0.0016366237538667405,
+      "max_abs_error_to_cpu_fp64": 0.004865565529030391,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "direct_tf32x3",
+      "milliseconds": 103.54376220703125,
+      "relative_rms_to_cpu_fp64": 0.0016366146365333356,
+      "max_abs_error_to_cpu_fp64": 0.004865565529030391,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "cuda_dequant_cublas_bf16",
+      "milliseconds": 7.507353973388672,
+      "relative_rms_to_cpu_fp64": 0.0024982357569354216,
+      "max_abs_error_to_cpu_fp64": 0.005116443256270031,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_bf16",
+      "milliseconds": 7.696025848388672,
+      "relative_rms_to_cpu_fp64": 0.002348625382334639,
+      "max_abs_error_to_cpu_fp64": 0.005727491218124214,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_bf16_pair",
+      "milliseconds": 15.460710144042968,
+      "relative_rms_to_cpu_fp64": 0.0016366146365333356,
+      "max_abs_error_to_cpu_fp64": 0.004865565529030391,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_fp32",
+      "milliseconds": 27.2279541015625,
+      "relative_rms_to_cpu_fp64": 0.0016366146365333356,
+      "max_abs_error_to_cpu_fp64": 0.004865565529030391,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "cuda_mmvq",
+      "milliseconds": 0.1868288040161133,
+      "relative_rms_to_cpu_fp64": 0.005380110981465924,
+      "max_abs_error_to_cpu_fp64": 0.010677150858441564,
+      "finite": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "cuda_mmq",
+      "milliseconds": 0.10081280469894409,
+      "relative_rms_to_cpu_fp64": 0.010749775650257226,
+      "max_abs_error_to_cpu_fp64": 0.0190566839185351,
+      "finite": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "plugin_triton",
+      "milliseconds": 0.4940767765045166,
+      "relative_rms_to_cpu_fp64": 0.006717531819349054,
+      "max_abs_error_to_cpu_fp64": 0.013338909575054458,
+      "finite": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_64_128",
+      "milliseconds": 0.15575040578842164,
+      "relative_rms_to_cpu_fp64": 0.0021529701573350293,
+      "max_abs_error_to_cpu_fp64": 0.0053662266280980475,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_32_64_128",
+      "milliseconds": 0.19722239971160888,
+      "relative_rms_to_cpu_fp64": 0.0021529701573350293,
+      "max_abs_error_to_cpu_fp64": 0.0053662266280980475,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_128_128",
+      "milliseconds": 0.24099841117858886,
+      "relative_rms_to_cpu_fp64": 0.0021529701573350293,
+      "max_abs_error_to_cpu_fp64": 0.0053662266280980475,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_64_256",
+      "milliseconds": 0.21416959762573243,
+      "relative_rms_to_cpu_fp64": 0.0021529701573350293,
+      "max_abs_error_to_cpu_fp64": 0.0053662266280980475,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_pair",
+      "milliseconds": 0.3607039928436279,
+      "relative_rms_to_cpu_fp64": 0.001589065460930931,
+      "max_abs_error_to_cpu_fp64": 0.003828175589433158,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "direct_tf32x3",
+      "milliseconds": 0.615065622329712,
+      "relative_rms_to_cpu_fp64": 0.0015889547950741938,
+      "max_abs_error_to_cpu_fp64": 0.003828175589433158,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "cuda_dequant_cublas_bf16",
+      "milliseconds": 0.4927951812744141,
+      "relative_rms_to_cpu_fp64": 0.002979473754041804,
+      "max_abs_error_to_cpu_fp64": 0.007017414860371218,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_bf16",
+      "milliseconds": 0.6498816013336182,
+      "relative_rms_to_cpu_fp64": 0.00291138661149678,
+      "max_abs_error_to_cpu_fp64": 0.007017414860371218,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_bf16_pair",
+      "milliseconds": 0.8438272476196289,
+      "relative_rms_to_cpu_fp64": 0.0015889547950741938,
+      "max_abs_error_to_cpu_fp64": 0.003828175589433158,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_fp32",
+      "milliseconds": 0.7918079853057861,
+      "relative_rms_to_cpu_fp64": 0.0015889547950741938,
+      "max_abs_error_to_cpu_fp64": 0.003828175589433158,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "cuda_mmvq",
+      "milliseconds": 0.7220223903656006,
+      "relative_rms_to_cpu_fp64": 0.005571365171177301,
+      "max_abs_error_to_cpu_fp64": 0.013364551403697078,
+      "finite": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "cuda_mmq",
+      "milliseconds": 0.31744000911712644,
+      "relative_rms_to_cpu_fp64": 0.012322464073271948,
+      "max_abs_error_to_cpu_fp64": 0.022531418269814196,
+      "finite": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "plugin_triton",
+      "milliseconds": 0.5960192203521728,
+      "relative_rms_to_cpu_fp64": 0.007766103747803355,
+      "max_abs_error_to_cpu_fp64": 0.01850637440583114,
+      "finite": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_64_128",
+      "milliseconds": 0.18247679471969605,
+      "relative_rms_to_cpu_fp64": 0.0023921681026551787,
+      "max_abs_error_to_cpu_fp64": 0.0057843685987961635,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_32_64_128",
+      "milliseconds": 0.22210559844970704,
+      "relative_rms_to_cpu_fp64": 0.0023921681026551787,
+      "max_abs_error_to_cpu_fp64": 0.0057843685987961635,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_128_128",
+      "milliseconds": 0.25425920486450193,
+      "relative_rms_to_cpu_fp64": 0.0023921681026551787,
+      "max_abs_error_to_cpu_fp64": 0.0057843685987961635,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_64_256",
+      "milliseconds": 0.24576001167297362,
+      "relative_rms_to_cpu_fp64": 0.0023921681026551787,
+      "max_abs_error_to_cpu_fp64": 0.0057843685987961635,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_pair",
+      "milliseconds": 0.37703680992126465,
+      "relative_rms_to_cpu_fp64": 0.0017064244723349698,
+      "max_abs_error_to_cpu_fp64": 0.0057843685987961635,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "direct_tf32x3",
+      "milliseconds": 0.6276607990264893,
+      "relative_rms_to_cpu_fp64": 0.0017062002582743851,
+      "max_abs_error_to_cpu_fp64": 0.0057843685987961635,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "cuda_dequant_cublas_bf16",
+      "milliseconds": 0.4975103855133057,
+      "relative_rms_to_cpu_fp64": 0.0029641956802109242,
+      "max_abs_error_to_cpu_fp64": 0.006288738696639484,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_bf16",
+      "milliseconds": 0.6591487884521484,
+      "relative_rms_to_cpu_fp64": 0.0029027283889740403,
+      "max_abs_error_to_cpu_fp64": 0.007791695832679579,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_bf16_pair",
+      "milliseconds": 0.9081855773925781,
+      "relative_rms_to_cpu_fp64": 0.0017062105357880085,
+      "max_abs_error_to_cpu_fp64": 0.0057843685987961635,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        16,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_fp32",
+      "milliseconds": 0.8862719535827637,
+      "relative_rms_to_cpu_fp64": 0.0017062002582743851,
+      "max_abs_error_to_cpu_fp64": 0.0057843685987961635,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "cuda_mmq",
+      "milliseconds": 4.590182495117188,
+      "relative_rms_to_cpu_fp64": 0.010227027795393672,
+      "max_abs_error_to_cpu_fp64": 0.01893948918723254,
+      "finite": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "plugin_triton",
+      "milliseconds": 1.235763168334961,
+      "relative_rms_to_cpu_fp64": 0.007850147274499938,
+      "max_abs_error_to_cpu_fp64": 0.01713220583792463,
+      "finite": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_64_128",
+      "milliseconds": 1.6228864669799805,
+      "relative_rms_to_cpu_fp64": 0.00202678197956481,
+      "max_abs_error_to_cpu_fp64": 0.005105988713808074,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_32_64_128",
+      "milliseconds": 1.1453439712524414,
+      "relative_rms_to_cpu_fp64": 0.00202678197956481,
+      "max_abs_error_to_cpu_fp64": 0.005105988713808074,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_128_128",
+      "milliseconds": 2.4869375228881836,
+      "relative_rms_to_cpu_fp64": 0.00202678197956481,
+      "max_abs_error_to_cpu_fp64": 0.005105988713808074,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_64_256",
+      "milliseconds": 2.418227195739746,
+      "relative_rms_to_cpu_fp64": 0.00202678197956481,
+      "max_abs_error_to_cpu_fp64": 0.005105988713808074,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_pair",
+      "milliseconds": 3.403059387207031,
+      "relative_rms_to_cpu_fp64": 0.001482291438770247,
+      "max_abs_error_to_cpu_fp64": 0.004244729888853271,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "direct_tf32x3",
+      "milliseconds": 5.553100967407227,
+      "relative_rms_to_cpu_fp64": 0.0014822657775171017,
+      "max_abs_error_to_cpu_fp64": 0.004244729888853271,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "cuda_dequant_cublas_bf16",
+      "milliseconds": 0.8334848403930664,
+      "relative_rms_to_cpu_fp64": 0.0026803270981348546,
+      "max_abs_error_to_cpu_fp64": 0.007717237151041445,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_bf16",
+      "milliseconds": 1.0170368194580077,
+      "relative_rms_to_cpu_fp64": 0.0025910407141147476,
+      "max_abs_error_to_cpu_fp64": 0.008073824073562719,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_bf16_pair",
+      "milliseconds": 1.6858623504638672,
+      "relative_rms_to_cpu_fp64": 0.0014822657775171017,
+      "max_abs_error_to_cpu_fp64": 0.004244729888853271,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        256,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_fp32",
+      "milliseconds": 2.2488576889038088,
+      "relative_rms_to_cpu_fp64": 0.0014822657775171017,
+      "max_abs_error_to_cpu_fp64": 0.004244729888853271,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "cuda_mmq",
+      "milliseconds": 76.98534545898437,
+      "relative_rms_to_cpu_fp64": 0.010699414922602584,
+      "max_abs_error_to_cpu_fp64": 0.021514462731147432,
+      "finite": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "plugin_triton",
+      "milliseconds": 15.776460266113281,
+      "relative_rms_to_cpu_fp64": 0.008061584217539865,
+      "max_abs_error_to_cpu_fp64": 0.018043844343083038,
+      "finite": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_64_128",
+      "milliseconds": 28.130816650390624,
+      "relative_rms_to_cpu_fp64": 0.002340435002988952,
+      "max_abs_error_to_cpu_fp64": 0.007021796872720643,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_32_64_128",
+      "milliseconds": 18.541567993164062,
+      "relative_rms_to_cpu_fp64": 0.002340435002988952,
+      "max_abs_error_to_cpu_fp64": 0.007021796872720643,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_128_128",
+      "milliseconds": 36.219085693359375,
+      "relative_rms_to_cpu_fp64": 0.002340435002988952,
+      "max_abs_error_to_cpu_fp64": 0.007021796872720643,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_16_64_256",
+      "milliseconds": 39.381964111328124,
+      "relative_rms_to_cpu_fp64": 0.002340435002988952,
+      "max_abs_error_to_cpu_fp64": 0.007021796872720643,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "direct_bf16_pair",
+      "milliseconds": 54.69091796875,
+      "relative_rms_to_cpu_fp64": 0.001648910145321386,
+      "max_abs_error_to_cpu_fp64": 0.004529680701352845,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "direct_tf32x3",
+      "milliseconds": 87.83406372070313,
+      "relative_rms_to_cpu_fp64": 0.001647939280167244,
+      "max_abs_error_to_cpu_fp64": 0.004529680701352845,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "cuda_dequant_cublas_bf16",
+      "milliseconds": 7.507609558105469,
+      "relative_rms_to_cpu_fp64": 0.00239350345203528,
+      "max_abs_error_to_cpu_fp64": 0.005632612287499228,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_bf16",
+      "milliseconds": 7.728947448730469,
+      "relative_rms_to_cpu_fp64": 0.002340435002988952,
+      "max_abs_error_to_cpu_fp64": 0.007021796872720643,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_bf16_pair",
+      "milliseconds": 15.504435729980468,
+      "relative_rms_to_cpu_fp64": 0.001647939280167244,
+      "max_abs_error_to_cpu_fp64": 0.004529680701352845,
+      "finite": true,
+      "correctness_gate": true
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "shape": [
+        4096,
+        5376,
+        10752
+      ],
+      "kernel": "dequant_cublas_fp32",
+      "milliseconds": 27.399679565429686,
+      "relative_rms_to_cpu_fp64": 0.001647939280167244,
+      "max_abs_error_to_cpu_fp64": 0.004529680701352845,
+      "finite": true,
+      "correctness_gate": true
+    }
+  ],
+  "utc_unix_finished": 1792771130.808926
+}

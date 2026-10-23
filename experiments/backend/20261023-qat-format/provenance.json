@@ -1,0 +1,89 @@
+{
+  "source_repo": "HauhauCS/Gemma4-31B-QAT-Uncensored-HauhauCS-Balanced-MTP",
+  "source_revision": "9654466e82d83f5ebfe1518a369bc5900873abb1",
+  "source_verification": {
+    "utc": "2026-10-21T16:50:22.662998+00:00",
+    "source_revision": "9654466e82d83f5ebfe1518a369bc5900873abb1",
+    "files": [
+      {
+        "file": "Gemma4-31B-QAT-Uncensored-HauhauCS-Balanced-Q4_K_M.gguf",
+        "bytes": 18687062176,
+        "sha256": "71667f9e601a4b914a98425c59150b731f6e15d260d661dbd1f1ee07469fc7db"
+      },
+      {
+        "file": "mmproj-Gemma4-31B-QAT-Uncensored-HauhauCS-Balanced-BF16.gguf",
+        "bytes": 1200726016,
+        "sha256": "7bef0d0fb3e85fc2941ec5f1c375febf3742645f158132a43ced557093aea841"
+      },
+      {
+        "file": "mtp-gemma-4-31B-it.gguf",
+        "bytes": 279954368,
+        "sha256": "b5c4e583fc5982439080114bbc1b7edaec361f9d4c9193d6bed606a3de401b62"
+      }
+    ],
+    "qat_backbone_requantized": false,
+    "published_template_preserved": true
+  },
+  "conversion_receipt": {
+    "source": "/home/isnotreal/models/gemma4-31b-qat-hauhau-balanced-mtp-gguf",
+    "output": "/home/isnotreal/models/gemma4-31b-qat-hauhau-balanced-native-mixed-w4w8a16",
+    "seconds": 1121.8009016920005,
+    "format": "compressed-tensors affine INT4 and symmetric INT8 group32; symmetric INT4 assistant",
+    "Q4_K": "Non-QKV Q4_K linear codes retained; QKV companions use symmetric INT8 for fused-kernel compatibility. BF16 group parameters introduce the recorded rounding error.",
+    "Q6_K_linears_and_fused_QKV": "INT8 group32; error per tensor in export-progress.json",
+    "vision_and_embeddings": "BF16",
+    "runtime_requires": "vLLM CompressedTensorsWNA16 floating-zero-point support",
+    "tested_for_inference": true,
+    "inference_validation": {
+      "vllm": "0.32.0 with local patches",
+      "trial": "/home/isnotreal/model-tools/gemma31-qat-mtp-20261021/native-qat-tq4/trials/20261022T154216Z",
+      "report": "/home/isnotreal/model-tools/gemma31-qat-mtp-20261021/native-qat-tq4/RESULTS.md",
+      "scope": "Vision, thinking, benign tools/pivot workflow, native API, unchanged Claude Code, short-context throughput and 195k retrieval/continuation passed. Not broad model-quality retention."
+    }
+  },
+  "matching_support_files": {
+    "tokenizer.json": {
+      "converted_sha256": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+      "source_sha256": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+      "identical": true
+    },
+    "tokenizer_config.json": {
+      "converted_sha256": "243e040a23c3b67854d8dd107d5794553598c6837ca1e76022f805a22f467363",
+      "source_sha256": "243e040a23c3b67854d8dd107d5794553598c6837ca1e76022f805a22f467363",
+      "identical": true
+    },
+    "chat_template.jinja": {
+      "converted_sha256": "94899c0f917d93f6fe81c95744d1e8ddab2d21d39228d2e4aec1fb2a25bff413",
+      "source_sha256": "94899c0f917d93f6fe81c95744d1e8ddab2d21d39228d2e4aec1fb2a25bff413",
+      "identical": true
+    },
+    "generation_config.json": {
+      "converted_sha256": "d4226bbe3117d2d253ba4609720ba82c6c4ce4627a9a6ae05387c78983ac03de",
+      "source_sha256": "d4226bbe3117d2d253ba4609720ba82c6c4ce4627a9a6ae05387c78983ac03de",
+      "identical": true
+    },
+    "processor_config.json": {
+      "converted_sha256": "32bdf45d2ad4cc29a0822ddd157a182de76644f0419a6228d151495256e9813c",
+      "source_sha256": "32bdf45d2ad4cc29a0822ddd157a182de76644f0419a6228d151495256e9813c",
+      "identical": true
+    }
+  },
+  "model_config_equal_except_quantization": true,
+  "versions": {
+    "vllm": "0.32.0",
+    "torch": "2.13.0",
+    "transformers": "5.16.1",
+    "compressed-tensors": "0.17.0",
+    "gguf": "0.19.0",
+    "vllm-gguf-plugin": "0.0.5",
+    "triton": "3.7.1"
+  },
+  "source_interpretation": "Matching original published Hauhau GGUF. Official Google QAT is a different checkpoint and is not a fair quantization-only comparator.",
+  "kernel_numerics_note": "Native conversion uses BF16 activations with packed INT4/INT8 Marlin and affine correction. Original GGUF dispatch uses GGML A8 GEMV/GEMM kernels; original file preservation does not imply identical floating-point execution.",
+  "isolated_plugin_changes": [
+    "Use transformers Qwen3_5Config import instead of removed vLLM config shim.",
+    "Use transformers Qwen3_5MoeConfig import instead of removed vLLM config shim.",
+    "Use installed CUDA extension through symlink; preserve isolated Gemma vision/MTP-capable plugin implementation."
+  ],
+  "runtime_binary_changed": false
+}

@@ -1,0 +1,122 @@
+[
+  {
+    "name": "blk.0.ffn_down.weight",
+    "method": "direct",
+    "precision": "bf16",
+    "w_stride": [
+      1294,
+      1
+    ],
+    "x_stride": [
+      1536,
+      2
+    ],
+    "nonzero_storage_offsets": true,
+    "relative_rms": 0.0022840981968483814
+  },
+  {
+    "name": "blk.0.ffn_down.weight",
+    "method": "dequant_cublas",
+    "precision": "bf16",
+    "w_stride": [
+      1294,
+      1
+    ],
+    "x_stride": [
+      1536,
+      2
+    ],
+    "nonzero_storage_offsets": true,
+    "relative_rms": 0.002870183627904288
+  },
+  {
+    "name": "blk.0.ffn_down.weight",
+    "method": "direct",
+    "precision": "bf16_pair",
+    "w_stride": [
+      1294,
+      1
+    ],
+    "x_stride": [
+      1536,
+      2
+    ],
+    "nonzero_storage_offsets": true,
+    "relative_rms": 0.001665882775469778
+  },
+  {
+    "name": "blk.0.ffn_down.weight",
+    "method": "dequant_cublas",
+    "precision": "bf16_pair",
+    "w_stride": [
+      1294,
+      1
+    ],
+    "x_stride": [
+      1536,
+      2
+    ],
+    "nonzero_storage_offsets": true,
+    "relative_rms": 0.0016658822583784196
+  },
+  {
+    "name": "blk.10.ffn_down.weight",
+    "method": "direct",
+    "precision": "bf16",
+    "w_stride": [
+      898,
+      1
+    ],
+    "x_stride": [
+      1536,
+      2
+    ],
+    "nonzero_storage_offsets": true,
+    "relative_rms": 0.0023394857372539993
+  },
+  {
+    "name": "blk.10.ffn_down.weight",
+    "method": "dequant_cublas",
+    "precision": "bf16",
+    "w_stride": [
+      898,
+      1
+    ],
+    "x_stride": [
+      1536,
+      2
+    ],
+    "nonzero_storage_offsets": true,
+    "relative_rms": 0.0028473934863553307
+  },
+  {
+    "name": "blk.10.ffn_down.weight",
+    "method": "direct",
+    "precision": "bf16_pair",
+    "w_stride": [
+      898,
+      1
+    ],
+    "x_stride": [
+      1536,
+      2
+    ],
+    "nonzero_storage_offsets": true,
+    "relative_rms": 0.001659211774052407
+  },
+  {
+    "name": "blk.10.ffn_down.weight",
+    "method": "dequant_cublas",
+    "precision": "bf16_pair",
+    "w_stride": [
+      898,
+      1
+    ],
+    "x_stride": [
+      1536,
+      2
+    ],
+    "nonzero_storage_offsets": true,
+    "relative_rms": 0.001659211774052407
+  }
+]

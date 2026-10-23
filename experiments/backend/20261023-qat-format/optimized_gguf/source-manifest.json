@@ -1,0 +1,24 @@
+{
+  "installed_source_files": {
+    "/home/isnotreal/model-tools/backend-qat-backup-20261023/gguf-runtime/vllm_gguf_plugin/quantization/linear.py": "b40556bc026632e610adaee2855d42ddc3d00d99ba07fdfee7cae171ec180efe",
+    "/home/isnotreal/model-tools/backend-qat-backup-20261023/gguf-runtime/vllm_gguf_plugin/ops.py": "daac821e871ff73df30b1836c17a7ef9574f8be6e4bedd5f6456c442b69c90db",
+    "/home/isnotreal/model-tools/backend-qat-backup-20261023/gguf-runtime/vllm_gguf_plugin/csrc/gguf/mmq.cuh": "1a3a8fb8cd9d1682a421bba53df92fdb323f7ba00956ab04bced4865cf9ad030",
+    "/home/isnotreal/model-tools/backend-qat-backup-20261023/gguf-runtime/vllm_gguf_plugin/csrc/gguf/vecdotq.cuh": "4972eddb514db4a12a996e667905a86fe8ce0f0f42e9839dd2db75774ad5d326",
+    "/home/isnotreal/model-tools/backend-qat-backup-20261023/gguf-runtime/vllm_gguf_plugin/csrc/gguf/gguf_kernel.cu": "4da2c6a6c0f9b0e60661f8334f2d356322f6f4f443b51dcfa570c4da57291e38",
+    "/home/isnotreal/model-tools/backend-qat-backup-20261023/gguf-runtime/vllm_gguf_plugin/triton/gemm/k_quant/q4_k.py": "8a3f708e6efb9351125ac4388c9b1cccc545a4e0b10929ec6d19e1178c99e96d",
+    "/home/isnotreal/model-tools/backend-qat-backup-20261023/gguf-runtime/vllm_gguf_plugin/triton/gemm/k_quant/q6_k.py": "1f5eb00e017b24b8651cfe814856747a1b86e6b0e2b140d318c66fd48fd0a80c",
+    "/home/isnotreal/vllm-env/lib/python3.12/site-packages/vllm/model_executor/layers/quantization/compressed_tensors/schemes/compressed_tensors_wNa16.py": "b7207a189d6bcee8f04a83fce08689c45d7d2461af21c27bef1b2ea754321694"
+  },
+  "source_revision": "9654466e82d83f5ebfe1518a369bc5900873abb1",
+  "upstream_reference": {
+    "repository": "https://github.com/ggml-org/llama.cpp",
+    "sha": "36e36e63a54fc8f85b95e9c499a022b597e478dd",
+    "files": [
+      "ggml/src/ggml-cuda/mmq.cuh",
+      "ggml/src/ggml-cuda/mmq-vec-dot.cuh",
+      "ggml/src/ggml-cuda/mmq-config-ampere.cuh",
+      "ggml/src/ggml-cuda/mma.cuh",
+      "ggml/src/ggml-common.h"
+    ]
+  }
+}

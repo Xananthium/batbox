@@ -1,0 +1,143 @@
+diff --git a/vllm_gguf_plugin/plugin.py b/vllm_gguf_plugin/plugin.py
+index a9299d7..6e57865 100644
+--- a/vllm_gguf_plugin/plugin.py
++++ b/vllm_gguf_plugin/plugin.py
+@@ -86,7 +86,14 @@ def _patch_engine_args() -> None:
+         if self.speculative_config is not None:
+             configured_model = configured_model or self.speculative_config.get("model")
+ 
+-        # A standalone MTP GGUF has draft weights but no Hugging Face config.
++        # Gemma's separately packaged assistant has its own HF configuration.
++        # Preserve that configuration rather than replacing it with the target.
++        local_draft_config = (
++            configured_model is not None
++            and check_gguf_file(configured_model)
++            and (Path(configured_model).parent / "config.json").is_file()
++        )
++        # Other standalone MTP GGUFs have draft weights but no HF config.
+         # Build the draft config from the target's config, then point its
+         # weights at the explicit GGUF file. The MTP adapter loads only nextn.
+         explicit_gguf_draft = (
+@@ -95,6 +102,7 @@ def _patch_engine_args() -> None:
+             and _is_gguf_reference(self.model_weights)
+             and self.speculative_config is not None
+             and self.speculative_config.get("method") == "mtp"
++            and not local_draft_config
+         )
+         if explicit_gguf_draft:
+             target_model_config = args[0] if args else kwargs["target_model_config"]
+@@ -114,6 +122,9 @@ def _patch_engine_args() -> None:
+         else:
+             config = original_create_speculative_config(self, *args, **kwargs)
+         gguf_model = self.model_weights
++        if config is not None and local_draft_config:
++            config.draft_model_config.model_weights = configured_model
++            config.draft_model_config.model = str(Path(configured_model).parent)
+         if (
+             config is not None
+             and config.method == "mtp"
+diff --git a/vllm_gguf_plugin/weights_adapter/__init__.py b/vllm_gguf_plugin/weights_adapter/__init__.py
+index be2c1d7..50db5cd 100644
+--- a/vllm_gguf_plugin/weights_adapter/__init__.py
++++ b/vllm_gguf_plugin/weights_adapter/__init__.py
+@@ -11,7 +11,7 @@ from .diffusion import (
+     get_diffusion_gguf_adapter,
+ )
+ from .gemma3 import Gemma3GGUFAdapter
+-from .gemma4 import Gemma4GGUFAdapter
++from .gemma4 import Gemma4GGUFAdapter, Gemma4MtpGGUFAdapter
+ from .olmoe import OLMoEGGUFAdapter
+ from .qwen3_5 import Qwen35GGUFAdapter, Qwen35MtpGGUFAdapter
+ from .transformers import TransformersGGUFWeightsAdapter
+@@ -19,6 +19,7 @@ from .transformers import TransformersGGUFWeightsAdapter
+ _ADAPTER_REGISTRY: list[type[BaseGGUFWeightsAdapter]] = [
+     Gemma3GGUFAdapter,
+     Gemma4GGUFAdapter,
++    Gemma4MtpGGUFAdapter,
+     OLMoEGGUFAdapter,
+     Qwen35GGUFAdapter,
+     Qwen35MtpGGUFAdapter,
+@@ -48,6 +49,7 @@ __all__ = [
+     "GGUFModelFiles",
+     "Gemma3GGUFAdapter",
+     "Gemma4GGUFAdapter",
++    "Gemma4MtpGGUFAdapter",
+     "OLMoEGGUFAdapter",
+     "QwenImageDiffusionGGUFAdapter",
+     "Qwen35GGUFAdapter",
+diff --git a/vllm_gguf_plugin/weights_adapter/gemma4.py b/vllm_gguf_plugin/weights_adapter/gemma4.py
+index 6d61e2a..4468e35 100644
+--- a/vllm_gguf_plugin/weights_adapter/gemma4.py
++++ b/vllm_gguf_plugin/weights_adapter/gemma4.py
+@@ -183,5 +183,56 @@ class Gemma4GGUFAdapter(BaseGGUFWeightsAdapter):
+         del model_config
+         for name, weight in weights:
+             if name == "model.vision_tower.patch_embedder.input_proj.weight":
++                if weight.ndim == 4:
++                    # GGUF convolution is OIHW; the processor emits HWC patches.
++                    weight = weight.permute(0, 2, 3, 1).contiguous()
+                 weight = weight.flatten(1)
+             yield from self._split_expert_weights(name, weight)
++
++
++class Gemma4MtpGGUFAdapter(BaseGGUFWeightsAdapter):
++    """Load a standalone Gemma 4 assistant GGUF through native MTP execution.
++
++    Assistant attention has Q projections only; its K/V cache is supplied by
++    the target model. The assistant embedding is retained for its own output
++    head while vLLM shares the target embedding for draft inputs.
++    """
++
++    @classmethod
++    def matches(cls, config) -> bool:
++        return config.model_type in ("gemma4_assistant", "gemma4_mtp")
++
++    @classmethod
++    def architecture(cls, config) -> str:
++        return "Gemma4MTPModel"
++
++    @staticmethod
++    def map_name(name: str) -> str | None:
++        mapper = WeightsMapper(
++            orig_to_new_prefix={
++                "token_embd.": "model.embed_tokens.",
++                "blk.": "model.layers.",
++                "output_norm.": "model.norm.",
++                "output.": "lm_head.",
++                "nextn.pre_projection.": "pre_projection.",
++                "nextn.post_projection.": "post_projection.",
++            },
++            orig_to_new_substr=GEMMA4_TEXT_SUBSTR,
++        )
++        return _map_tensor_name(mapper, name)
++
++    def build_name_map(
++        self,
++        files: GGUFModelFiles,
++        model_config: ModelConfig,
++    ) -> dict[str, str]:
++        del model_config
++        names = sorted(get_gguf_tensor_names(files.backbone))
++        mapping = {}
++        for name in names:
++            mapped = self.map_name(name)
++            if mapped is not None:
++                mapping[name] = mapped
++            elif name != "rope_freqs.weight":
++                raise ValueError(f"Unmapped Gemma 4 assistant tensor: {name}")
++        return mapping
+diff --git a/vllm_gguf_plugin/weights_adapter/qwen3_5.py b/vllm_gguf_plugin/weights_adapter/qwen3_5.py
+index 30797ae..63c3ea9 100644
+--- a/vllm_gguf_plugin/weights_adapter/qwen3_5.py
++++ b/vllm_gguf_plugin/weights_adapter/qwen3_5.py
+@@ -11,8 +11,8 @@ import gguf
+ import torch
+ from vllm.logger import init_logger
+ from vllm.model_executor.models.utils import WeightsMapper
+-from vllm.transformers_utils.configs.qwen3_5 import Qwen3_5Config
+-from vllm.transformers_utils.configs.qwen3_5_moe import Qwen3_5MoeConfig
++from transformers.models.qwen3_5.configuration_qwen3_5 import Qwen3_5Config
++from transformers.models.qwen3_5_moe.configuration_qwen3_5_moe import Qwen3_5MoeConfig
+ 
+ from ..gguf_files import GGUFModelFiles
+ from ..gguf_utils import maybe_patch_hf_config_from_gguf

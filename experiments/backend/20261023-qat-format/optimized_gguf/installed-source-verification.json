@@ -1,0 +1,8 @@
+{
+  "utc": "2026-10-23T17:02:07.545893+00:00",
+  "scope": "All saved Python source files in installed vllm/compressed_tensors snapshots; binary dependencies were not rewritten by this experiment",
+  "checked_files": 2988,
+  "changed": [],
+  "missing": [],
+  "baseline_manifest_sha256": "a23c6ce69c3ddcf517c9bd743c9fd23f8a99a3ca94f16308f1f4e68e34120462"
+}

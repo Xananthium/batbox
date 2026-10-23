@@ -1,0 +1,6 @@
+{
+  "sample_count": 2550,
+  "max_observed_mib_per_gpu": 20666,
+  "scope": "NVML1-second samples spanning trial serving and final release restart; not true allocator peak",
+  "graph_capture_reported_gib_per_gpu": 0.37
+}

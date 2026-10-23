@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "status": "experimental force policy, not a measured dispatch table",
+  "rules": [
+    {
+      "qtype": 12,
+      "op": "direct",
+      "precision": "bf16_pair"
+    },
+    {
+      "qtype": 14,
+      "op": "direct",
+      "precision": "bf16_pair"
+    }
+  ]
+}

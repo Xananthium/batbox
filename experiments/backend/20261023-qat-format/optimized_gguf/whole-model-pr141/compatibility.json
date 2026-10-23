@@ -1,0 +1,13 @@
+{
+  "utc": "2026-10-23T16:32:37.838315+00:00",
+  "upstream_commit": "e62877c30519305f3c82dc0d616cf62b5ed67133",
+  "changes": [
+    "Restore already validated Gemma4 MTP adapter/registration for unchanged MTP2",
+    "Preserve already validated Gemma4 vision OIHW to HWC layout correction",
+    "Use Transformers Qwen config imports for installed vLLM0.32 import compatibility",
+    "Preserve existing standalone assistant/config.json instead of PR141 Qwen-oriented target-config override; equivalent to tested baseline Gemma draft loading"
+  ],
+  "kernel_changes": false,
+  "patch_sha256": "af43131572bb3c8c339e8d5cd8212f2a759ae86d430ba766895dc02938c5c06c",
+  "build_provenance_note": "Incremental build: successful upstream TUs from nvcc13.3, final6 remaining objects from nvcc13.0; all SM86, runtime13.0. GPU smoke passed; not a clean all13.0 build."
+}

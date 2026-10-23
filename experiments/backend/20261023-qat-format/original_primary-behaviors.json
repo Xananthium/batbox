@@ -1,0 +1,166 @@
+{
+  "checkpoint": "/home/isnotreal/models/gemma4-31b-qat-hauhau-balanced-mtp-gguf/Gemma4-31B-QAT-Uncensored-HauhauCS-Balanced-Q4_K_M.gguf",
+  "records": [
+    {
+      "test": "forced_tool_call",
+      "passed": true,
+      "response": {
+        "id": "chatcmpl-8be6652039262e26",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "chatcmpl-tool-b71c4c36c0081589",
+            "name": "add",
+            "input": {
+              "a": 3,
+              "b": 4
+            }
+          }
+        ],
+        "model": "qwen3.6-35b-hauhau-w4a16-vision",
+        "stop_reason": "tool_use",
+        "usage": {
+          "input_tokens": 81,
+          "output_tokens": 15
+        }
+      }
+    },
+    {
+      "test": "tool_result_roundtrip",
+      "passed": true,
+      "response": {
+        "id": "chatcmpl-b4f3da138f2cb3b2",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "The sum of 3 and 4 is 7."
+          }
+        ],
+        "model": "qwen3.6-35b-hauhau-w4a16-vision",
+        "stop_reason": "end_turn",
+        "usage": {
+          "input_tokens": 103,
+          "output_tokens": 17
+        }
+      }
+    },
+    {
+      "test": "automatic_tool_choice",
+      "passed": true,
+      "response": {
+        "id": "chatcmpl-8503b677b4766d0d",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "chatcmpl-tool-96f9746c5060960b",
+            "name": "add",
+            "input": {
+              "a": 19,
+              "b": 23
+            }
+          }
+        ],
+        "model": "qwen3.6-35b-hauhau-w4a16-vision",
+        "stop_reason": "tool_use",
+        "usage": {
+          "input_tokens": 84,
+          "output_tokens": 17
+        }
+      }
+    },
+    {
+      "test": "pivot_after_two_errors",
+      "passed": true,
+      "response": {
+        "id": "chatcmpl-a86c220439be0438",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "chatcmpl-tool-aecb02a50c828652",
+            "name": "read_text",
+            "input": {
+              "path": "/reports/quarterly.txt"
+            }
+          }
+        ],
+        "model": "qwen3.6-35b-hauhau-w4a16-vision",
+        "stop_reason": "tool_use",
+        "usage": {
+          "input_tokens": 236,
+          "output_tokens": 25
+        }
+      }
+    },
+    {
+      "test": "workflow_completion",
+      "passed": true,
+      "response": {
+        "id": "chatcmpl-98858bd099ea2447",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "The revenue for the quarter was USD 47 million."
+          }
+        ],
+        "model": "qwen3.6-35b-hauhau-w4a16-vision",
+        "stop_reason": "end_turn",
+        "usage": {
+          "input_tokens": 288,
+          "output_tokens": 17
+        }
+      }
+    },
+    {
+      "test": "vision_red",
+      "passed": true,
+      "response": {
+        "id": "chatcmpl-b194c251deab0c56",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "Red"
+          }
+        ],
+        "model": "qwen3.6-35b-hauhau-w4a16-vision",
+        "stop_reason": "end_turn",
+        "usage": {
+          "input_tokens": 284,
+          "output_tokens": 2
+        }
+      }
+    },
+    {
+      "test": "vision_blue",
+      "passed": true,
+      "response": {
+        "id": "chatcmpl-8573c7ea54d74231",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "Blue"
+          }
+        ],
+        "model": "qwen3.6-35b-hauhau-w4a16-vision",
+        "stop_reason": "end_turn",
+        "usage": {
+          "input_tokens": 284,
+          "output_tokens": 2
+        }
+      }
+    }
+  ]
+}

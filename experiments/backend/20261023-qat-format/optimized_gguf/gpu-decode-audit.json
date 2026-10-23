@@ -1,0 +1,3715 @@
+{
+  "device": "NVIDIA GeForce RTX 3090",
+  "source": "/home/isnotreal/models/gemma4-31b-qat-hauhau-balanced-mtp-gguf/Gemma4-31B-QAT-Uncensored-HauhauCS-Balanced-Q4_K_M.gguf",
+  "scope": "GPU decode correctness; sampled rows from every quantized tensor",
+  "rows": [
+    {
+      "name": "token_embd.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00020715939632637685,
+      "legacy_fp32_bit_mismatches": 14312
+    },
+    {
+      "name": "blk.0.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006370718068480382,
+      "legacy_fp32_bit_mismatches": 20825
+    },
+    {
+      "name": "blk.0.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006144022878747945,
+      "legacy_fp32_bit_mismatches": 31818
+    },
+    {
+      "name": "blk.0.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007027278751085833,
+      "legacy_fp32_bit_mismatches": 20765
+    },
+    {
+      "name": "blk.0.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00022084000109800475,
+      "legacy_fp32_bit_mismatches": 17249
+    },
+    {
+      "name": "blk.0.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021794076894203222,
+      "legacy_fp32_bit_mismatches": 61437
+    },
+    {
+      "name": "blk.0.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006093803422024165,
+      "legacy_fp32_bit_mismatches": 20807
+    },
+    {
+      "name": "blk.0.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006768563287648967,
+      "legacy_fp32_bit_mismatches": 21184
+    },
+    {
+      "name": "blk.1.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006483916288638755,
+      "legacy_fp32_bit_mismatches": 20688
+    },
+    {
+      "name": "blk.1.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006027331283053485,
+      "legacy_fp32_bit_mismatches": 31682
+    },
+    {
+      "name": "blk.1.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006345967216726463,
+      "legacy_fp32_bit_mismatches": 21101
+    },
+    {
+      "name": "blk.1.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00022526116586589286,
+      "legacy_fp32_bit_mismatches": 16473
+    },
+    {
+      "name": "blk.1.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0002187525134446495,
+      "legacy_fp32_bit_mismatches": 61584
+    },
+    {
+      "name": "blk.1.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006594820603846386,
+      "legacy_fp32_bit_mismatches": 21085
+    },
+    {
+      "name": "blk.1.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0005967601106997198,
+      "legacy_fp32_bit_mismatches": 20732
+    },
+    {
+      "name": "blk.2.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006742966980340759,
+      "legacy_fp32_bit_mismatches": 20977
+    },
+    {
+      "name": "blk.2.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006051227248323437,
+      "legacy_fp32_bit_mismatches": 31829
+    },
+    {
+      "name": "blk.2.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000665563140412735,
+      "legacy_fp32_bit_mismatches": 20909
+    },
+    {
+      "name": "blk.2.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00022013944364982817,
+      "legacy_fp32_bit_mismatches": 16861
+    },
+    {
+      "name": "blk.2.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021773856744963056,
+      "legacy_fp32_bit_mismatches": 61624
+    },
+    {
+      "name": "blk.2.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006017609366619595,
+      "legacy_fp32_bit_mismatches": 20864
+    },
+    {
+      "name": "blk.2.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006180249630513957,
+      "legacy_fp32_bit_mismatches": 20934
+    },
+    {
+      "name": "blk.3.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007233887502074252,
+      "legacy_fp32_bit_mismatches": 21163
+    },
+    {
+      "name": "blk.3.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006515923156053179,
+      "legacy_fp32_bit_mismatches": 31926
+    },
+    {
+      "name": "blk.3.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006640788267434051,
+      "legacy_fp32_bit_mismatches": 20968
+    },
+    {
+      "name": "blk.3.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0002213060471111423,
+      "legacy_fp32_bit_mismatches": 17119
+    },
+    {
+      "name": "blk.3.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021818170299436112,
+      "legacy_fp32_bit_mismatches": 61202
+    },
+    {
+      "name": "blk.3.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006781542246696179,
+      "legacy_fp32_bit_mismatches": 21045
+    },
+    {
+      "name": "blk.3.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006142402954827903,
+      "legacy_fp32_bit_mismatches": 20741
+    },
+    {
+      "name": "blk.4.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006808497671119458,
+      "legacy_fp32_bit_mismatches": 20849
+    },
+    {
+      "name": "blk.4.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006402314747239119,
+      "legacy_fp32_bit_mismatches": 32102
+    },
+    {
+      "name": "blk.4.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006133775210478368,
+      "legacy_fp32_bit_mismatches": 21082
+    },
+    {
+      "name": "blk.4.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021957618430646814,
+      "legacy_fp32_bit_mismatches": 16394
+    },
+    {
+      "name": "blk.4.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00022463330047627747,
+      "legacy_fp32_bit_mismatches": 62396
+    },
+    {
+      "name": "blk.4.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006422450642006582,
+      "legacy_fp32_bit_mismatches": 21087
+    },
+    {
+      "name": "blk.4.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006563153186132159,
+      "legacy_fp32_bit_mismatches": 21125
+    },
+    {
+      "name": "blk.5.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006886215123398364,
+      "legacy_fp32_bit_mismatches": 21087
+    },
+    {
+      "name": "blk.5.attn_output.weight",
+      "qtype": 12,
+      "values": 65536,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006184147576572735,
+      "legacy_fp32_bit_mismatches": 63597
+    },
+    {
+      "name": "blk.5.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006137346760915186,
+      "legacy_fp32_bit_mismatches": 20906
+    },
+    {
+      "name": "blk.5.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000219532332922894,
+      "legacy_fp32_bit_mismatches": 60226
+    },
+    {
+      "name": "blk.5.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006372956469077652,
+      "legacy_fp32_bit_mismatches": 20921
+    },
+    {
+      "name": "blk.5.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006654934483431883,
+      "legacy_fp32_bit_mismatches": 21038
+    },
+    {
+      "name": "blk.6.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006711175831360502,
+      "legacy_fp32_bit_mismatches": 20999
+    },
+    {
+      "name": "blk.6.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006415165009016249,
+      "legacy_fp32_bit_mismatches": 31911
+    },
+    {
+      "name": "blk.6.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006712448622302453,
+      "legacy_fp32_bit_mismatches": 21032
+    },
+    {
+      "name": "blk.6.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021823127353661663,
+      "legacy_fp32_bit_mismatches": 17070
+    },
+    {
+      "name": "blk.6.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021917002428231656,
+      "legacy_fp32_bit_mismatches": 61220
+    },
+    {
+      "name": "blk.6.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006407527655348055,
+      "legacy_fp32_bit_mismatches": 21094
+    },
+    {
+      "name": "blk.6.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006847153422676455,
+      "legacy_fp32_bit_mismatches": 20931
+    },
+    {
+      "name": "blk.7.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007815776454764216,
+      "legacy_fp32_bit_mismatches": 21077
+    },
+    {
+      "name": "blk.7.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006472680278995578,
+      "legacy_fp32_bit_mismatches": 31750
+    },
+    {
+      "name": "blk.7.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007033278781642509,
+      "legacy_fp32_bit_mismatches": 21135
+    },
+    {
+      "name": "blk.7.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006259869320606148,
+      "legacy_fp32_bit_mismatches": 21049
+    },
+    {
+      "name": "blk.7.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007053237296153527,
+      "legacy_fp32_bit_mismatches": 83153
+    },
+    {
+      "name": "blk.7.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006376717409754468,
+      "legacy_fp32_bit_mismatches": 20893
+    },
+    {
+      "name": "blk.7.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006596614439827691,
+      "legacy_fp32_bit_mismatches": 21073
+    },
+    {
+      "name": "blk.8.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006702517437340178,
+      "legacy_fp32_bit_mismatches": 21022
+    },
+    {
+      "name": "blk.8.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000641461587830891,
+      "legacy_fp32_bit_mismatches": 32062
+    },
+    {
+      "name": "blk.8.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006476580134810889,
+      "legacy_fp32_bit_mismatches": 20928
+    },
+    {
+      "name": "blk.8.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006646379288582618,
+      "legacy_fp32_bit_mismatches": 20938
+    },
+    {
+      "name": "blk.8.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006452347123376294,
+      "legacy_fp32_bit_mismatches": 83247
+    },
+    {
+      "name": "blk.8.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006432622772801556,
+      "legacy_fp32_bit_mismatches": 21121
+    },
+    {
+      "name": "blk.8.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006880072490974729,
+      "legacy_fp32_bit_mismatches": 21033
+    },
+    {
+      "name": "blk.9.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006741112567178094,
+      "legacy_fp32_bit_mismatches": 21038
+    },
+    {
+      "name": "blk.9.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006687586450683325,
+      "legacy_fp32_bit_mismatches": 32077
+    },
+    {
+      "name": "blk.9.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006463746885664784,
+      "legacy_fp32_bit_mismatches": 21163
+    },
+    {
+      "name": "blk.9.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00020949889934064738,
+      "legacy_fp32_bit_mismatches": 16500
+    },
+    {
+      "name": "blk.9.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021929847639322024,
+      "legacy_fp32_bit_mismatches": 62349
+    },
+    {
+      "name": "blk.9.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006413860812562311,
+      "legacy_fp32_bit_mismatches": 20794
+    },
+    {
+      "name": "blk.9.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006511955384888681,
+      "legacy_fp32_bit_mismatches": 20993
+    },
+    {
+      "name": "blk.10.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006503566363831273,
+      "legacy_fp32_bit_mismatches": 20922
+    },
+    {
+      "name": "blk.10.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006321549152974899,
+      "legacy_fp32_bit_mismatches": 31485
+    },
+    {
+      "name": "blk.10.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006138760349613584,
+      "legacy_fp32_bit_mismatches": 20786
+    },
+    {
+      "name": "blk.10.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000651544642441756,
+      "legacy_fp32_bit_mismatches": 21047
+    },
+    {
+      "name": "blk.10.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006361399199707234,
+      "legacy_fp32_bit_mismatches": 82911
+    },
+    {
+      "name": "blk.10.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006755700442081597,
+      "legacy_fp32_bit_mismatches": 21073
+    },
+    {
+      "name": "blk.10.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000647226605135288,
+      "legacy_fp32_bit_mismatches": 21107
+    },
+    {
+      "name": "blk.11.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006227883635463708,
+      "legacy_fp32_bit_mismatches": 21068
+    },
+    {
+      "name": "blk.11.attn_output.weight",
+      "qtype": 12,
+      "values": 65536,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006226665881582372,
+      "legacy_fp32_bit_mismatches": 63004
+    },
+    {
+      "name": "blk.11.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006169103326648185,
+      "legacy_fp32_bit_mismatches": 20820
+    },
+    {
+      "name": "blk.11.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006546940337817649,
+      "legacy_fp32_bit_mismatches": 82895
+    },
+    {
+      "name": "blk.11.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006485808093191481,
+      "legacy_fp32_bit_mismatches": 21125
+    },
+    {
+      "name": "blk.11.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00064460975242775,
+      "legacy_fp32_bit_mismatches": 20813
+    },
+    {
+      "name": "blk.12.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006793140895262009,
+      "legacy_fp32_bit_mismatches": 21010
+    },
+    {
+      "name": "blk.12.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006398978200725317,
+      "legacy_fp32_bit_mismatches": 31829
+    },
+    {
+      "name": "blk.12.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000659095372439125,
+      "legacy_fp32_bit_mismatches": 21066
+    },
+    {
+      "name": "blk.12.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006973676197562285,
+      "legacy_fp32_bit_mismatches": 21034
+    },
+    {
+      "name": "blk.12.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0002220884011346401,
+      "legacy_fp32_bit_mismatches": 60848
+    },
+    {
+      "name": "blk.12.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006467368069226242,
+      "legacy_fp32_bit_mismatches": 20913
+    },
+    {
+      "name": "blk.12.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006551424972946587,
+      "legacy_fp32_bit_mismatches": 21032
+    },
+    {
+      "name": "blk.13.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006491519624178213,
+      "legacy_fp32_bit_mismatches": 21043
+    },
+    {
+      "name": "blk.13.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006156472453266325,
+      "legacy_fp32_bit_mismatches": 32002
+    },
+    {
+      "name": "blk.13.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006645821578848157,
+      "legacy_fp32_bit_mismatches": 20707
+    },
+    {
+      "name": "blk.13.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00022832708210512485,
+      "legacy_fp32_bit_mismatches": 16786
+    },
+    {
+      "name": "blk.13.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006461851228437423,
+      "legacy_fp32_bit_mismatches": 82880
+    },
+    {
+      "name": "blk.13.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006496958697079983,
+      "legacy_fp32_bit_mismatches": 21147
+    },
+    {
+      "name": "blk.13.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00066199248982154,
+      "legacy_fp32_bit_mismatches": 21048
+    },
+    {
+      "name": "blk.14.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006609821690056071,
+      "legacy_fp32_bit_mismatches": 21107
+    },
+    {
+      "name": "blk.14.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00064423128234372,
+      "legacy_fp32_bit_mismatches": 31839
+    },
+    {
+      "name": "blk.14.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006200386437497611,
+      "legacy_fp32_bit_mismatches": 20813
+    },
+    {
+      "name": "blk.14.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00063446040071349,
+      "legacy_fp32_bit_mismatches": 20635
+    },
+    {
+      "name": "blk.14.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006682976678382843,
+      "legacy_fp32_bit_mismatches": 83616
+    },
+    {
+      "name": "blk.14.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006371941830203819,
+      "legacy_fp32_bit_mismatches": 21106
+    },
+    {
+      "name": "blk.14.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006575240824315482,
+      "legacy_fp32_bit_mismatches": 21243
+    },
+    {
+      "name": "blk.15.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00062579311175301,
+      "legacy_fp32_bit_mismatches": 21071
+    },
+    {
+      "name": "blk.15.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006315093148055671,
+      "legacy_fp32_bit_mismatches": 31727
+    },
+    {
+      "name": "blk.15.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00065173283982192,
+      "legacy_fp32_bit_mismatches": 21069
+    },
+    {
+      "name": "blk.15.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006359144087108926,
+      "legacy_fp32_bit_mismatches": 20874
+    },
+    {
+      "name": "blk.15.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021500940145878665,
+      "legacy_fp32_bit_mismatches": 59420
+    },
+    {
+      "name": "blk.15.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000698822614841575,
+      "legacy_fp32_bit_mismatches": 21076
+    },
+    {
+      "name": "blk.15.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006717600966672862,
+      "legacy_fp32_bit_mismatches": 21003
+    },
+    {
+      "name": "blk.16.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006930543430593854,
+      "legacy_fp32_bit_mismatches": 21141
+    },
+    {
+      "name": "blk.16.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006315337241806582,
+      "legacy_fp32_bit_mismatches": 32054
+    },
+    {
+      "name": "blk.16.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006549150571929504,
+      "legacy_fp32_bit_mismatches": 21007
+    },
+    {
+      "name": "blk.16.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021824193601357322,
+      "legacy_fp32_bit_mismatches": 16549
+    },
+    {
+      "name": "blk.16.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006398611971970922,
+      "legacy_fp32_bit_mismatches": 82803
+    },
+    {
+      "name": "blk.16.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006609565428018362,
+      "legacy_fp32_bit_mismatches": 21172
+    },
+    {
+      "name": "blk.16.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006648986429706855,
+      "legacy_fp32_bit_mismatches": 20999
+    },
+    {
+      "name": "blk.17.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006845604259470498,
+      "legacy_fp32_bit_mismatches": 20822
+    },
+    {
+      "name": "blk.17.attn_output.weight",
+      "qtype": 12,
+      "values": 65536,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006391502912635443,
+      "legacy_fp32_bit_mismatches": 63329
+    },
+    {
+      "name": "blk.17.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006300299444703939,
+      "legacy_fp32_bit_mismatches": 21051
+    },
+    {
+      "name": "blk.17.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006502505841055994,
+      "legacy_fp32_bit_mismatches": 82865
+    },
+    {
+      "name": "blk.17.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006413538882830116,
+      "legacy_fp32_bit_mismatches": 21092
+    },
+    {
+      "name": "blk.17.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000661877809555911,
+      "legacy_fp32_bit_mismatches": 21099
+    },
+    {
+      "name": "blk.18.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006995392127054943,
+      "legacy_fp32_bit_mismatches": 21040
+    },
+    {
+      "name": "blk.18.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006389056445928108,
+      "legacy_fp32_bit_mismatches": 31858
+    },
+    {
+      "name": "blk.18.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006551196524929073,
+      "legacy_fp32_bit_mismatches": 20970
+    },
+    {
+      "name": "blk.18.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006363091663186963,
+      "legacy_fp32_bit_mismatches": 21108
+    },
+    {
+      "name": "blk.18.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021950598864928708,
+      "legacy_fp32_bit_mismatches": 60025
+    },
+    {
+      "name": "blk.18.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006307854225391532,
+      "legacy_fp32_bit_mismatches": 21100
+    },
+    {
+      "name": "blk.18.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006712684253112991,
+      "legacy_fp32_bit_mismatches": 20882
+    },
+    {
+      "name": "blk.19.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006458683079271178,
+      "legacy_fp32_bit_mismatches": 21099
+    },
+    {
+      "name": "blk.19.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006424695388675446,
+      "legacy_fp32_bit_mismatches": 31941
+    },
+    {
+      "name": "blk.19.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006254689246313341,
+      "legacy_fp32_bit_mismatches": 20860
+    },
+    {
+      "name": "blk.19.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006396212858078336,
+      "legacy_fp32_bit_mismatches": 20864
+    },
+    {
+      "name": "blk.19.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000640429661527416,
+      "legacy_fp32_bit_mismatches": 83050
+    },
+    {
+      "name": "blk.19.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006551035319182683,
+      "legacy_fp32_bit_mismatches": 20976
+    },
+    {
+      "name": "blk.19.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006649607791210055,
+      "legacy_fp32_bit_mismatches": 20961
+    },
+    {
+      "name": "blk.20.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006305968282827233,
+      "legacy_fp32_bit_mismatches": 20926
+    },
+    {
+      "name": "blk.20.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006463880453503121,
+      "legacy_fp32_bit_mismatches": 31801
+    },
+    {
+      "name": "blk.20.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000615397215500267,
+      "legacy_fp32_bit_mismatches": 20916
+    },
+    {
+      "name": "blk.20.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0002263160967620299,
+      "legacy_fp32_bit_mismatches": 16983
+    },
+    {
+      "name": "blk.20.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000644636868607515,
+      "legacy_fp32_bit_mismatches": 83331
+    },
+    {
+      "name": "blk.20.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006707001445065453,
+      "legacy_fp32_bit_mismatches": 20920
+    },
+    {
+      "name": "blk.20.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006365269401040123,
+      "legacy_fp32_bit_mismatches": 21005
+    },
+    {
+      "name": "blk.21.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006841830480259645,
+      "legacy_fp32_bit_mismatches": 21068
+    },
+    {
+      "name": "blk.21.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006223287234564403,
+      "legacy_fp32_bit_mismatches": 31925
+    },
+    {
+      "name": "blk.21.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006533226228539907,
+      "legacy_fp32_bit_mismatches": 20789
+    },
+    {
+      "name": "blk.21.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006527182588650238,
+      "legacy_fp32_bit_mismatches": 20888
+    },
+    {
+      "name": "blk.21.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00022431758627778874,
+      "legacy_fp32_bit_mismatches": 60681
+    },
+    {
+      "name": "blk.21.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006314028338511531,
+      "legacy_fp32_bit_mismatches": 20893
+    },
+    {
+      "name": "blk.21.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006579634084911257,
+      "legacy_fp32_bit_mismatches": 20976
+    },
+    {
+      "name": "blk.22.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007096359038141981,
+      "legacy_fp32_bit_mismatches": 21095
+    },
+    {
+      "name": "blk.22.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006364257151244672,
+      "legacy_fp32_bit_mismatches": 31707
+    },
+    {
+      "name": "blk.22.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007049331124648245,
+      "legacy_fp32_bit_mismatches": 20965
+    },
+    {
+      "name": "blk.22.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006693787900926678,
+      "legacy_fp32_bit_mismatches": 21036
+    },
+    {
+      "name": "blk.22.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000655131542963557,
+      "legacy_fp32_bit_mismatches": 83177
+    },
+    {
+      "name": "blk.22.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006787531216568024,
+      "legacy_fp32_bit_mismatches": 20990
+    },
+    {
+      "name": "blk.22.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006510824966885582,
+      "legacy_fp32_bit_mismatches": 21086
+    },
+    {
+      "name": "blk.23.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006961525151107135,
+      "legacy_fp32_bit_mismatches": 20899
+    },
+    {
+      "name": "blk.23.attn_output.weight",
+      "qtype": 12,
+      "values": 65536,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006660344373862699,
+      "legacy_fp32_bit_mismatches": 63039
+    },
+    {
+      "name": "blk.23.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006810611697550758,
+      "legacy_fp32_bit_mismatches": 21130
+    },
+    {
+      "name": "blk.23.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006913989988769816,
+      "legacy_fp32_bit_mismatches": 83749
+    },
+    {
+      "name": "blk.23.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006835327516242818,
+      "legacy_fp32_bit_mismatches": 21125
+    },
+    {
+      "name": "blk.23.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000626272524192232,
+      "legacy_fp32_bit_mismatches": 21119
+    },
+    {
+      "name": "blk.24.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006582171308910635,
+      "legacy_fp32_bit_mismatches": 20798
+    },
+    {
+      "name": "blk.24.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006416501432591962,
+      "legacy_fp32_bit_mismatches": 31993
+    },
+    {
+      "name": "blk.24.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006810138055712377,
+      "legacy_fp32_bit_mismatches": 20705
+    },
+    {
+      "name": "blk.24.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021607080931954634,
+      "legacy_fp32_bit_mismatches": 16775
+    },
+    {
+      "name": "blk.24.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00022821831752273814,
+      "legacy_fp32_bit_mismatches": 63871
+    },
+    {
+      "name": "blk.24.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006723019073792856,
+      "legacy_fp32_bit_mismatches": 21160
+    },
+    {
+      "name": "blk.24.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006654937719132125,
+      "legacy_fp32_bit_mismatches": 21060
+    },
+    {
+      "name": "blk.25.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006420128704835421,
+      "legacy_fp32_bit_mismatches": 21003
+    },
+    {
+      "name": "blk.25.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006105222367051592,
+      "legacy_fp32_bit_mismatches": 31989
+    },
+    {
+      "name": "blk.25.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000666492736657023,
+      "legacy_fp32_bit_mismatches": 20896
+    },
+    {
+      "name": "blk.25.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006691064256750288,
+      "legacy_fp32_bit_mismatches": 21100
+    },
+    {
+      "name": "blk.25.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006674239370009431,
+      "legacy_fp32_bit_mismatches": 83744
+    },
+    {
+      "name": "blk.25.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006077778750321566,
+      "legacy_fp32_bit_mismatches": 21034
+    },
+    {
+      "name": "blk.25.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006561027379720233,
+      "legacy_fp32_bit_mismatches": 20942
+    },
+    {
+      "name": "blk.26.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006565392596220061,
+      "legacy_fp32_bit_mismatches": 20926
+    },
+    {
+      "name": "blk.26.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006337651273928803,
+      "legacy_fp32_bit_mismatches": 31871
+    },
+    {
+      "name": "blk.26.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006244914469328138,
+      "legacy_fp32_bit_mismatches": 21053
+    },
+    {
+      "name": "blk.26.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006491161891515418,
+      "legacy_fp32_bit_mismatches": 20936
+    },
+    {
+      "name": "blk.26.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006694690934170307,
+      "legacy_fp32_bit_mismatches": 83412
+    },
+    {
+      "name": "blk.26.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006863475274009732,
+      "legacy_fp32_bit_mismatches": 21069
+    },
+    {
+      "name": "blk.26.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006675291109151277,
+      "legacy_fp32_bit_mismatches": 21099
+    },
+    {
+      "name": "blk.27.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006819229896200159,
+      "legacy_fp32_bit_mismatches": 20984
+    },
+    {
+      "name": "blk.27.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006752458249661214,
+      "legacy_fp32_bit_mismatches": 32209
+    },
+    {
+      "name": "blk.27.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000605281609803249,
+      "legacy_fp32_bit_mismatches": 20809
+    },
+    {
+      "name": "blk.27.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021925447434827485,
+      "legacy_fp32_bit_mismatches": 16292
+    },
+    {
+      "name": "blk.27.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00022526105846648934,
+      "legacy_fp32_bit_mismatches": 62011
+    },
+    {
+      "name": "blk.27.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000634647267561915,
+      "legacy_fp32_bit_mismatches": 20892
+    },
+    {
+      "name": "blk.27.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007016920977032526,
+      "legacy_fp32_bit_mismatches": 21129
+    },
+    {
+      "name": "blk.28.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006484887303027737,
+      "legacy_fp32_bit_mismatches": 21023
+    },
+    {
+      "name": "blk.28.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006386538713458123,
+      "legacy_fp32_bit_mismatches": 31807
+    },
+    {
+      "name": "blk.28.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006782366735869837,
+      "legacy_fp32_bit_mismatches": 21150
+    },
+    {
+      "name": "blk.28.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007205745702585772,
+      "legacy_fp32_bit_mismatches": 21018
+    },
+    {
+      "name": "blk.28.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006745636434319755,
+      "legacy_fp32_bit_mismatches": 83536
+    },
+    {
+      "name": "blk.28.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006357119733337922,
+      "legacy_fp32_bit_mismatches": 21040
+    },
+    {
+      "name": "blk.28.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006617617689284965,
+      "legacy_fp32_bit_mismatches": 21094
+    },
+    {
+      "name": "blk.29.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000714802313951011,
+      "legacy_fp32_bit_mismatches": 20946
+    },
+    {
+      "name": "blk.29.attn_output.weight",
+      "qtype": 12,
+      "values": 65536,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006721806527617249,
+      "legacy_fp32_bit_mismatches": 63001
+    },
+    {
+      "name": "blk.29.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007030642298632007,
+      "legacy_fp32_bit_mismatches": 21099
+    },
+    {
+      "name": "blk.29.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006833432979030975,
+      "legacy_fp32_bit_mismatches": 83736
+    },
+    {
+      "name": "blk.29.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00067695504380418,
+      "legacy_fp32_bit_mismatches": 20908
+    },
+    {
+      "name": "blk.29.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006499322845945816,
+      "legacy_fp32_bit_mismatches": 21088
+    },
+    {
+      "name": "blk.30.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007108341503694797,
+      "legacy_fp32_bit_mismatches": 21035
+    },
+    {
+      "name": "blk.30.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006256130074271639,
+      "legacy_fp32_bit_mismatches": 31947
+    },
+    {
+      "name": "blk.30.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007187475494408161,
+      "legacy_fp32_bit_mismatches": 21009
+    },
+    {
+      "name": "blk.30.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006026032654951035,
+      "legacy_fp32_bit_mismatches": 21114
+    },
+    {
+      "name": "blk.30.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00022282410825505056,
+      "legacy_fp32_bit_mismatches": 61401
+    },
+    {
+      "name": "blk.30.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006536982909461262,
+      "legacy_fp32_bit_mismatches": 21092
+    },
+    {
+      "name": "blk.30.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006771633511087706,
+      "legacy_fp32_bit_mismatches": 21045
+    },
+    {
+      "name": "blk.31.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007363797498001282,
+      "legacy_fp32_bit_mismatches": 20989
+    },
+    {
+      "name": "blk.31.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006803191606191053,
+      "legacy_fp32_bit_mismatches": 32072
+    },
+    {
+      "name": "blk.31.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006699074412821412,
+      "legacy_fp32_bit_mismatches": 21078
+    },
+    {
+      "name": "blk.31.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00020800254562289817,
+      "legacy_fp32_bit_mismatches": 15546
+    },
+    {
+      "name": "blk.31.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006655682684589369,
+      "legacy_fp32_bit_mismatches": 83888
+    },
+    {
+      "name": "blk.31.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000656956646148215,
+      "legacy_fp32_bit_mismatches": 21016
+    },
+    {
+      "name": "blk.31.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006739498827366383,
+      "legacy_fp32_bit_mismatches": 21145
+    },
+    {
+      "name": "blk.32.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006967381103802716,
+      "legacy_fp32_bit_mismatches": 20848
+    },
+    {
+      "name": "blk.32.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000655131766662973,
+      "legacy_fp32_bit_mismatches": 32060
+    },
+    {
+      "name": "blk.32.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000634346456475942,
+      "legacy_fp32_bit_mismatches": 20777
+    },
+    {
+      "name": "blk.32.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006714081941372596,
+      "legacy_fp32_bit_mismatches": 21106
+    },
+    {
+      "name": "blk.32.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006568459354151177,
+      "legacy_fp32_bit_mismatches": 83770
+    },
+    {
+      "name": "blk.32.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006533592331608413,
+      "legacy_fp32_bit_mismatches": 20953
+    },
+    {
+      "name": "blk.32.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006577590301211591,
+      "legacy_fp32_bit_mismatches": 20877
+    },
+    {
+      "name": "blk.33.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007205576788658024,
+      "legacy_fp32_bit_mismatches": 20856
+    },
+    {
+      "name": "blk.33.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006389523544579437,
+      "legacy_fp32_bit_mismatches": 31773
+    },
+    {
+      "name": "blk.33.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006720281933409633,
+      "legacy_fp32_bit_mismatches": 20611
+    },
+    {
+      "name": "blk.33.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006588276525358055,
+      "legacy_fp32_bit_mismatches": 20946
+    },
+    {
+      "name": "blk.33.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00023023195689533216,
+      "legacy_fp32_bit_mismatches": 64023
+    },
+    {
+      "name": "blk.33.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006779334401574615,
+      "legacy_fp32_bit_mismatches": 21018
+    },
+    {
+      "name": "blk.33.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006232859171475583,
+      "legacy_fp32_bit_mismatches": 20877
+    },
+    {
+      "name": "blk.34.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006831374724515401,
+      "legacy_fp32_bit_mismatches": 21094
+    },
+    {
+      "name": "blk.34.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006564808102527621,
+      "legacy_fp32_bit_mismatches": 31764
+    },
+    {
+      "name": "blk.34.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006752433563428175,
+      "legacy_fp32_bit_mismatches": 21110
+    },
+    {
+      "name": "blk.34.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021810087416132329,
+      "legacy_fp32_bit_mismatches": 16329
+    },
+    {
+      "name": "blk.34.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006525559202588555,
+      "legacy_fp32_bit_mismatches": 83214
+    },
+    {
+      "name": "blk.34.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006431067029183174,
+      "legacy_fp32_bit_mismatches": 21077
+    },
+    {
+      "name": "blk.34.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006263214877747699,
+      "legacy_fp32_bit_mismatches": 21189
+    },
+    {
+      "name": "blk.35.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006708075345369488,
+      "legacy_fp32_bit_mismatches": 21106
+    },
+    {
+      "name": "blk.35.attn_output.weight",
+      "qtype": 12,
+      "values": 65536,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006847266991358473,
+      "legacy_fp32_bit_mismatches": 63885
+    },
+    {
+      "name": "blk.35.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006758011699448181,
+      "legacy_fp32_bit_mismatches": 20847
+    },
+    {
+      "name": "blk.35.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000667887532127516,
+      "legacy_fp32_bit_mismatches": 83500
+    },
+    {
+      "name": "blk.35.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006241936722682774,
+      "legacy_fp32_bit_mismatches": 21059
+    },
+    {
+      "name": "blk.35.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006571406469515952,
+      "legacy_fp32_bit_mismatches": 21147
+    },
+    {
+      "name": "blk.36.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006088394066996407,
+      "legacy_fp32_bit_mismatches": 20951
+    },
+    {
+      "name": "blk.36.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006511822718552659,
+      "legacy_fp32_bit_mismatches": 32234
+    },
+    {
+      "name": "blk.36.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006694658041815979,
+      "legacy_fp32_bit_mismatches": 21123
+    },
+    {
+      "name": "blk.36.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006663631877948706,
+      "legacy_fp32_bit_mismatches": 20968
+    },
+    {
+      "name": "blk.36.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00022856382631410195,
+      "legacy_fp32_bit_mismatches": 61913
+    },
+    {
+      "name": "blk.36.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006568894770735928,
+      "legacy_fp32_bit_mismatches": 20930
+    },
+    {
+      "name": "blk.36.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006733098129722389,
+      "legacy_fp32_bit_mismatches": 20771
+    },
+    {
+      "name": "blk.37.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006713502975831906,
+      "legacy_fp32_bit_mismatches": 21069
+    },
+    {
+      "name": "blk.37.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006529607441565064,
+      "legacy_fp32_bit_mismatches": 32281
+    },
+    {
+      "name": "blk.37.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006674230144367167,
+      "legacy_fp32_bit_mismatches": 20751
+    },
+    {
+      "name": "blk.37.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006692597151408165,
+      "legacy_fp32_bit_mismatches": 21151
+    },
+    {
+      "name": "blk.37.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006562328907437682,
+      "legacy_fp32_bit_mismatches": 83764
+    },
+    {
+      "name": "blk.37.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000691730964735211,
+      "legacy_fp32_bit_mismatches": 21034
+    },
+    {
+      "name": "blk.37.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006844313347791592,
+      "legacy_fp32_bit_mismatches": 21197
+    },
+    {
+      "name": "blk.38.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006366024010763907,
+      "legacy_fp32_bit_mismatches": 21165
+    },
+    {
+      "name": "blk.38.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006583415931419226,
+      "legacy_fp32_bit_mismatches": 32315
+    },
+    {
+      "name": "blk.38.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006449223140059131,
+      "legacy_fp32_bit_mismatches": 21067
+    },
+    {
+      "name": "blk.38.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021789294349764188,
+      "legacy_fp32_bit_mismatches": 16520
+    },
+    {
+      "name": "blk.38.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00067175040343623,
+      "legacy_fp32_bit_mismatches": 83602
+    },
+    {
+      "name": "blk.38.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000647724454941195,
+      "legacy_fp32_bit_mismatches": 20980
+    },
+    {
+      "name": "blk.38.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006402017511381726,
+      "legacy_fp32_bit_mismatches": 20621
+    },
+    {
+      "name": "blk.39.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007122974019353508,
+      "legacy_fp32_bit_mismatches": 20889
+    },
+    {
+      "name": "blk.39.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006734249428602183,
+      "legacy_fp32_bit_mismatches": 32127
+    },
+    {
+      "name": "blk.39.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006756719793657975,
+      "legacy_fp32_bit_mismatches": 20895
+    },
+    {
+      "name": "blk.39.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007225171273333906,
+      "legacy_fp32_bit_mismatches": 21142
+    },
+    {
+      "name": "blk.39.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00022850898031925152,
+      "legacy_fp32_bit_mismatches": 63383
+    },
+    {
+      "name": "blk.39.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006561227120866898,
+      "legacy_fp32_bit_mismatches": 20915
+    },
+    {
+      "name": "blk.39.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006765967233818515,
+      "legacy_fp32_bit_mismatches": 21099
+    },
+    {
+      "name": "blk.40.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006608243038966864,
+      "legacy_fp32_bit_mismatches": 20616
+    },
+    {
+      "name": "blk.40.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006547451683042996,
+      "legacy_fp32_bit_mismatches": 32168
+    },
+    {
+      "name": "blk.40.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006994016164825427,
+      "legacy_fp32_bit_mismatches": 21011
+    },
+    {
+      "name": "blk.40.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006649256102512335,
+      "legacy_fp32_bit_mismatches": 21068
+    },
+    {
+      "name": "blk.40.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006860179090825387,
+      "legacy_fp32_bit_mismatches": 83615
+    },
+    {
+      "name": "blk.40.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007058038750116352,
+      "legacy_fp32_bit_mismatches": 21028
+    },
+    {
+      "name": "blk.40.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006884005951087215,
+      "legacy_fp32_bit_mismatches": 21129
+    },
+    {
+      "name": "blk.41.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007202553947378704,
+      "legacy_fp32_bit_mismatches": 21161
+    },
+    {
+      "name": "blk.41.attn_output.weight",
+      "qtype": 12,
+      "values": 65536,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007021938649006658,
+      "legacy_fp32_bit_mismatches": 63765
+    },
+    {
+      "name": "blk.41.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007027632090064977,
+      "legacy_fp32_bit_mismatches": 21063
+    },
+    {
+      "name": "blk.41.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007328600170127826,
+      "legacy_fp32_bit_mismatches": 83621
+    },
+    {
+      "name": "blk.41.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006959969434842124,
+      "legacy_fp32_bit_mismatches": 20860
+    },
+    {
+      "name": "blk.41.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006654282339367743,
+      "legacy_fp32_bit_mismatches": 21011
+    },
+    {
+      "name": "blk.42.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006507810866657865,
+      "legacy_fp32_bit_mismatches": 20962
+    },
+    {
+      "name": "blk.42.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006474384673128956,
+      "legacy_fp32_bit_mismatches": 32246
+    },
+    {
+      "name": "blk.42.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006359247294779762,
+      "legacy_fp32_bit_mismatches": 21099
+    },
+    {
+      "name": "blk.42.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021500056761677576,
+      "legacy_fp32_bit_mismatches": 16662
+    },
+    {
+      "name": "blk.42.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00022667016254196515,
+      "legacy_fp32_bit_mismatches": 63602
+    },
+    {
+      "name": "blk.42.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006572768326656516,
+      "legacy_fp32_bit_mismatches": 20959
+    },
+    {
+      "name": "blk.42.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006733512107151346,
+      "legacy_fp32_bit_mismatches": 20879
+    },
+    {
+      "name": "blk.43.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006669046545356543,
+      "legacy_fp32_bit_mismatches": 21126
+    },
+    {
+      "name": "blk.43.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006385163892654444,
+      "legacy_fp32_bit_mismatches": 32098
+    },
+    {
+      "name": "blk.43.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006580359077444971,
+      "legacy_fp32_bit_mismatches": 21137
+    },
+    {
+      "name": "blk.43.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006618035360865194,
+      "legacy_fp32_bit_mismatches": 21069
+    },
+    {
+      "name": "blk.43.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006666975007002117,
+      "legacy_fp32_bit_mismatches": 83462
+    },
+    {
+      "name": "blk.43.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007131452874725525,
+      "legacy_fp32_bit_mismatches": 21109
+    },
+    {
+      "name": "blk.43.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006641750642187537,
+      "legacy_fp32_bit_mismatches": 21039
+    },
+    {
+      "name": "blk.44.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007272978095678148,
+      "legacy_fp32_bit_mismatches": 20876
+    },
+    {
+      "name": "blk.44.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006604655056436823,
+      "legacy_fp32_bit_mismatches": 32219
+    },
+    {
+      "name": "blk.44.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000723895658514233,
+      "legacy_fp32_bit_mismatches": 20958
+    },
+    {
+      "name": "blk.44.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006717431272704043,
+      "legacy_fp32_bit_mismatches": 21099
+    },
+    {
+      "name": "blk.44.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006660652460643709,
+      "legacy_fp32_bit_mismatches": 84052
+    },
+    {
+      "name": "blk.44.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006426482832445525,
+      "legacy_fp32_bit_mismatches": 21129
+    },
+    {
+      "name": "blk.44.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006075762089736257,
+      "legacy_fp32_bit_mismatches": 21017
+    },
+    {
+      "name": "blk.45.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006989527777088834,
+      "legacy_fp32_bit_mismatches": 21144
+    },
+    {
+      "name": "blk.45.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006218097732633588,
+      "legacy_fp32_bit_mismatches": 31918
+    },
+    {
+      "name": "blk.45.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006532076352171786,
+      "legacy_fp32_bit_mismatches": 21210
+    },
+    {
+      "name": "blk.45.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0002087023626172082,
+      "legacy_fp32_bit_mismatches": 16370
+    },
+    {
+      "name": "blk.45.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0002296382491510209,
+      "legacy_fp32_bit_mismatches": 63020
+    },
+    {
+      "name": "blk.45.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006271143180190316,
+      "legacy_fp32_bit_mismatches": 20539
+    },
+    {
+      "name": "blk.45.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006602228160425787,
+      "legacy_fp32_bit_mismatches": 20941
+    },
+    {
+      "name": "blk.46.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000638465533739176,
+      "legacy_fp32_bit_mismatches": 20950
+    },
+    {
+      "name": "blk.46.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006547837129913198,
+      "legacy_fp32_bit_mismatches": 32103
+    },
+    {
+      "name": "blk.46.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006789126725028801,
+      "legacy_fp32_bit_mismatches": 20957
+    },
+    {
+      "name": "blk.46.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006514179686912978,
+      "legacy_fp32_bit_mismatches": 20877
+    },
+    {
+      "name": "blk.46.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006340641015392075,
+      "legacy_fp32_bit_mismatches": 83084
+    },
+    {
+      "name": "blk.46.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006928443188563529,
+      "legacy_fp32_bit_mismatches": 21001
+    },
+    {
+      "name": "blk.46.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006317059523424053,
+      "legacy_fp32_bit_mismatches": 21220
+    },
+    {
+      "name": "blk.47.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007582726784385574,
+      "legacy_fp32_bit_mismatches": 21118
+    },
+    {
+      "name": "blk.47.attn_output.weight",
+      "qtype": 12,
+      "values": 65536,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006898456376030752,
+      "legacy_fp32_bit_mismatches": 63953
+    },
+    {
+      "name": "blk.47.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006566566059170545,
+      "legacy_fp32_bit_mismatches": 21077
+    },
+    {
+      "name": "blk.47.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006336518003185487,
+      "legacy_fp32_bit_mismatches": 82496
+    },
+    {
+      "name": "blk.47.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006373768431030369,
+      "legacy_fp32_bit_mismatches": 21031
+    },
+    {
+      "name": "blk.47.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006337885453996015,
+      "legacy_fp32_bit_mismatches": 20939
+    },
+    {
+      "name": "blk.48.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006396019540757336,
+      "legacy_fp32_bit_mismatches": 20934
+    },
+    {
+      "name": "blk.48.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006216507344877512,
+      "legacy_fp32_bit_mismatches": 31898
+    },
+    {
+      "name": "blk.48.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006324139944155927,
+      "legacy_fp32_bit_mismatches": 21041
+    },
+    {
+      "name": "blk.48.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006542446632836996,
+      "legacy_fp32_bit_mismatches": 20846
+    },
+    {
+      "name": "blk.48.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0002181082515574044,
+      "legacy_fp32_bit_mismatches": 59790
+    },
+    {
+      "name": "blk.48.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006489209320347126,
+      "legacy_fp32_bit_mismatches": 20930
+    },
+    {
+      "name": "blk.48.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006456512494310232,
+      "legacy_fp32_bit_mismatches": 21089
+    },
+    {
+      "name": "blk.49.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006433145696716956,
+      "legacy_fp32_bit_mismatches": 21071
+    },
+    {
+      "name": "blk.49.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006570882785844553,
+      "legacy_fp32_bit_mismatches": 32026
+    },
+    {
+      "name": "blk.49.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0007104985656963158,
+      "legacy_fp32_bit_mismatches": 21196
+    },
+    {
+      "name": "blk.49.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0002185808861700337,
+      "legacy_fp32_bit_mismatches": 16677
+    },
+    {
+      "name": "blk.49.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006317033688404326,
+      "legacy_fp32_bit_mismatches": 83505
+    },
+    {
+      "name": "blk.49.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000660269348302363,
+      "legacy_fp32_bit_mismatches": 21183
+    },
+    {
+      "name": "blk.49.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006429190108400994,
+      "legacy_fp32_bit_mismatches": 21154
+    },
+    {
+      "name": "blk.50.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006088882223111423,
+      "legacy_fp32_bit_mismatches": 21038
+    },
+    {
+      "name": "blk.50.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000655932461360764,
+      "legacy_fp32_bit_mismatches": 32006
+    },
+    {
+      "name": "blk.50.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006635945226912457,
+      "legacy_fp32_bit_mismatches": 20884
+    },
+    {
+      "name": "blk.50.attn_v.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006181233178711456,
+      "legacy_fp32_bit_mismatches": 21104
+    },
+    {
+      "name": "blk.50.ffn_down.weight",
+      "qtype": 12,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006671040253323714,
+      "legacy_fp32_bit_mismatches": 83551
+    },
+    {
+      "name": "blk.50.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006343580197745332,
+      "legacy_fp32_bit_mismatches": 21045
+    },
+    {
+      "name": "blk.50.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006277441765587941,
+      "legacy_fp32_bit_mismatches": 21180
+    },
+    {
+      "name": "blk.51.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000681632616813463,
+      "legacy_fp32_bit_mismatches": 21076
+    },
+    {
+      "name": "blk.51.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006606612832711486,
+      "legacy_fp32_bit_mismatches": 31976
+    },
+    {
+      "name": "blk.51.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006499129000554968,
+      "legacy_fp32_bit_mismatches": 21137
+    },
+    {
+      "name": "blk.51.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00022141781191360445,
+      "legacy_fp32_bit_mismatches": 17023
+    },
+    {
+      "name": "blk.51.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021749821234128225,
+      "legacy_fp32_bit_mismatches": 60515
+    },
+    {
+      "name": "blk.51.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006038839521400592,
+      "legacy_fp32_bit_mismatches": 20963
+    },
+    {
+      "name": "blk.51.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006402246815331735,
+      "legacy_fp32_bit_mismatches": 21191
+    },
+    {
+      "name": "blk.52.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006263440853098137,
+      "legacy_fp32_bit_mismatches": 20934
+    },
+    {
+      "name": "blk.52.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006466483446949568,
+      "legacy_fp32_bit_mismatches": 31924
+    },
+    {
+      "name": "blk.52.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006218280865961646,
+      "legacy_fp32_bit_mismatches": 20892
+    },
+    {
+      "name": "blk.52.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00022200546906418092,
+      "legacy_fp32_bit_mismatches": 16388
+    },
+    {
+      "name": "blk.52.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021730273229355267,
+      "legacy_fp32_bit_mismatches": 60922
+    },
+    {
+      "name": "blk.52.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006323502032508346,
+      "legacy_fp32_bit_mismatches": 20799
+    },
+    {
+      "name": "blk.52.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006847056203583729,
+      "legacy_fp32_bit_mismatches": 21111
+    },
+    {
+      "name": "blk.53.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000716102084562947,
+      "legacy_fp32_bit_mismatches": 20857
+    },
+    {
+      "name": "blk.53.attn_output.weight",
+      "qtype": 12,
+      "values": 65536,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000684457369100838,
+      "legacy_fp32_bit_mismatches": 64151
+    },
+    {
+      "name": "blk.53.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006906844813121313,
+      "legacy_fp32_bit_mismatches": 20911
+    },
+    {
+      "name": "blk.53.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021772271458542976,
+      "legacy_fp32_bit_mismatches": 59971
+    },
+    {
+      "name": "blk.53.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006428628067902028,
+      "legacy_fp32_bit_mismatches": 21132
+    },
+    {
+      "name": "blk.53.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006381434188227382,
+      "legacy_fp32_bit_mismatches": 20957
+    },
+    {
+      "name": "blk.54.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006736268043561623,
+      "legacy_fp32_bit_mismatches": 20846
+    },
+    {
+      "name": "blk.54.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006596834392281684,
+      "legacy_fp32_bit_mismatches": 32350
+    },
+    {
+      "name": "blk.54.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000656462661178519,
+      "legacy_fp32_bit_mismatches": 20705
+    },
+    {
+      "name": "blk.54.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021732658675510883,
+      "legacy_fp32_bit_mismatches": 16304
+    },
+    {
+      "name": "blk.54.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021903665121098892,
+      "legacy_fp32_bit_mismatches": 61565
+    },
+    {
+      "name": "blk.54.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006499412892304842,
+      "legacy_fp32_bit_mismatches": 21045
+    },
+    {
+      "name": "blk.54.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006847270235528614,
+      "legacy_fp32_bit_mismatches": 21138
+    },
+    {
+      "name": "blk.55.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006508721646221237,
+      "legacy_fp32_bit_mismatches": 20985
+    },
+    {
+      "name": "blk.55.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006795504530494688,
+      "legacy_fp32_bit_mismatches": 32336
+    },
+    {
+      "name": "blk.55.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006602709318744987,
+      "legacy_fp32_bit_mismatches": 20680
+    },
+    {
+      "name": "blk.55.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021748819755906785,
+      "legacy_fp32_bit_mismatches": 16535
+    },
+    {
+      "name": "blk.55.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021501735656776497,
+      "legacy_fp32_bit_mismatches": 58844
+    },
+    {
+      "name": "blk.55.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000597081093938313,
+      "legacy_fp32_bit_mismatches": 20798
+    },
+    {
+      "name": "blk.55.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000626406206095559,
+      "legacy_fp32_bit_mismatches": 20956
+    },
+    {
+      "name": "blk.56.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006218037941793331,
+      "legacy_fp32_bit_mismatches": 20903
+    },
+    {
+      "name": "blk.56.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006410811123795909,
+      "legacy_fp32_bit_mismatches": 32164
+    },
+    {
+      "name": "blk.56.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006606649231099745,
+      "legacy_fp32_bit_mismatches": 20833
+    },
+    {
+      "name": "blk.56.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000216133414444863,
+      "legacy_fp32_bit_mismatches": 16731
+    },
+    {
+      "name": "blk.56.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0002192488857265363,
+      "legacy_fp32_bit_mismatches": 61838
+    },
+    {
+      "name": "blk.56.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006435087291358245,
+      "legacy_fp32_bit_mismatches": 20917
+    },
+    {
+      "name": "blk.56.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006144912301454886,
+      "legacy_fp32_bit_mismatches": 21098
+    },
+    {
+      "name": "blk.57.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006302902442688041,
+      "legacy_fp32_bit_mismatches": 20827
+    },
+    {
+      "name": "blk.57.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006324010332030058,
+      "legacy_fp32_bit_mismatches": 31997
+    },
+    {
+      "name": "blk.57.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.000692907429720086,
+      "legacy_fp32_bit_mismatches": 21055
+    },
+    {
+      "name": "blk.57.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021719493621403176,
+      "legacy_fp32_bit_mismatches": 16649
+    },
+    {
+      "name": "blk.57.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021830018781409446,
+      "legacy_fp32_bit_mismatches": 60214
+    },
+    {
+      "name": "blk.57.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006518198233818569,
+      "legacy_fp32_bit_mismatches": 21159
+    },
+    {
+      "name": "blk.57.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006666402623775377,
+      "legacy_fp32_bit_mismatches": 21064
+    },
+    {
+      "name": "blk.58.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006785516215256248,
+      "legacy_fp32_bit_mismatches": 21165
+    },
+    {
+      "name": "blk.58.attn_output.weight",
+      "qtype": 12,
+      "values": 32768,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006614655332416449,
+      "legacy_fp32_bit_mismatches": 32287
+    },
+    {
+      "name": "blk.58.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006631913148765323,
+      "legacy_fp32_bit_mismatches": 21030
+    },
+    {
+      "name": "blk.58.attn_v.weight",
+      "qtype": 14,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021671309341561273,
+      "legacy_fp32_bit_mismatches": 16688
+    },
+    {
+      "name": "blk.58.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021614582840285854,
+      "legacy_fp32_bit_mismatches": 59780
+    },
+    {
+      "name": "blk.58.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006329640540516295,
+      "legacy_fp32_bit_mismatches": 21140
+    },
+    {
+      "name": "blk.58.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006481830541881028,
+      "legacy_fp32_bit_mismatches": 20960
+    },
+    {
+      "name": "blk.59.attn_k.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006607849617167826,
+      "legacy_fp32_bit_mismatches": 20842
+    },
+    {
+      "name": "blk.59.attn_output.weight",
+      "qtype": 12,
+      "values": 65536,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006920306910576986,
+      "legacy_fp32_bit_mismatches": 63901
+    },
+    {
+      "name": "blk.59.attn_q.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006287131317023108,
+      "legacy_fp32_bit_mismatches": 20885
+    },
+    {
+      "name": "blk.59.ffn_down.weight",
+      "qtype": 14,
+      "values": 86016,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.00021749738754672492,
+      "legacy_fp32_bit_mismatches": 61188
+    },
+    {
+      "name": "blk.59.ffn_gate.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006775056001812816,
+      "legacy_fp32_bit_mismatches": 21121
+    },
+    {
+      "name": "blk.59.ffn_up.weight",
+      "qtype": 12,
+      "values": 21504,
+      "fp32_bit_mismatches": 0,
+      "bf16_bit_mismatches": 0,
+      "legacy_fp32_relative_rms": 0.0006364099179091061,
+      "legacy_fp32_bit_mismatches": 21135
+    }
+  ],
+  "summary": {
+    "tensors": 411,
+    "values": 13712384,
+    "fp32_bit_mismatches": 0,
+    "bf16_bit_mismatches": 0,
+    "legacy_fp32_bit_mismatches": 12571059,
+    "max_legacy_fp32_relative_rms": 0.0007815776454764216,
+    "elapsed_seconds": 22.76810781599488
+  }
+}

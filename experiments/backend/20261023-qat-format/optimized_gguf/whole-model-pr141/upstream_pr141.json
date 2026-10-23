@@ -1,0 +1,1010 @@
+{
+  "variant": "upstream_pr141",
+  "utc_started": "2026-10-23T16:47:26.355904+00:00",
+  "sampling": {
+    "temperature": 0.6,
+    "top_k": 64,
+    "top_p": 0.9,
+    "min_p": 0.05,
+    "repetition_penalty": 1.1,
+    "seed": 20261023
+  },
+  "model_info": {
+    "object": "list",
+    "data": [
+      {
+        "id": "qwen3.6-35b-hauhau-w4a16-vision",
+        "object": "model",
+        "created": 1792774046,
+        "owned_by": "vllm",
+        "root": "/home/isnotreal/models/gemma4-31b-qat-hauhau-balanced-mtp-gguf/Gemma4-31B-QAT-Uncensored-HauhauCS-Balanced-Q4_K_M.gguf",
+        "parent": null,
+        "max_model_len": 200000,
+        "permission": [
+          {
+            "id": "modelperm-b417089bf325028d",
+            "object": "model_permission",
+            "created": 1792774046,
+            "allow_create_engine": false,
+            "allow_sampling": true,
+            "allow_logprobs": true,
+            "allow_search_indices": false,
+            "allow_view": true,
+            "allow_fine_tuning": false,
+            "organization": "*",
+            "group": null,
+            "is_blocking": false
+          }
+        ]
+      }
+    ]
+  },
+  "performance": [
+    {
+      "wall_seconds": 1.4237453990062932,
+      "aggregate_output_tokens_per_second": 89.9037145892362,
+      "requests": [
+        {
+          "id": "perf_c1_r0_0",
+          "usage": {
+            "prompt_tokens": 66,
+            "total_tokens": 194,
+            "completion_tokens": 128,
+            "completion_tokens_details": {
+              "reasoning_tokens": 127
+            }
+          },
+          "wall_seconds": 1.4221662819909398,
+          "first_output_seconds": 0.19981925199681427,
+          "first_visible_seconds": null,
+          "decode_tokens_per_second": 103.89848126894893,
+          "content": "",
+          "reasoning": "\n*   *Context:* Final matched benchmark BX-20261023 C1 request 0 (implies this is part of a larger set or a specific project milestone).\n    *   *Goal:* Detailed engineering review of a **durable job queue**.\n    *   *Key Focus Areas:* Idempotency, retry handling, worker crashes, cancellation, audit records, and regression checks.\n\n    *   What makes a queue \"durable\"? It's not just about storing data; it's about ensuring that once a task is accepted, it *will* be completed, regardless",
+          "tool_calls": [],
+          "finish_reason": "length",
+          "repetition": {
+            "repeated_8gram_fraction": 0.0,
+            "duplicate_consecutive_lines": 0,
+            "word_tokens": 110
+          },
+          "payload_sha256": "d51e110510e91fc54798e7886cc037444e27344ebb7c0980a4279527876e5de3"
+        }
+      ],
+      "concurrency": 1,
+      "repeat": 0,
+      "warmup": true,
+      "metrics_delta": {
+        "vllm:spec_decode_num_draft_tokens_total": 102.0,
+        "vllm:request_num_preemptions_bucket": 8.0,
+        "vllm:prefix_cache_hits_total": 0.0,
+        "vllm:external_prefix_cache_queries_total": 66.0,
+        "vllm:external_prefix_cache_hits_total": 0.0,
+        "vllm:spec_decode_num_drafts_total": 51.0,
+        "vllm:spec_decode_num_accepted_tokens_total": 76.0,
+        "vllm:prefix_cache_queries_total": 66.0,
+        "vllm:num_preemptions_total": 0.0,
+        "vllm:num_requests_waiting": 0.0,
+        "vllm:num_requests_waiting_by_reason": 0.0,
+        "vllm:request_num_preemptions_sum": 0.0,
+        "vllm:num_requests_running": 0.0,
+        "vllm:request_num_preemptions_count": 1.0,
+        "vllm:num_requests_kv_fetch_by_stage": 0.0,
+        "vllm:spec_decode_num_accepted_tokens_per_pos_total": 76.0
+      }
+    },
+    {
+      "wall_seconds": 5.582999487000052,
+      "aggregate_output_tokens_per_second": 91.70697600674798,
+      "requests": [
+        {
+          "id": "perf_c1_r1_0",
+          "usage": {
+            "prompt_tokens": 66,
+            "total_tokens": 578,
+            "completion_tokens": 512,
+            "completion_tokens_details": {
+              "reasoning_tokens": 511
+            }
+          },
+          "wall_seconds": 5.581224755995208,
+          "first_output_seconds": 0.15528935899783392,
+          "first_visible_seconds": null,
+          "decode_tokens_per_second": 94.17731001419206,
+          "content": "",
+          "reasoning": "\n*   *Context:* Final matched benchmark BX-20261023 C1 request 0 (implies a high-standard, technical output).\n    *   *Goal:* Detailed engineering review of a \"durable job queue.\"\n    *   *Key Components to Address:*\n        1.  Idempotency.\n        2.  Retry handling.\n        3.  Worker crashes/fault tolerance.\n        4.  Cancellation mechanisms.\n        5.  Audit records (observability/tracing).\n        6.  Practical regression checks (testing/validation).\n\n    *   What makes a queue \"durable\"? It's not just about storing data; it's about ensuring that once a task is accepted, it *will* eventually be completed, regardless of failures.\n    *   *Core Architecture:* Producer $\\rightarrow$ Queue (Storage) $\\rightarrow$ Consumer (Workers).\n\n    *   **Section 1: The Core Mechanism (The \"Durable\" part)**\n        *   Need a storage layer (DB or Message Broker like RabbitMQ, Kafka, or a relational table).\n        *   State transitions: `Pending` $\\rightarrow$ `Running` $\\rightarrow$ `Completed`/`Failed`.\n\n    *   **Section 2: Idempotency (Ensuring \"Exactly Once\" semantics - effectively)**\n        *   Definition: $f(f(x)) = f(x)$.\n        *   How to achieve it? Unique IDs for every job.\n        *   Strategies: Upserts in DB, checking if the result already exists before starting.\n\n    *   **Section 3: Retry Handling & Backoff**\n        *   Why? Not all errors are equal.\n        *   Immediate vs. Exponential Backoff.\n        *   Dead Letter Queues (DLQ) for when retries fail.\n\n    *   **Section 4: Worker Crashes & Fault Tolerance**\n        *   The \"Ack\" (Acknowledgement) pattern.\n        *   Visibility Timeout (Heartbeats): What happens if a worker dies while processing?\n        *   Re-queueing logic.\n\n    *   **Section 5: Cancellation & Timeouts**\n        *   Graceful shutdown.\n        *   Hard timeouts (don't let a job run forever).\n        *   Propagation of the \"Cancel\" signal.\n\n    *   **Section 6:",
+          "tool_calls": [],
+          "finish_reason": "length",
+          "repetition": {
+            "repeated_8gram_fraction": 0.0,
+            "duplicate_consecutive_lines": 0,
+            "word_tokens": 417
+          },
+          "payload_sha256": "11202b7710b51e20b87189e905b817d4e5724941076babc2ef64e8b747cf35d0"
+        }
+      ],
+      "concurrency": 1,
+      "repeat": 1,
+      "warmup": false,
+      "metrics_delta": {
+        "vllm:spec_decode_num_draft_tokens_total": 434.0,
+        "vllm:request_num_preemptions_bucket": 8.0,
+        "vllm:prefix_cache_hits_total": 48.0,
+        "vllm:external_prefix_cache_queries_total": 18.0,
+        "vllm:external_prefix_cache_hits_total": 0.0,
+        "vllm:spec_decode_num_drafts_total": 217.0,
+        "vllm:spec_decode_num_accepted_tokens_total": 294.0,
+        "vllm:prefix_cache_queries_total": 66.0,
+        "vllm:num_preemptions_total": 0.0,
+        "vllm:num_requests_waiting": 0.0,
+        "vllm:num_requests_waiting_by_reason": 0.0,
+        "vllm:request_num_preemptions_sum": 0.0,
+        "vllm:num_requests_running": 0.0,
+        "vllm:request_num_preemptions_count": 1.0,
+        "vllm:num_requests_kv_fetch_by_stage": 0.0,
+        "vllm:spec_decode_num_accepted_tokens_per_pos_total": 294.0
+      }
+    },
+    {
+      "wall_seconds": 5.61958199799119,
+      "aggregate_output_tokens_per_second": 91.10997938690504,
+      "requests": [
+        {
+          "id": "perf_c1_r2_0",
+          "usage": {
+            "prompt_tokens": 66,
+            "total_tokens": 578,
+            "completion_tokens": 512,
+            "completion_tokens_details": {
+              "reasoning_tokens": 511
+            }
+          },
+          "wall_seconds": 5.6180566160037415,
+          "first_output_seconds": 0.1602460349968169,
+          "first_visible_seconds": null,
+          "decode_tokens_per_second": 93.62728742882176,
+          "content": "",
+          "reasoning": "\n*   *Context:* Final matched benchmark BX-20261023 C1 request 0 (implies a high-standard, technical output).\n    *   *Goal:* Detailed engineering review of a \"durable job queue.\"\n    *   *Key Components to Address:*\n        1.  Idempotency.\n        2.  Retry handling.\n        3.  Worker crashes/fault tolerance.\n        4.  Cancellation mechanisms.\n        5.  Audit records (observability/tracing).\n        6.  Practical regression checks (testing/validation).\n\n    *   What makes a queue \"durable\"? It's not just about storing data; it's about ensuring that once a task is accepted, it *will* eventually be completed, regardless of failures.\n    *   *Core Architecture:* Producer $\\rightarrow$ Queue (Storage) $\\rightarrow$ Consumer (Workers).\n\n    *   **Section 1: The Core Mechanism (The \"Durable\" part)**\n        *   Need a storage layer (DB or Message Broker like RabbitMQ, Kafka, or a relational table).\n        *   State transitions: `Pending` $\\rightarrow$ `Running` $\\rightarrow$ `Completed`/`Failed`.\n\n    *   **Section 2: Idempotency (Ensuring \"Exactly Once\" semantics - effectively)**\n        *   Definition: $f(f(x)) = f(x)$.\n        *   How to achieve it? Unique IDs for every job.\n        *   Strategies: Upserts in DB, checking if the result already exists before starting.\n\n    *   **Section 3: Retry Handling & Backoff**\n        *   Why? Not all errors are equal.\n        *   Immediate vs. Exponential Backoff.\n        *   Dead Letter Queues (DLQ) for when retries fail.\n\n    *   **Section 4: Worker Crashes & Fault Tolerance**\n        *   The \"Ack\" (Acknowledgement) pattern.\n        *   Visibility Timeout (Heartbeats): What happens if a worker dies while processing?\n        *   Re-queueing logic.\n\n    *   **Section 5: Cancellation & Timeouts**\n        *   Graceful shutdown.\n        *   Hard timeouts (don't let a job run forever).\n        *   Propagation of the \"Cancel\" signal.\n\n    *   **Section 6:",
+          "tool_calls": [],
+          "finish_reason": "length",
+          "repetition": {
+            "repeated_8gram_fraction": 0.0,
+            "duplicate_consecutive_lines": 0,
+            "word_tokens": 417
+          },
+          "payload_sha256": "11202b7710b51e20b87189e905b817d4e5724941076babc2ef64e8b747cf35d0"
+        }
+      ],
+      "concurrency": 1,
+      "repeat": 2,
+      "warmup": false,
+      "metrics_delta": {
+        "vllm:spec_decode_num_draft_tokens_total": 434.0,
+        "vllm:request_num_preemptions_bucket": 8.0,
+        "vllm:prefix_cache_hits_total": 48.0,
+        "vllm:external_prefix_cache_queries_total": 18.0,
+        "vllm:external_prefix_cache_hits_total": 0.0,
+        "vllm:spec_decode_num_drafts_total": 217.0,
+        "vllm:spec_decode_num_accepted_tokens_total": 294.0,
+        "vllm:prefix_cache_queries_total": 66.0,
+        "vllm:num_preemptions_total": 0.0,
+        "vllm:num_requests_waiting": 0.0,
+        "vllm:num_requests_waiting_by_reason": 0.0,
+        "vllm:request_num_preemptions_sum": 0.0,
+        "vllm:num_requests_running": 0.0,
+        "vllm:request_num_preemptions_count": 1.0,
+        "vllm:num_requests_kv_fetch_by_stage": 0.0,
+        "vllm:spec_decode_num_accepted_tokens_per_pos_total": 294.0
+      }
+    },
+    {
+      "wall_seconds": 2.2190216519957175,
+      "aggregate_output_tokens_per_second": 230.73231373813928,
+      "requests": [
+        {
+          "id": "perf_c4_r0_0",
+          "usage": {
+            "prompt_tokens": 66,
+            "total_tokens": 194,
+            "completion_tokens": 128,
+            "completion_tokens_details": {
+              "reasoning_tokens": 127
+            }
+          },
+          "wall_seconds": 1.9329460409935564,
+          "first_output_seconds": 0.36182248100521974,
+          "first_visible_seconds": null,
+          "decode_tokens_per_second": 80.83387152627435,
+          "content": "",
+          "reasoning": "\n*   *Context:* Final matched benchmark BX-20261023 C4 request 0. (This looks like a specific task identifier from a larger set, but the core goal is clear).\n    *   *Task:* Detailed engineering review of a **durable job queue**.\n    *   *Key Components to Cover:*\n        *   Idempotency.\n        *   Retry handling.\n        *   Worker crashes (fault tolerance).\n        *   Cancellation/Timeout logic.\n        *   Audit records (observability).\n        *   Practical regression checks (testing",
+          "tool_calls": [],
+          "finish_reason": "length",
+          "repetition": {
+            "repeated_8gram_fraction": 0.0,
+            "duplicate_consecutive_lines": 0,
+            "word_tokens": 96
+          },
+          "payload_sha256": "365d7fee8ed3f6c95e0cfaf04d2d1313e3f8bedb083a0f38493f830006f8de77"
+        },
+        {
+          "id": "perf_c4_r0_1",
+          "usage": {
+            "prompt_tokens": 66,
+            "total_tokens": 194,
+            "completion_tokens": 128,
+            "completion_tokens_details": {
+              "reasoning_tokens": 127
+            }
+          },
+          "wall_seconds": 2.2170668129983824,
+          "first_output_seconds": 0.43236259699915536,
+          "first_visible_seconds": null,
+          "decode_tokens_per_second": 71.16025101610171,
+          "content": "",
+          "reasoning": "\n*   *Context:* Engineering Review for a \"Durable Job Queue.\"\n    *   *Key Requirements:* Idempotency, Retry Handling, Worker Crashes (Fault Tolerance), Cancellation, Audit Records, and Regression Checks.\n    *   *Goal:* A comprehensive technical analysis/design document that evaluates how to build or optimize a system that ensures tasks are completed reliably even in the face of failure.\n\n    A logical flow is essential for an engineering review. I'll structure it as follows:\n    *   **Executive Summary:** High-level goal.\n    *   **Core Architecture:** The basic",
+          "tool_calls": [],
+          "finish_reason": "length",
+          "repetition": {
+            "repeated_8gram_fraction": 0.0,
+            "duplicate_consecutive_lines": 0,
+            "word_tokens": 117
+          },
+          "payload_sha256": "d4092da563c754789dbfb86236429e2b18a3841c70a70ce6b0f8f9a8c6dd84b2"
+        },
+        {
+          "id": "perf_c4_r0_2",
+          "usage": {
+            "prompt_tokens": 66,
+            "total_tokens": 194,
+            "completion_tokens": 128,
+            "completion_tokens_details": {
+              "reasoning_tokens": 127
+            }
+          },
+          "wall_seconds": 2.0357098770036828,
+          "first_output_seconds": 0.431952459999593,
+          "first_visible_seconds": null,
+          "decode_tokens_per_second": 79.18903361160645,
+          "content": "",
+          "reasoning": "\n*   *Context:* Final matched benchmark BX-20261023 C4 request 2. (This suggests it's part of a larger set of benchmarks/tests, likely for an AI evaluation).\n    *   *Task:* Detailed engineering review of a **durable job queue**.\n    *   *Key Requirements:*\n        *   Idempotency.\n        *   Retry handling.\n        *   Worker crashes (fault tolerance).\n        *   Cancellation.\n        *   Audit records.\n        *   Practical regression checks.\n\n    *   What is a",
+          "tool_calls": [],
+          "finish_reason": "length",
+          "repetition": {
+            "repeated_8gram_fraction": 0.0,
+            "duplicate_consecutive_lines": 0,
+            "word_tokens": 93
+          },
+          "payload_sha256": "d8acc9a299d9ce413959dac6a769da42f9e13e5550e5fbd94c29a53bceb90578"
+        },
+        {
+          "id": "perf_c4_r0_3",
+          "usage": {
+            "prompt_tokens": 66,
+            "total_tokens": 194,
+            "completion_tokens": 128,
+            "completion_tokens_details": {
+              "reasoning_tokens": 127
+            }
+          },
+          "wall_seconds": 2.0343611240095925,
+          "first_output_seconds": 0.43132691700884607,
+          "first_visible_seconds": null,
+          "decode_tokens_per_second": 79.22475979948996,
+          "content": "",
+          "reasoning": "\n*   *Context:* Final matched benchmark BX-20261023 C4 request 3. (This suggests it's part of a larger set of tasks or a specific project milestone).\n    *   *Goal:* A detailed engineering review of a *durable job queue*.\n    *   *Key Components to Cover:*\n        1.  Idempotency.\n        2.  Retry Handling.\n        3.  Worker Crashes (Fault Tolerance).\n        4.  Cancellation/Timeout logic.\n        5.  Audit Records (Observability).\n        6",
+          "tool_calls": [],
+          "finish_reason": "length",
+          "repetition": {
+            "repeated_8gram_fraction": 0.0,
+            "duplicate_consecutive_lines": 0,
+            "word_tokens": 94
+          },
+          "payload_sha256": "f375ede6274f44172d689f36bc024f33d7374ebf77ba6b286379a2d7197baf7c"
+        }
+      ],
+      "concurrency": 4,
+      "repeat": 0,
+      "warmup": true,
+      "metrics_delta": {
+        "vllm:spec_decode_num_draft_tokens_total": 396.0,
+        "vllm:request_num_preemptions_bucket": 32.0,
+        "vllm:prefix_cache_hits_total": 0.0,
+        "vllm:external_prefix_cache_queries_total": 264.0,
+        "vllm:external_prefix_cache_hits_total": 0.0,
+        "vllm:spec_decode_num_drafts_total": 198.0,
+        "vllm:spec_decode_num_accepted_tokens_total": 311.0,
+        "vllm:prefix_cache_queries_total": 264.0,
+        "vllm:num_preemptions_total": 0.0,
+        "vllm:num_requests_waiting": 0.0,
+        "vllm:num_requests_waiting_by_reason": 0.0,
+        "vllm:request_num_preemptions_sum": 0.0,
+        "vllm:num_requests_running": 0.0,
+        "vllm:request_num_preemptions_count": 4.0,
+        "vllm:num_requests_kv_fetch_by_stage": 0.0,
+        "vllm:spec_decode_num_accepted_tokens_per_pos_total": 311.0
+      }
+    },
+    {
+      "wall_seconds": 8.11079655699723,
+      "aggregate_output_tokens_per_second": 252.50294291171426,
+      "requests": [
+        {
+          "id": "perf_c4_r1_0",
+          "usage": {
+            "prompt_tokens": 66,
+            "total_tokens": 578,
+            "completion_tokens": 512,
+            "completion_tokens_details": {
+              "reasoning_tokens": 511
+            }
+          },
+          "wall_seconds": 7.9084690589952515,
+          "first_output_seconds": 0.21794762200443074,
+          "first_visible_seconds": null,
+          "decode_tokens_per_second": 66.44542950522562,
+          "content": "",
+          "reasoning": "\n*   *Context:* Final matched benchmark BX-20261023 C4 request 0. (This looks like a specific project identifier, but the core task is \"detailed engineering review of a durable job queue\").\n    *   *Core Goal:* Analyze/Design a system that ensures tasks are processed reliably even in the face of failures.\n    *   *Key Components to Address:*\n        1.  Idempotency.\n        2.  Retry Handling.\n        3.  Worker Crashes (Fault Tolerance).\n        4.  Cancellation/Timeouts.\n        5.  Audit Records (Observability).\n        6.  Regression Checks (Validation).\n\n    A logical flow for an engineering review would be:\n    *   **Introduction:** Define what a durable job queue is and its purpose.\n    *   **The Core Architecture:** The Producer $\\rightarrow$ Queue $\\rightarrow$ Worker loop.\n    *   **Deep Dive into Key Engineering Pillars:**\n        *   Reliability (Crashes & Retries).\n        *   Consistency (Idempotency).\n        *   Control (Cancellation & Timeouts).\n        *   Visibility (Auditing).\n    *   **Verification (Regression Checks):** How do we know it works?\n    *   **Conclusion/Summary Table.**\n\n    *   *Durable Job Queue Definition:* It's not just a list; it's a state machine. A job moves from `Pending` $\\rightarrow$ `Running` $\\rightarrow$ `Completed`/`Failed`.\n\n    *   *Idempotency:* Why does it matter? Because jobs *will* run more than once.\n        *   *Concept:* $f(x) = f(f(x))$.\n        *   *Implementation:* Use unique IDs. Check if done before starting. Example: \"Send Email\" should check if the email was already sent so the user doesn't get five copies.\n\n    *   *Retry Handling:* Don't just retry immediately.\n        *   *Exponential Backoff:* Avoid \"thundering herd.\"\n        *   *Jitter:* Add randomness to prevent synchronized retries.\n        *   *Dead Letter Queue (DLQ):* When all else fails, park the job.\n\n    *   *Worker Crashes:* What happens when the process dies mid-job?\n        *   *Acknowledgement (ACK):* Don",
+          "tool_calls": [],
+          "finish_reason": "length",
+          "repetition": {
+            "repeated_8gram_fraction": 0.0,
+            "duplicate_consecutive_lines": 0,
+            "word_tokens": 441
+          },
+          "payload_sha256": "cb24230e535f9d2dad5d8362e931f2e5f978f0b14e013ce1ca2cd91af1ce22e7"
+        },
+        {
+          "id": "perf_c4_r1_1",
+          "usage": {
+            "prompt_tokens": 66,
+            "total_tokens": 578,
+            "completion_tokens": 512,
+            "completion_tokens_details": {
+              "reasoning_tokens": 511
+            }
+          },
+          "wall_seconds": 7.9410127739975,
+          "first_output_seconds": 0.2833411059982609,
+          "first_visible_seconds": null,
+          "decode_tokens_per_second": 66.73046614618197,
+          "content": "",
+          "reasoning": "\n*   *Context:* Engineering review of a \"durable job queue.\"\n    *   *Key Requirements:* Idempotency, retry handling, worker crashes (fault tolerance), cancellation/timeout, audit records, and regression checks.\n    *   *Goal:* A comprehensive technical guide/review that covers both the architecture and the operational nuances.\n\n    *   What is it? A system that ensures a task is eventually completed, even if the process restarts or fails.\n    *   Core components: Producer $\\rightarrow$ Queue (Storage) $\\rightarrow$ Consumer (Worker).\n\n    A logical flow for an engineering review would be:\n    *   **Introduction:** High-level purpose.\n    *   **The Core Architecture:** Storage, Scheduling, Execution.\n    *   **Deep Dive into Key Patterns:**\n        *   Idempotency (Ensuring correctness).\n        *   Retry Strategy (Handling failure).\n        *   Fault Tolerance (Dealing with crashes).\n        *   Cancellation & Timeouts (Managing resources).\n        *   Observability/Audit (Tracking progress).\n    *   **Verification/Regression:** How to ensure it stays healthy.\n    *   **Conclusion.**\n\n    *   *Introduction:* Define durability. It's not just about putting things in a list; it's about ensuring they *actually happen*.\n\n    *   *Idempotency:* Why does it matter? Because tasks can run multiple times (at-least-once delivery).\n        *   *Concept:* $f(x) = f(f(x))$.\n        *   *Implementation:* Unique IDs, state tracking (Pending $\\rightarrow$ Running $\\rightarrow$ Completed). Use a \"Job ID\" as a key.\n\n    *   *Retry Handling:* Don't just retry immediately.\n        *   *Exponential Backoff:* Avoid \"thundering herd.\"\n        *   *Jitter:* Add randomness to prevent synchronized retries.\n        *   *Dead Letter Queue (DLQ):* What happens when all else fails?\n\n    *   *Worker Crashes (Fault Tolerance):* The \"Ack\" pattern.\n        *   *Visibility Timeout:* If a worker takes a job but doesn't say \"done,\" put it back.\n        *   *Heartbeats:* For long jobs, tell the queue \"I'm still alive!\"\n\n    *   *Cancellation & Timeouts:*\n        *   *Hard",
+          "tool_calls": [],
+          "finish_reason": "length",
+          "repetition": {
+            "repeated_8gram_fraction": 0.0,
+            "duplicate_consecutive_lines": 0,
+            "word_tokens": 458
+          },
+          "payload_sha256": "a4c17d1a82095d5cbcc49eb21a67a070ac3dcba9bbd19c61485c92db4736755f"
+        },
+        {
+          "id": "perf_c4_r1_2",
+          "usage": {
+            "prompt_tokens": 66,
+            "total_tokens": 578,
+            "completion_tokens": 512,
+            "completion_tokens_details": {
+              "reasoning_tokens": 511
+            }
+          },
+          "wall_seconds": 7.8724712999974145,
+          "first_output_seconds": 0.282975793001242,
+          "first_visible_seconds": null,
+          "decode_tokens_per_second": 67.3299034868587,
+          "content": "",
+          "reasoning": "\n*   *Context:* Final matched benchmark BX-20261023 C4 request 2. (This suggests it's part of a larger set of tasks or a specific project milestone).\n    *   *Goal:* A detailed engineering review of a \"durable job queue.\"\n    *   *Key Components to Cover:*\n        *   Idempotency.\n        *   Retry handling.\n        *   Worker crashes (fault tolerance).\n        *   Cancellation/Timeout mechanisms.\n        *   Audit records (observability).\n        *   Practical regression checks (testing/validation).\n\n    *   What is a durable job queue? It's not just a list of things to do; it's a system that ensures work is completed even if the process restarts or fails.\n    *   *Core concept:* State persistence. If the power goes out, we don't lose our place.\n\n    *   **Section 1: Core Architecture & Persistence.** (The foundation)\n    *   **Section 2: Idempotency.** (Ensuring correctness when repeating)\n    *   **Section 3: Retry Handling & Backoff.** (Dealing with failure)\n    *   **Section _4: Worker Lifecycle & Crash Recovery.** (Handling the \"what if\")\n    *   **Section 5: Cancellation & Timeouts.** (Managing resources)\n    *   **Section 6: Audit Records & Observability.** (Knowing what happened)\n    *   **Section 7: Regression Checks.** (Ensuring stability over time)\n\n    *   *Persistence:* Mention the storage layer (SQL, NoSQL, Redis). The key is moving from \"Pending\" $\\rightarrow$ \"Processing\" $\\rightarrow$ \"Completed\".\n\n    *   *Idempotency:* Why does it matter? Because jobs *will* be retried.\n        *   *Strategy:* Unique IDs, `upsert` operations, or state tracking.\n        *   *Example:* Sending an email shouldn't result in two emails if the worker crashes after sending but before marking as complete.\n\n    *   *Retry Handling:* Don't just retry immediately.\n        *   *Exponential Backoff:* $2^n$. Avoids \"thundering herd.\"\n        *   *Jitter:* Adding randomness so workers don't all sync up.\n        *   *Dead Letter Queue (DLQ",
+          "tool_calls": [],
+          "finish_reason": "length",
+          "repetition": {
+            "repeated_8gram_fraction": 0.0,
+            "duplicate_consecutive_lines": 0,
+            "word_tokens": 439
+          },
+          "payload_sha256": "4d36cc09b25113292f3d33b94e339e963e09336bfd0c522673926d01bd0b2c08"
+        },
+        {
+          "id": "perf_c4_r1_3",
+          "usage": {
+            "prompt_tokens": 66,
+            "total_tokens": 578,
+            "completion_tokens": 512,
+            "completion_tokens_details": {
+              "reasoning_tokens": 511
+            }
+          },
+          "wall_seconds": 8.10734248701192,
+          "first_output_seconds": 0.2826019900094252,
+          "first_visible_seconds": null,
+          "decode_tokens_per_second": 65.30568013031923,
+          "content": "",
+          "reasoning": "\n*   *Context:* Final matched benchmark BX-20261023 C4 request 3. (This suggests it's part of a larger series or a specific project requirement).\n    *   *Goal:* A detailed engineering review of a \"durable job queue.\"\n    *   *Key Components to cover:*\n        *   Idempotency.\n        *   Retry handling.\n        *   Worker crashes (fault tolerance).\n        *   Cancellation/Timeout.\n        *   Audit records (observability).\n        *   Practical regression checks (testing/validation).\n\n    *   What is a durable job queue? It's not just a list of things to do; it's a system that ensures work is completed even if the process restarts or fails.\n    *   *Core concept:* State persistence. The state must move from `Pending` $\\rightarrow$ `Running` $\\rightarrow$ `Completed`/`Failed`.\n\n    A logical flow for an engineering review would be:\n    *   **Introduction/Overview** (The \"Why\" and \"What\").\n    *   **Core Architecture** (Persistence & Scheduling).\n    *   **Deep Dive into Key Mechanisms** (The requested components).\n    *   **Failure Modes & Recovery** (Crashes and Timeouts).\n    *   **Observability & Auditing**.\n    *   **Testing Strategy** (Regression checks).\n    *   **Conclusion/Summary Table**.\n\n    *   *Idempotency:* Why? Because jobs might run twice. How? Use a unique ID + check status before starting. *Example:* Adding $10 to a balance should result in the same outcome regardless of how many times the operation runs.\n\n    *   *Retry Handling:* Not all retries are equal. Exponential backoff is key. Jitter prevents \"thundering herd.\" Max retries prevent infinite loops.\n\n    *   *Worker Crashes:* This is about \"At-least-once delivery.\" Need a heartbeat or a visibility timeout. If a worker dies, the job returns to the queue.\n\n    *   *Cancellation/Timeouts:* Hard timeouts (kill the job) vs. Soft timeouts (graceful shutdown). Cancellation tokens allow workers to stop halfway through.\n\n    *   *Audit Records:* Tracking history. Input parameters, output results, timestamps, and error logs.\n\n    *   *Regression Checks:* How do we",
+          "tool_calls": [],
+          "finish_reason": "length",
+          "repetition": {
+            "repeated_8gram_fraction": 0.0,
+            "duplicate_consecutive_lines": 0,
+            "word_tokens": 453
+          },
+          "payload_sha256": "6beb11a3ec11b94952441a67282270a5c294aa5bd481c4c85b47d9e39546e037"
+        }
+      ],
+      "concurrency": 4,
+      "repeat": 1,
+      "warmup": false,
+      "metrics_delta": {
+        "vllm:spec_decode_num_draft_tokens_total": 1738.0,
+        "vllm:request_num_preemptions_bucket": 32.0,
+        "vllm:prefix_cache_hits_total": 192.0,
+        "vllm:external_prefix_cache_queries_total": 72.0,
+        "vllm:external_prefix_cache_hits_total": 0.0,
+        "vllm:spec_decode_num_drafts_total": 869.0,
+        "vllm:spec_decode_num_accepted_tokens_total": 1177.0,
+        "vllm:prefix_cache_queries_total": 264.0,
+        "vllm:num_preemptions_total": 0.0,
+        "vllm:num_requests_waiting": 0.0,
+        "vllm:num_requests_waiting_by_reason": 0.0,
+        "vllm:request_num_preemptions_sum": 0.0,
+        "vllm:num_requests_running": 0.0,
+        "vllm:request_num_preemptions_count": 4.0,
+        "vllm:num_requests_kv_fetch_by_stage": 0.0,
+        "vllm:spec_decode_num_accepted_tokens_per_pos_total": 1177.0
+      }
+    },
+    {
+      "wall_seconds": 8.151631315995473,
+      "aggregate_output_tokens_per_second": 251.23805537933595,
+      "requests": [
+        {
+          "id": "perf_c4_r2_0",
+          "usage": {
+            "prompt_tokens": 66,
+            "total_tokens": 578,
+            "completion_tokens": 512,
+            "completion_tokens_details": {
+              "reasoning_tokens": 511
+            }
+          },
+          "wall_seconds": 7.945781144997454,
+          "first_output_seconds": 0.2367138849949697,
+          "first_visible_seconds": null,
+          "decode_tokens_per_second": 66.28558070199472,
+          "content": "",
+          "reasoning": "\n*   *Context:* Final matched benchmark BX-20261023 C4 request 0. (This looks like a specific project identifier, but the core task is \"detailed engineering review of a durable job queue\").\n    *   *Core Goal:* Analyze/Design a system that ensures tasks are processed reliably even in the face of failures.\n    *   *Key Components to Address:*\n        1.  Idempotency.\n        2.  Retry Handling.\n        3.  Worker Crashes (Fault Tolerance).\n        4.  Cancellation/Timeouts.\n        5.  Audit Records (Observability).\n        6.  Regression Checks (Validation).\n\n    A logical flow for an engineering review would be:\n    *   **Introduction:** Define what a durable job queue is and its purpose.\n    *   **The Core Architecture:** The Producer $\\rightarrow$ Queue $\\rightarrow$ Worker loop.\n    *   **Deep Dive into Key Engineering Pillars:**\n        *   Reliability (Crashes & Retries).\n        *   Consistency (Idempotency).\n        *   Control (Cancellation & Timeouts).\n        *   Visibility (Auditing).\n    *   **Verification (Regression Checks):** How do we know it works?\n    *   **Conclusion/Summary Table.**\n\n    *   *Durable Job Queue Definition:* It's not just a list; it's a state machine. A job moves from `Pending` $\\rightarrow$ `Running` $\\rightarrow$ `Completed`/`Failed`.\n\n    *   *Idempotency:* Why does it matter? Because jobs *will* run more than once.\n        *   *Concept:* $f(x) = f(f(x))$.\n        *   *Implementation:* Use unique IDs. Check if done before starting. Example: \"Send Email\" should check if the email was already sent so the user doesn't get five copies.\n\n    *   *Retry Handling:* Don't just retry immediately.\n        *   *Exponential Backoff:* Avoid \"thundering herd.\"\n        *   *Jitter:* Add randomness to prevent synchronized retries.\n        *   *Dead Letter Queue (DLQ):* When all else fails, park the job.\n\n    *   *Worker Crashes:* What happens when the process dies mid-job?\n        *   *Acknowledgement (ACK):* Don",
+          "tool_calls": [],
+          "finish_reason": "length",
+          "repetition": {
+            "repeated_8gram_fraction": 0.0,
+            "duplicate_consecutive_lines": 0,
+            "word_tokens": 441
+          },
+          "payload_sha256": "cb24230e535f9d2dad5d8362e931f2e5f978f0b14e013ce1ca2cd91af1ce22e7"
+        },
+        {
+          "id": "perf_c4_r2_1",
+          "usage": {
+            "prompt_tokens": 66,
+            "total_tokens": 578,
+            "completion_tokens": 512,
+            "completion_tokens_details": {
+              "reasoning_tokens": 511
+            }
+          },
+          "wall_seconds": 7.981240253997385,
+          "first_output_seconds": 0.30154306400800124,
+          "first_visible_seconds": null,
+          "decode_tokens_per_second": 66.53908186199024,
+          "content": "",
+          "reasoning": "\n*   *Context:* Engineering review of a \"durable job queue.\"\n    *   *Key Requirements:* Idempotency, retry handling, worker crashes (fault tolerance), cancellation/timeout, audit records, and regression checks.\n    *   *Goal:* A comprehensive technical guide/review that covers both the architecture and the operational nuances.\n\n    *   What is it? A system that ensures a task is eventually completed, even if the process restarts or fails.\n    *   Core components: Producer $\\rightarrow$ Queue (Storage) $\\rightarrow$ Consumer (Worker).\n\n    A logical flow for an engineering review would be:\n    *   **Introduction:** High-level purpose.\n    *   **The Core Architecture:** Storage, Scheduling, Execution.\n    *   **Deep Dive into Key Patterns:**\n        *   Idempotency (Ensuring correctness).\n        *   Retry Strategy (Handling failure).\n        *   Fault Tolerance (Dealing with crashes).\n        *   Cancellation & Timeouts (Managing resources).\n        *   Observability/Audit (Tracking progress).\n    *   **Verification/Regression:** How to ensure it stays healthy.\n    *   **Conclusion.**\n\n    *   *Introduction:* Define durability. It's not just about putting things in a list; it's about ensuring they *actually happen*.\n\n    *   *Idempotency:* Why does it matter? Because tasks can run multiple times (at-least-once delivery).\n        *   *Concept:* $f(x) = f(f(x))$.\n        *   *Implementation:* Unique IDs, state tracking (Pending $\\rightarrow$ Running $\\rightarrow$ Completed). Use a \"Job ID\" as a key.\n\n    *   *Retry Handling:* Don't just retry immediately.\n        *   *Exponential Backoff:* Avoid \"thundering herd.\"\n        *   *Jitter:* Add randomness to prevent synchronized retries.\n        *   *Dead Letter Queue (DLQ):* What happens when all else fails?\n\n    *   *Worker Crashes (Fault Tolerance):* The \"Ack\" pattern.\n        *   *Visibility Timeout:* If a worker takes a job but doesn't say \"done,\" put it back.\n        *   *Heartbeats:* For long jobs, tell the queue \"I'm still alive!\"\n\n    *   *Cancellation & Timeouts:*\n        *   *Hard",
+          "tool_calls": [],
+          "finish_reason": "length",
+          "repetition": {
+            "repeated_8gram_fraction": 0.0,
+            "duplicate_consecutive_lines": 0,
+            "word_tokens": 458
+          },
+          "payload_sha256": "a4c17d1a82095d5cbcc49eb21a67a070ac3dcba9bbd19c61485c92db4736755f"
+        },
+        {
+          "id": "perf_c4_r2_2",
+          "usage": {
+            "prompt_tokens": 66,
+            "total_tokens": 578,
+            "completion_tokens": 512,
+            "completion_tokens_details": {
+              "reasoning_tokens": 511
+            }
+          },
+          "wall_seconds": 7.9114588710071985,
+          "first_output_seconds": 0.3016169809998246,
+          "first_visible_seconds": null,
+          "decode_tokens_per_second": 67.14988397735355,
+          "content": "",
+          "reasoning": "\n*   *Context:* Final matched benchmark BX-20261023 C4 request 2. (This suggests it's part of a larger set of tasks or a specific project milestone).\n    *   *Goal:* A detailed engineering review of a \"durable job queue.\"\n    *   *Key Components to Cover:*\n        *   Idempotency.\n        *   Retry handling.\n        *   Worker crashes (fault tolerance).\n        *   Cancellation/Timeout mechanisms.\n        *   Audit records (observability).\n        *   Practical regression checks (testing/validation).\n\n    *   What is a durable job queue? It's not just a list of things to do; it's a system that ensures work is completed even if the process restarts or fails.\n    *   *Core concept:* State persistence. If the power goes out, we don't lose our place.\n\n    *   **Section 1: Core Architecture & Persistence.** (The foundation)\n    *   **Section 2: Idempotency.** (Ensuring correctness when repeating)\n    *   **Section 3: Retry Handling & Backoff.** (Dealing with failure)\n    *   **Section _4: Worker Lifecycle & Crash Recovery.** (Handling the \"what if\")\n    *   **Section 5: Cancellation & Timeouts.** (Managing resources)\n    *   **Section 6: Audit Records & Observability.** (Knowing what happened)\n    *   **Section 7: Regression Checks.** (Ensuring stability over time)\n\n    *   *Persistence:* Mention the storage layer (SQL, NoSQL, Redis). The key is moving from \"Pending\" $\\rightarrow$ \"Processing\" $\\rightarrow$ \"Completed\".\n\n    *   *Idempotency:* Why does it matter? Because jobs *will* be retried.\n        *   *Strategy:* Unique IDs, `upsert` operations, or state tracking.\n        *   *Example:* Sending an email shouldn't result in two emails if the worker crashes after sending but before marking as complete.\n\n    *   *Retry Handling:* Don't just retry immediately.\n        *   *Exponential Backoff:* $2^n$. Avoids \"thundering herd.\"\n        *   *Jitter:* Adding randomness so workers don't all sync up.\n        *   *Dead Letter Queue (DLQ",
+          "tool_calls": [],
+          "finish_reason": "length",
+          "repetition": {
+            "repeated_8gram_fraction": 0.0,
+            "duplicate_consecutive_lines": 0,
+            "word_tokens": 439
+          },
+          "payload_sha256": "4d36cc09b25113292f3d33b94e339e963e09336bfd0c522673926d01bd0b2c08"
+        },
+        {
+          "id": "perf_c4_r2_3",
+          "usage": {
+            "prompt_tokens": 66,
+            "total_tokens": 578,
+            "completion_tokens": 512,
+            "completion_tokens_details": {
+              "reasoning_tokens": 511
+            }
+          },
+          "wall_seconds": 8.148377347999485,
+          "first_output_seconds": 0.3008876550011337,
+          "first_visible_seconds": null,
+          "decode_tokens_per_second": 65.11636459439022,
+          "content": "",
+          "reasoning": "\n*   *Context:* Final matched benchmark BX-20261023 C4 request 3. (This suggests it's part of a larger series or a specific project requirement).\n    *   *Goal:* A detailed engineering review of a \"durable job queue.\"\n    *   *Key Components to cover:*\n        *   Idempotency.\n        *   Retry handling.\n        *   Worker crashes (fault tolerance).\n        *   Cancellation/Timeout.\n        *   Audit records (observability).\n        *   Practical regression checks (testing/validation).\n\n    *   What is a durable job queue? It's not just a list of things to do; it's a system that ensures work is completed even if the process restarts or fails.\n    *   *Core concept:* State persistence. The state must move from `Pending` $\\rightarrow$ `Running` $\\rightarrow$ `Completed`/`Failed`.\n\n    A logical flow for an engineering review would be:\n    *   **Introduction/Overview** (The \"Why\" and \"What\").\n    *   **Core Architecture** (Persistence & Scheduling).\n    *   **Deep Dive into Key Mechanisms** (The requested components).\n    *   **Failure Modes & Recovery** (Crashes and Timeouts).\n    *   **Observability & Auditing**.\n    *   **Testing Strategy** (Regression checks).\n    *   **Conclusion/Summary Table**.\n\n    *   *Idempotency:* Why? Because jobs might run twice. How? Use a unique ID + check status before starting. *Example:* Adding $10 to a balance should result in the same outcome regardless of how many times the operation runs.\n\n    *   *Retry Handling:* Not all retries are equal. Exponential backoff is key. Jitter prevents \"thundering herd.\" Max retries prevent infinite loops.\n\n    *   *Worker Crashes:* This is about \"At-least-once delivery.\" Need a heartbeat or a visibility timeout. If a worker dies, the job returns to the queue.\n\n    *   *Cancellation/Timeouts:* Hard timeouts (kill the job) vs. Soft timeouts (graceful shutdown). Cancellation tokens allow workers to stop halfway through.\n\n    *   *Audit Records:* Tracking history. Input parameters, output results, timestamps, and error logs.\n\n    *   *Regression Checks:* How do we",
+          "tool_calls": [],
+          "finish_reason": "length",
+          "repetition": {
+            "repeated_8gram_fraction": 0.0,
+            "duplicate_consecutive_lines": 0,
+            "word_tokens": 453
+          },
+          "payload_sha256": "6beb11a3ec11b94952441a67282270a5c294aa5bd481c4c85b47d9e39546e037"
+        }
+      ],
+      "concurrency": 4,
+      "repeat": 2,
+      "warmup": false,
+      "metrics_delta": {
+        "vllm:spec_decode_num_draft_tokens_total": 1738.0,
+        "vllm:request_num_preemptions_bucket": 32.0,
+        "vllm:prefix_cache_hits_total": 192.0,
+        "vllm:external_prefix_cache_queries_total": 72.0,
+        "vllm:external_prefix_cache_hits_total": 0.0,
+        "vllm:spec_decode_num_drafts_total": 869.0,
+        "vllm:spec_decode_num_accepted_tokens_total": 1177.0,
+        "vllm:prefix_cache_queries_total": 264.0,
+        "vllm:num_preemptions_total": 0.0,
+        "vllm:num_requests_waiting": 0.0,
+        "vllm:num_requests_waiting_by_reason": 0.0,
+        "vllm:request_num_preemptions_sum": 0.0,
+        "vllm:num_requests_running": 0.0,
+        "vllm:request_num_preemptions_count": 4.0,
+        "vllm:num_requests_kv_fetch_by_stage": 0.0,
+        "vllm:spec_decode_num_accepted_tokens_per_pos_total": 1177.0
+      }
+    }
+  ],
+  "quality": [
+    {
+      "id": "facts",
+      "usage": {
+        "prompt_tokens": 55,
+        "total_tokens": 367,
+        "completion_tokens": 312,
+        "completion_tokens_details": {
+          "reasoning_tokens": 237
+        }
+      },
+      "wall_seconds": 2.8214404180034762,
+      "first_output_seconds": 0.1262499040021794,
+      "first_visible_seconds": 2.219706091011176,
+      "decode_tokens_per_second": 115.39072966618878,
+      "content": "```json\n{\n  \"capital_of_australia\": \"Canberra\",\n  \"carbon_atomic_number\": 6,\n  \"hex_ff_decimal\": 255,\n  \"bits_per_byte\": 8,\n  \"water_formula\": \"H2O\"\n}\n```",
+      "reasoning": "*   Target output: JSON.\n    *   Required keys: `capital_of_australia`, `carbon_atomic_number`, `hex_ff_decimal`, `bits_per_byte`, `water_formula`.\n    *   Constraint: Return *only* JSON.\n\n    *   `capital_of_australia`: Canberra\n    *   `carbon_atomic_number`: 6\n    *   `hex_ff_decimal`: 255 (FF in hex is $15 \\times 16 + 15 = 240 + 15 = 255$)\n    *   `bits_per_byte`: 8\n    *   `water_formula`: H2O\n\n    ```json\n    {\n      \"capital_of_australia\": \"Canberra\",\n      \"carbon_atomic_number\": 6,\n      \"hex_ff_decimal\": 255,\n      \"bits_per_byte\": 8,\n      \"water_formula\": \"H2O\"\n    }\n    ```",
+      "tool_calls": [],
+      "finish_reason": "stop",
+      "repetition": {
+        "repeated_8gram_fraction": 0.21084337349397586,
+        "duplicate_consecutive_lines": 0,
+        "word_tokens": 173
+      },
+      "payload_sha256": "875968d6122d0a62acd54e43ff3bf64523f8557136f6063b55e1affa12fa2519",
+      "assessment": {
+        "passed": true,
+        "strict_json_only": false,
+        "expected": {
+          "capital_of_australia": "Canberra",
+          "carbon_atomic_number": 6,
+          "hex_ff_decimal": 255,
+          "bits_per_byte": 8,
+          "water_formula": "H2O"
+        },
+        "parsed_answer": {
+          "capital_of_australia": "Canberra",
+          "carbon_atomic_number": 6,
+          "hex_ff_decimal": 255,
+          "bits_per_byte": 8,
+          "water_formula": "H2O"
+        }
+      }
+    },
+    {
+      "id": "arithmetic",
+      "usage": {
+        "prompt_tokens": 39,
+        "total_tokens": 654,
+        "completion_tokens": 615,
+        "completion_tokens_details": {
+          "reasoning_tokens": 608
+        }
+      },
+      "wall_seconds": 5.665230120997876,
+      "first_output_seconds": 0.14044612699944992,
+      "first_visible_seconds": 5.613210965995677,
+      "decode_tokens_per_second": 111.13556668767292,
+      "content": "2749",
+      "reasoning": "*   Operation: (47 * 83) - (128 * 9)\n\n    *   47 * 80 = 3760\n    *   47 * 3 = 141\n    *   3760 + 141 = 3901\n\n    *   128 * 10 = 1280\n    *   1280 - 128 = 1152\n    *   (Alternatively: 100 * 9 = 900, 20 * 9 = 180, 8 * 9 = 72; 900 + 180 + 72 = 1152)\n\n    *   3901 - 1152\n    *   3901 - 1000 = 2901\n    *   2901 - 100 = 2801\n    *   2801 - 50 = 2751\n    *   2751 - 2 = 2749\n\n    *   47 * 83:\n        40 * 80 = 3200\n        40 * 3 = 100\n        7 * 80 = 560\n        7 * 3 = 21\n        Wait, let's re-add: 3200 + 100 + 560 + 21 = 3881? No.\n        Let's try again:\n        40 * 80 = 3200\n        40 * 3 = 120\n        7 * 80 = 560\n        7 * 3 = 21\n        Sum: 3200 + 120 + 560 + 21 = 3320 + 560 + 21 = 3880 + 21 = 3901. Correct.\n\n    *   128 * 9:\n        100 * 9 = 900\n        20 * 9 = 180\n        8 * 9 = 72\n        Sum: 900 + 180 + 72 = 1080 + 72 = 1152. Correct.\n\n    *   Subtraction:\n        3901 - 1152 = ?\n        3901 - 1100 = 2801\n        2801 - 52 = 2749. Correct.",
+      "tool_calls": [],
+      "finish_reason": "stop",
+      "repetition": {
+        "repeated_8gram_fraction": 0.02409638554216864,
+        "duplicate_consecutive_lines": 0,
+        "word_tokens": 256
+      },
+      "payload_sha256": "83a4188be16ee588d3bea2b5613aedeac0795717c028cb1188d605c7cbcfbe71",
+      "assessment": {
+        "passed": true,
+        "strict_json_only": true,
+        "expected": 2749,
+        "parsed_answer": 2749
+      }
+    },
+    {
+      "id": "extraction",
+      "usage": {
+        "prompt_tokens": 73,
+        "total_tokens": 259,
+        "completion_tokens": 186,
+        "completion_tokens_details": {
+          "reasoning_tokens": 131
+        }
+      },
+      "wall_seconds": 1.7431470970041119,
+      "first_output_seconds": 0.15764715400291607,
+      "first_visible_seconds": 1.3193750830105273,
+      "decode_tokens_per_second": 116.68243875796877,
+      "content": "```json\n{\n  \"total_value\": 146,\n  \"colors_sorted_by_value_desc\": [\n    \"blue\",\n    \"red\",\n    \"green\"\n  ]\n}\n```",
+      "reasoning": "*   Red: 11 units * 4 = 44\n    *   Blue: 7 units * 9 = 63\n    *   Green: 13 units * 3 = 39\n\n    *   Total Value = 44 + 63 + 39 = 146\n\n    *   Blue (63) > Red (44) > Green (39)\n\n    *   `total_value`: 146\n    *   `colors_sorted_by_value_desc`: [\"blue\", \"red\", \"green\"]",
+      "tool_calls": [],
+      "finish_reason": "stop",
+      "repetition": {
+        "repeated_8gram_fraction": 0.06862745098039214,
+        "duplicate_consecutive_lines": 0,
+        "word_tokens": 109
+      },
+      "payload_sha256": "e891f636936da55aed8e910a60b92cac362dcb9305de3c8a27bd39a2d7aa7fac",
+      "assessment": {
+        "passed": true,
+        "strict_json_only": false,
+        "expected": {
+          "total_value": 146,
+          "colors_sorted_by_value_desc": [
+            "blue",
+            "red",
+            "green"
+          ]
+        },
+        "parsed_answer": {
+          "total_value": 146,
+          "colors_sorted_by_value_desc": [
+            "blue",
+            "red",
+            "green"
+          ]
+        }
+      }
+    },
+    {
+      "id": "code",
+      "usage": {
+        "prompt_tokens": 58,
+        "total_tokens": 301,
+        "completion_tokens": 243,
+        "completion_tokens_details": {
+          "reasoning_tokens": 234
+        }
+      },
+      "wall_seconds": 2.4531049799988978,
+      "first_output_seconds": 0.13900854100938886,
+      "first_visible_seconds": 2.402211074004299,
+      "decode_tokens_per_second": 104.57645408489266,
+      "content": "[4, 9]",
+      "reasoning": "*   `xs = [3, 1, 3, 2]`\n    *   Expression: `sorted({x*x for x in xs if x > 1})`\n\n    *   `{x*x for x in xs if x > 1}` is a set comprehension.\n    *   Filter condition: `x > 1`.\n    *   Input elements: `3`, `1`, `3`, `2`.\n    *   Elements satisfying `x > 1`: `3`, `3`, `2`.\n    *   Squares of these elements: $3^2 = 9$, $3^2 = 9$, $2^ = 4$.\n    *   The resulting set contains unique values: `{9, 4}` (or `{4, 9}`).\n\n    *   `sorted({4, 9})` returns a list with elements in ascending order.\n    *   Result: `[4, 9]`.\n\n    *   `print([4, 9])` outputs `[4, 9]`.",
+      "tool_calls": [],
+      "finish_reason": "stop",
+      "repetition": {
+        "repeated_8gram_fraction": 0.06161137440758291,
+        "duplicate_consecutive_lines": 0,
+        "word_tokens": 218
+      },
+      "payload_sha256": "316d0ba20a23401b47cca706ab004c09be12cefe503a37ae6c5232cd5d09a507",
+      "assessment": {
+        "passed": true,
+        "strict_json_only": true,
+        "expected": [
+          4,
+          9
+        ],
+        "parsed_answer": [
+          4,
+          9
+        ]
+      }
+    },
+    {
+      "id": "constraints",
+      "usage": {
+        "prompt_tokens": 48,
+        "total_tokens": 254,
+        "completion_tokens": 206,
+        "completion_tokens_details": {
+          "reasoning_tokens": 173
+        }
+      },
+      "wall_seconds": 1.9248530250042677,
+      "first_output_seconds": 0.15720996100571938,
+      "first_visible_seconds": 1.6718029710027622,
+      "decode_tokens_per_second": 115.9736398004888,
+      "content": "```json\n{\n  \"status\": \"ready\",\n  \"count\": 0,\n  \"tags\": []\n}\n```",
+      "reasoning": "*   Goal: Return a JSON object.\n    *   Keys required: `status`, `count`, `tags`.\n    *   `status` value: \"ready\" (lowercase).\n    *   `count` value: 0 (integer).\n    *   `tags` value: [] (empty array).\n\n    ```json\n    {\n      \"status\": \"ready\",\n      \"count\": 0,\n      \"tags\": []\n    }\n    ```\n\n    *   Is it a JSON object? Yes.\n    *   Exactly keys `status`, `count`, `tags`? Yes.\n    *   `status` = \"ready\"? Yes.\n    *   `count` = 0? Yes.\n    *   `tags` = []? Yes.",
+      "tool_calls": [],
+      "finish_reason": "stop",
+      "repetition": {
+        "repeated_8gram_fraction": 0.1607142857142857,
+        "duplicate_consecutive_lines": 0,
+        "word_tokens": 175
+      },
+      "payload_sha256": "8f8bd5b87f94874ad6762d305896ae01535be18198e376cf2cff417efa6ac715",
+      "assessment": {
+        "passed": true,
+        "strict_json_only": false,
+        "expected": {
+          "status": "ready",
+          "count": 0,
+          "tags": []
+        },
+        "parsed_answer": {
+          "status": "ready",
+          "count": 0,
+          "tags": []
+        }
+      }
+    },
+    {
+      "id": "precedence",
+      "usage": {
+        "prompt_tokens": 66,
+        "total_tokens": 294,
+        "completion_tokens": 228,
+        "completion_tokens_details": {
+          "reasoning_tokens": 201
+        }
+      },
+      "wall_seconds": 2.201942207000684,
+      "first_output_seconds": 0.1410845939972205,
+      "first_visible_seconds": 2.0002177999995183,
+      "decode_tokens_per_second": 110.14831814080233,
+      "content": "```json\n{\n  \"A\": \"Mira\",\n  \"B\": \"Ivo\"\n}\n```",
+      "reasoning": "*   Input records:\n        *   A, revision 2, owner: Noor\n        *   B, revision 4, owner: Ivo\n        *   A, revision 5, owner: Mira\n        *   B, revision 1, owner: Eli\n    *   Goal: Use the *highest revision* for each item (A and B).\n    *   Output format: JSON mapping items to their current owners.\n\n    *   Item A:\n        *   Revision 2 (Noor)\n        *   Revision 5 (Mira)\n        *   Highest revision = 5 $\\rightarrow$ Owner = Mira.\n    *   Item B:\n        *   Revision 4 (Ivo)\n        *   Revision 1 (Eli)\n        *   Highest revision = 4 $\\rightarrow$ Owner = Ivo.\n\n    *   `{ \"A\": \"Mira\", \"B\": \"Ivo\" }`",
+      "tool_calls": [],
+      "finish_reason": "stop",
+      "repetition": {
+        "repeated_8gram_fraction": 0.06666666666666665,
+        "duplicate_consecutive_lines": 0,
+        "word_tokens": 172
+      },
+      "payload_sha256": "dcd9a2cf937c49c001e61d5080c59b6e0ce556e8dd2e52cce219785d1e5ded55",
+      "assessment": {
+        "passed": true,
+        "strict_json_only": false,
+        "expected": {
+          "A": "Mira",
+          "B": "Ivo"
+        },
+        "parsed_answer": {
+          "A": "Mira",
+          "B": "Ivo"
+        }
+      }
+    },
+    {
+      "id": "planning_constraints",
+      "usage": {
+        "prompt_tokens": 56,
+        "total_tokens": 216,
+        "completion_tokens": 160,
+        "completion_tokens_details": {
+          "reasoning_tokens": 140
+        }
+      },
+      "wall_seconds": 1.578733011992881,
+      "first_output_seconds": 0.15500746999168769,
+      "first_visible_seconds": 1.4542991719936254,
+      "decode_tokens_per_second": 111.67882805312958,
+      "content": "```json\n[\"P\", \"V\", \"R\", \"M\"]\n```",
+      "reasoning": "*   Steps: P (prepare), V (validate P), R (release after V), M (monitor after R).\n    *   Goal: Find the valid dependency order and return it as a JSON array of step letters.\n\n    *   P must happen first.\n    *   V happens *after* P (\"validate P\").\n    *   R happens *after* V (\"release after V\").\n    *   M happens *after* R (\"monitor after R\").\n\n    *   Order: P $\\rightarrow$ V $\\rightarrow$ R $\\rightarrow$ M.\n\n    *   `[\"P\", \"V\", \"R\", \"M\"]`",
+      "tool_calls": [],
+      "finish_reason": "stop",
+      "repetition": {
+        "repeated_8gram_fraction": 0.0714285714285714,
+        "duplicate_consecutive_lines": 0,
+        "word_tokens": 161
+      },
+      "payload_sha256": "e98485c1157d828d2764ec8283c9795e97d770d447e774cf125896d49ce2496b",
+      "assessment": {
+        "passed": true,
+        "strict_json_only": false,
+        "expected": [
+          "P",
+          "V",
+          "R",
+          "M"
+        ],
+        "parsed_answer": [
+          "P",
+          "V",
+          "R",
+          "M"
+        ]
+      }
+    },
+    {
+      "id": "limited_evidence",
+      "usage": {
+        "prompt_tokens": 76,
+        "total_tokens": 335,
+        "completion_tokens": 259,
+        "completion_tokens_details": {
+          "reasoning_tokens": 227
+        }
+      },
+      "wall_seconds": 2.5439772219979204,
+      "first_output_seconds": 0.1427907509932993,
+      "first_visible_seconds": 2.314526924994425,
+      "decode_tokens_per_second": 107.44688224569938,
+      "content": "```json\n{\n  \"increase\": 5,\n  \"observed_at_0905\": null\n}\n```",
+      "reasoning": "*   Input text: \"A sensor read 12 at 09:00 and 17 at 09:10. There is no 09:05 reading.\"\n    *   Goal: Extract/calculate `increase` (between the two readings) and identify the value of `observed_at_0905`.\n    *   Output format: JSON only.\n\n    *   Reading 1: 12 at 09:00.\n    *   Reading 2: 17 at 09:10.\n    *   Observation for 09:05: None (\"no 09:05 reading\").\n\n    *   `increase`: $17 - 12 = 5$.\n    *   `observed_at_0905`: Since there was no reading, it should be `null`.\n\n    ```json\n    {\n      \"increase\": 5,\n      \"observed_at_0905\": null\n    }\n    ```",
+      "tool_calls": [],
+      "finish_reason": "stop",
+      "repetition": {
+        "repeated_8gram_fraction": 0.08024691358024694,
+        "duplicate_consecutive_lines": 0,
+        "word_tokens": 169
+      },
+      "payload_sha256": "9d1a9f01bbbdfea7bc650c728ad77097570eb7255963a9dee21f19e74232468c",
+      "assessment": {
+        "passed": true,
+        "strict_json_only": false,
+        "expected": {
+          "increase": 5,
+          "observed_at_0905": null
+        },
+        "parsed_answer": {
+          "increase": 5,
+          "observed_at_0905": null
+        }
+      }
+    },
+    {
+      "id": "tool_lookup",
+      "usage": {
+        "prompt_tokens": 97,
+        "total_tokens": 243,
+        "completion_tokens": 146,
+        "completion_tokens_details": {
+          "reasoning_tokens": 124
+        }
+      },
+      "wall_seconds": 1.6659046740096528,
+      "first_output_seconds": 0.16056338501221035,
+      "first_visible_seconds": 1.5636904500133824,
+      "decode_tokens_per_second": 96.32367162171577,
+      "content": "",
+      "reasoning": "The user wants to get the status of deployment record \"B-17\".\nI need to call `lookup_record` with `record_id = 'B-17'`.\nAfter receiving the result, I should output a JSON object containing `state` and `retry_budget`.\n\nStep 1: Call `lookup_record(record_id='B-17')`.\nStep 2: Parse the response (which will likely be an object or string) to find the `state` and `retry_budget`.\nStep 3: Return them as JSON.",
+      "tool_calls": [
+        {
+          "id": "chatcmpl-tool-980aa9f351c12567",
+          "type": "function",
+          "function": {
+            "name": "lookup_record",
+            "arguments": "{\"record_id\": \"B-17\"}"
+          }
+        }
+      ],
+      "finish_reason": "tool_calls",
+      "repetition": {
+        "repeated_8gram_fraction": 0.02020202020202022,
+        "duplicate_consecutive_lines": 0,
+        "word_tokens": 106
+      },
+      "payload_sha256": "9192169a90c8e820485c7e640d29769e5968c7f43b5b4a331a8cf6de73bde7c7",
+      "assessment": {
+        "passed": true,
+        "strict_json_only": false,
+        "expected": {
+          "name": "lookup_record",
+          "arguments": {
+            "record_id": "B-17"
+          }
+        },
+        "parsed_answer": ""
+      }
+    },
+    {
+      "id": "tool_result",
+      "usage": {
+        "prompt_tokens": 154,
+        "total_tokens": 250,
+        "completion_tokens": 96,
+        "completion_tokens_details": {
+          "reasoning_tokens": 68
+        }
+      },
+      "wall_seconds": 1.0712577149970457,
+      "first_output_seconds": 0.14136083700577728,
+      "first_visible_seconds": 0.8392762120056432,
+      "decode_tokens_per_second": 102.16186573850615,
+      "content": "```json\n{\n  \"state\": \"ready\",\n  \"retry_budget\": 6\n}\n```",
+      "reasoning": "The user wants the output in JSON format containing `state` and `retry_budget` from the result of `lookup_record` for record B-17.\n\nFrom the tool response:\n- `state`: \"ready\"\n- `retry_budget`: 6\n\nFinal output should be a JSON object.",
+      "tool_calls": [],
+      "finish_reason": "stop",
+      "repetition": {
+        "repeated_8gram_fraction": 0.0,
+        "duplicate_consecutive_lines": 0,
+        "word_tokens": 78
+      },
+      "payload_sha256": "c39ea0847ddfed93205f6a610afbcd8e4717f8d7390b849352a5e88b05d62d96",
+      "assessment": {
+        "passed": true,
+        "strict_json_only": false,
+        "expected": {
+          "state": "ready",
+          "retry_budget": 6
+        },
+        "parsed_answer": {
+          "state": "ready",
+          "retry_budget": 6
+        }
+      }
+    }
+  ],
+  "long_context": [],
+  "fixtures_sha256": "7fa09cf5ba9cd7f91a5faa758e0bcda755bd937a1036198f1e328fe4a5538d9d",
+  "metrics_delta": {
+    "vllm:spec_decode_num_draft_tokens_total": 6612.0,
+    "vllm:request_num_preemptions_bucket": 200.0,
+    "vllm:prefix_cache_hits_total": 560.0,
+    "vllm:external_prefix_cache_queries_total": 1152.0,
+    "vllm:external_prefix_cache_hits_total": 0.0,
+    "vllm:spec_decode_num_drafts_total": 3306.0,
+    "vllm:spec_decode_num_accepted_tokens_total": 4890.0,
+    "vllm:prefix_cache_queries_total": 1712.0,
+    "vllm:num_preemptions_total": 0.0,
+    "vllm:num_requests_waiting": 0.0,
+    "vllm:num_requests_waiting_by_reason": 0.0,
+    "vllm:request_num_preemptions_sum": 0.0,
+    "vllm:num_requests_running": 0.0,
+    "vllm:request_num_preemptions_count": 25.0,
+    "vllm:num_requests_kv_fetch_by_stage": 0.0,
+    "vllm:spec_decode_num_accepted_tokens_per_pos_total": 4890.0
+  },
+  "utc_finished": "2026-10-23T16:48:21.412932+00:00",
+  "quality_passes": 10,
+  "quality_total": 10,
+  "performance_summary": {
+    "1": {
+      "median_aggregate_tps": 91.40847769682651,
+      "median_decode_tps_per_client": 93.90229872150691,
+      "median_ttft_seconds": 0.1577676969973254
+    },
+    "4": {
+      "median_aggregate_tps": 251.87049914552512,
+      "median_decode_tps_per_client": 66.49225568360794,
+      "median_ttft_seconds": 0.28315844949975144
+    }
+  }
+}

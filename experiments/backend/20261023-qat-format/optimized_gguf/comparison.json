@@ -1,0 +1,229 @@
+{
+  "utc": "2026-10-23T17:02:56.962677+00:00",
+  "rows": {
+    "converted": {
+      "performance": {
+        "1": {
+          "median_aggregate_tps": 90.2545655137834,
+          "median_decode_tps_per_client": 92.9107362822499,
+          "median_ttft_seconds": 0.1712575365017983
+        },
+        "4": {
+          "median_aggregate_tps": 242.1799312021867,
+          "median_decode_tps_per_client": 64.37505569624268,
+          "median_ttft_seconds": 0.31495434049429605
+        }
+      },
+      "short_quality": [
+        10,
+        10
+      ],
+      "long_exact_answers": [
+        5,
+        5
+      ],
+      "cold_long_first_output_seconds": 111.04455672400945,
+      "cold_prompt_tokens": 63460,
+      "shared_batch_seconds": 131.77953319800145,
+      "shared_batch_metrics": {
+        "vllm:prefix_cache_queries_total": 253851.0,
+        "vllm:spec_decode_num_draft_tokens_total": 1410.0,
+        "vllm:num_requests_kv_fetch_by_stage": 0.0,
+        "vllm:num_preemptions_total": 0.0,
+        "vllm:request_num_preemptions_sum": 0.0,
+        "vllm:request_num_preemptions_count": 4.0,
+        "vllm:spec_decode_num_drafts_total": 705.0,
+        "vllm:num_requests_waiting": 0.0,
+        "vllm:prefix_cache_hits_total": 190272.0,
+        "vllm:external_prefix_cache_queries_total": 63579.0,
+        "vllm:spec_decode_num_accepted_tokens_per_pos_total": 1256.0,
+        "vllm:external_prefix_cache_hits_total": 0.0,
+        "vllm:num_requests_running": 0.0,
+        "vllm:request_num_preemptions_bucket": 32.0,
+        "vllm:num_requests_waiting_by_reason": 0.0,
+        "vllm:spec_decode_num_accepted_tokens_total": 1256.0
+      },
+      "behavior_checks": [
+        7,
+        7
+      ]
+    },
+    "original": {
+      "performance": {
+        "1": {
+          "median_aggregate_tps": 59.23531061375631,
+          "median_decode_tps_per_client": 60.63091640235288,
+          "median_ttft_seconds": 0.21369442400464322
+        },
+        "4": {
+          "median_aggregate_tps": 72.83752571366554,
+          "median_decode_tps_per_client": 18.884008004412102,
+          "median_ttft_seconds": 0.7688903459929861
+        }
+      },
+      "short_quality": [
+        10,
+        10
+      ],
+      "long_exact_answers": [
+        4,
+        5
+      ],
+      "cold_long_first_output_seconds": 445.0525560389942,
+      "cold_prompt_tokens": 63460,
+      "shared_batch_seconds": 496.3227098030038,
+      "shared_batch_metrics": {
+        "vllm:request_num_preemptions_count": 4.0,
+        "vllm:num_requests_kv_fetch_by_stage": 0.0,
+        "vllm:external_prefix_cache_queries_total": 63579.0,
+        "vllm:spec_decode_num_accepted_tokens_total": 1120.0,
+        "vllm:spec_decode_num_drafts_total": 636.0,
+        "vllm:num_requests_waiting_by_reason": 0.0,
+        "vllm:prefix_cache_queries_total": 253851.0,
+        "vllm:num_preemptions_total": 0.0,
+        "vllm:request_num_preemptions_bucket": 32.0,
+        "vllm:external_prefix_cache_hits_total": 0.0,
+        "vllm:num_requests_running": 0.0,
+        "vllm:spec_decode_num_accepted_tokens_per_pos_total": 1120.0,
+        "vllm:request_num_preemptions_sum": 0.0,
+        "vllm:prefix_cache_hits_total": 190272.0,
+        "vllm:num_requests_waiting": 0.0,
+        "vllm:spec_decode_num_draft_tokens_total": 1272.0
+      },
+      "behavior_checks": [
+        7,
+        7
+      ]
+    },
+    "custom_fast_v1": {
+      "performance": {
+        "1": {
+          "median_aggregate_tps": 48.79286789399569,
+          "median_decode_tps_per_client": 49.70735168310944,
+          "median_ttft_seconds": 0.21145959350542398
+        },
+        "4": {
+          "median_aggregate_tps": 102.02504641866916,
+          "median_decode_tps_per_client": 26.316028936693407,
+          "median_ttft_seconds": 0.4594567524982267
+        }
+      },
+      "short_quality": [
+        10,
+        10
+      ],
+      "long_exact_answers": [
+        4,
+        5
+      ],
+      "cold_long_first_output_seconds": 109.43681988900062,
+      "cold_prompt_tokens": 63460,
+      "shared_batch_seconds": 137.78536637700745,
+      "shared_batch_metrics": {
+        "vllm:request_num_preemptions_sum": 0.0,
+        "vllm:external_prefix_cache_queries_total": 63579.0,
+        "vllm:spec_decode_num_accepted_tokens_total": 1093.0,
+        "vllm:spec_decode_num_draft_tokens_total": 1206.0,
+        "vllm:num_preemptions_total": 0.0,
+        "vllm:prefix_cache_queries_total": 253851.0,
+        "vllm:prefix_cache_hits_total": 190272.0,
+        "vllm:num_requests_running": 0.0,
+        "vllm:spec_decode_num_drafts_total": 603.0,
+        "vllm:num_requests_waiting_by_reason": 0.0,
+        "vllm:request_num_preemptions_bucket": 32.0,
+        "vllm:num_requests_waiting": 0.0,
+        "vllm:request_num_preemptions_count": 4.0,
+        "vllm:spec_decode_num_accepted_tokens_per_pos_total": 1093.0,
+        "vllm:external_prefix_cache_hits_total": 0.0,
+        "vllm:num_requests_kv_fetch_by_stage": 0.0
+      },
+      "behavior_checks": null
+    },
+    "upstream_pr141": {
+      "performance": {
+        "1": {
+          "median_aggregate_tps": 91.40847769682651,
+          "median_decode_tps_per_client": 93.90229872150691,
+          "median_ttft_seconds": 0.1577676969973254
+        },
+        "4": {
+          "median_aggregate_tps": 251.87049914552512,
+          "median_decode_tps_per_client": 66.49225568360794,
+          "median_ttft_seconds": 0.28315844949975144
+        }
+      },
+      "short_quality": [
+        10,
+        10
+      ],
+      "long_exact_answers": [
+        5,
+        5
+      ],
+      "cold_long_first_output_seconds": 93.83074035200116,
+      "cold_prompt_tokens": 63460,
+      "shared_batch_seconds": 114.55556826200336,
+      "shared_batch_metrics": {
+        "vllm:prefix_cache_queries_total": 253851.0,
+        "vllm:num_requests_running": 0.0,
+        "vllm:request_num_preemptions_sum": 0.0,
+        "vllm:spec_decode_num_drafts_total": 629.0,
+        "vllm:request_num_preemptions_bucket": 32.0,
+        "vllm:spec_decode_num_draft_tokens_total": 1258.0,
+        "vllm:spec_decode_num_accepted_tokens_total": 1142.0,
+        "vllm:num_requests_waiting_by_reason": 0.0,
+        "vllm:spec_decode_num_accepted_tokens_per_pos_total": 1142.0,
+        "vllm:prefix_cache_hits_total": 190272.0,
+        "vllm:request_num_preemptions_count": 4.0,
+        "vllm:num_requests_kv_fetch_by_stage": 0.0,
+        "vllm:external_prefix_cache_hits_total": 0.0,
+        "vllm:external_prefix_cache_queries_total": 63579.0,
+        "vllm:num_requests_waiting": 0.0,
+        "vllm:num_preemptions_total": 0.0
+      },
+      "behavior_checks": [
+        7,
+        7
+      ]
+    }
+  },
+  "source_pins": {
+    "plugin": "e62877c30519305f3c82dc0d616cf62b5ed67133",
+    "llama_cpp": "002a12ad25503a93501b2e188c360029830a241a",
+    "model": "9654466e82d83f5ebfe1518a369bc5900873abb1"
+  },
+  "extension_sha256": "e3cefbcc99a4008b96d52daeaddae770dad20b28f27432e18a4fdc894a912548",
+  "release": "/home/isnotreal/model-tools/gguf-pr141-releases/20261023-e62877c-e3cefbc",
+  "rollback": "/home/isnotreal/model-tools/gguf-pr141-releases/20261023-e62877c-e3cefbc/restore-converted.py",
+  "persistent_activation_verified": true,
+  "sampling": {
+    "temperature": 0.6,
+    "top_k": 64,
+    "top_p": 0.9,
+    "min_p": 0.05,
+    "repetition_penalty": 1.1,
+    "seed": 20261023
+  },
+  "preserved_settings": {
+    "max_model_len": 200000,
+    "tensor_parallel_size": 2,
+    "kv_cache_dtype": "turboquant_4bit_nc",
+    "kv_cache_memory_bytes_per_gpu": 6442450944,
+    "kv_offloading_size_gib": 80,
+    "prefix_caching": true,
+    "mtp_draft_tokens": 2,
+    "max_num_batched_tokens": 4096,
+    "max_num_seqs": 16,
+    "v2_model_runner": true
+  },
+  "limits": [
+    "Two timed fixed-length512-token batches per concurrency after warmup; no statistical superiority claim from the small 1.3%/4.0% margin.",
+    "Matched long prompt has63460 tokens; configured200000 capacity was preserved but this is not a new200000-token request stress test.",
+    "One synthetic suite does not prove broad model-quality equivalence or identify the historical repetition cause.",
+    "PR141 changes upstream dispatch and packed-shard layout; serving gains are not attributed to a single kernel.",
+    "PR141 extension is the measured incremental mixed nvcc13.3/13.0 SM86 build; a clean uniform compiler rebuild remains untested.",
+    "Original GGUF codes/scales are retained, but upstream A8 kernels quantize activations and are not bitwise FP32 GEMMs.",
+    "Controlled MTP2/off ablation remains deferred and was not run."
+  ],
+  "upstream_contribution": "Existing PR141 is the foundation. Ampere evidence and Gemma compatibility changes can complement it; no duplicate kernel-port PR has been published."
+}

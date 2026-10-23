@@ -1,0 +1,55 @@
+{
+  "prepared_at": "2026-10-23T16:21:26.348265+00:00",
+  "plugin_revision": "e62877c30519305f3c82dc0d616cf62b5ed67133",
+  "llama_revision": "002a12ad25503a93501b2e188c360029830a241a",
+  "toolkit_wheel_root": "/home/isnotreal/vllm-env/lib/python3.12/site-packages/nvidia/cu13",
+  "isolated_toolkit_shim": "/home/isnotreal/batbox/experiments/backend/20261023-qat-format/optimized_gguf/upstream-pr141/.build-toolkit",
+  "cuda_arch": "8.6",
+  "compiler_started": true,
+  "gpu_access": false,
+  "install_into_environment": false,
+  "build_output": "in-place extension inside this isolated checkout only",
+  "ninja_candidates": [
+    "/home/isnotreal/vllm-env/bin/ninja",
+    "/home/isnotreal/model-tools/vllm-upgrade-20261006T140750Z/rollback-env-0.28.0/bin/ninja"
+  ],
+  "build_started_at": "2026-10-23T16:38:58.736896+00:00",
+  "shared_host_conditions": "worker_runtime approved CPU4 compilation after C1/C4 timing; quality/long-context server phase concurrent",
+  "build_returncode": 0,
+  "build_elapsed_seconds": 28.828905827002018,
+  "build_finished_at": "2026-10-23T16:39:27.565823+00:00",
+  "extension_files": [
+    "vllm_gguf_plugin/_C_gguf.abi3.so"
+  ],
+  "attempts": [
+    {
+      "build_returncode": 1,
+      "build_elapsed_seconds": 235.08228718998726,
+      "build_started_at": "2026-10-23T16:23:31.629554+00:00",
+      "build_finished_at": "2026-10-23T16:27:26.712075+00:00",
+      "failure": "nvcc13.3 with CUDA runtime headers13.0; CCCL rejected mismatched toolkit"
+    },
+    {
+      "build_returncode": 1,
+      "build_elapsed_seconds": 4.517932476999704,
+      "build_started_at": "2026-10-23T16:32:26.256205+00:00",
+      "build_finished_at": "2026-10-23T16:32:30.774151+00:00",
+      "failure": "CUDA wheel splits nvvm/crt into separate packages; NVVM link missing and CCCL include roots were not exposed"
+    },
+    {
+      "build_returncode": 0,
+      "build_elapsed_seconds": 28.828905827002018,
+      "build_started_at": "2026-10-23T16:38:58.736896+00:00",
+      "build_finished_at": "2026-10-23T16:39:27.565823+00:00"
+    }
+  ],
+  "matching_compiler_root": "/home/isnotreal/.cache/uv/archive-v0/rTX4nDxuEEBk7VLZ/nvidia/cu13",
+  "matching_nvvm_root": "/home/isnotreal/.cache/uv/archive-v0/-gNnMdcCUJtmoy4h/nvidia/cu13",
+  "matching_crt_root": "/home/isnotreal/.cache/uv/archive-v0/ct3v7t0KdXdyfWpM/nvidia/cu13",
+  "toolchain_smoke_compile": "passed CUDA+Thrust SM86",
+  "compiler_object_mix": "Incremental build: successful upstream TUs from nvcc13.3; six remaining objects from nvcc13.0.88. All target SM86, runtime13.0. Not a uniform-toolchain clean build.",
+  "extension_sha256": "e3cefbcc99a4008b96d52daeaddae770dad20b28f27432e18a4fdc894a912548",
+  "compatibility_patch_sha256": "af43131572bb3c8c339e8d5cd8212f2a759ae86d430ba766895dc02938c5c06c",
+  "kernel_probe_command": "CUDA_VISIBLE_DEVICES=0 PYTHONPATH=./upstream-pr141 PYTHONNOUSERSITE=1 VLLM_PLUGINS=gguf VLLM_GGUF_CUDA_KERNEL=upstream OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 LD_LIBRARY_PATH=/home/isnotreal/vllm-env/lib/python3.12/site-packages/nvidia/cu13/lib /home/isnotreal/vllm-env/bin/python -u probe_pr141.py",
+  "kernel_probe_artifact": "pr141-kernel-results.json"
+}
