@@ -42,6 +42,7 @@ target_sources(batbox_agents
     PRIVATE
         .placeholder.cpp
         AgentSupervisor.cpp   # CPP 6.5 — semaphore-bounded spawn + snapshot (full impl)
+        AgentJournal.cpp
         SubAgent.cpp          # CPP 6.4 — per-agent jthread + ConversationEngine
         AgentSpec.cpp         # CPP 6.2 — frontmatter-driven agent config
         AgentLoader.cpp       # CPP 6.3 — scan ~/.batbox/agents/ for agent .md files

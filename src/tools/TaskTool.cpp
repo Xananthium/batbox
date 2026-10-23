@@ -73,6 +73,11 @@ Json TaskTool::schema_json() const {
                     {"description", "Optional one-line label shown in the TUI "
                                     "sub-agent panel for this agent instance."}
                 }}
+                ,{"standing", Json{{"type", "boolean"}, {"description",
+                    "Keep this worker's conversation available after completion for SendMessage follow-ups."}}}
+                ,{"resume_agent_id", Json{{"type", "string"}, {"description",
+                    "Continue a previous agent's durable conversation; prompt becomes its follow-up. "
+                    "A live worker receives the message without opening a second writer."}}}
             }},
             {"required",   Json::array({"subagent_type", "prompt"})}
         }}
@@ -135,8 +140,15 @@ ToolResult TaskTool::run(const Json& args, ToolContext& ctx) {
     auto [child_src, child_tok] = ctx.cancel_token.child();
     (void)child_src; // supervisor_ takes ownership of child_src internally
 
-    const std::string agent_id =
-        supervisor_.spawn(spec, prompt, ctx.agent_id, std::move(child_tok));
+    if (args.contains("standing") && !args["standing"].is_boolean())
+        return ToolResult::error("Task: standing must be boolean");
+    if (args.contains("resume_agent_id") && !args["resume_agent_id"].is_string())
+        return ToolResult::error("Task: resume_agent_id must be a string");
+    const auto resume_id = args.value("resume_agent_id", std::string{});
+    const std::string agent_id = resume_id.empty()
+        ? supervisor_.spawn(spec, prompt, ctx.agent_id, std::move(child_tok), args.value("standing", false))
+        : supervisor_.resume_subagent(resume_id, prompt, std::move(child_tok));
+    if (agent_id.empty()) return ToolResult::error("Task: no durable conversation found for " + resume_id);
 
     // --- Build result ---
     Json payload = {
@@ -145,7 +157,7 @@ ToolResult TaskTool::run(const Json& args, ToolContext& ctx) {
         {"status",        "dispatched"}
     };
 
-    return ToolResult::ok(payload.dump(2), std::move(payload));
+    return ToolResult::ok_json(std::move(payload));
 }
 
 } // namespace batbox::tools

@@ -36,6 +36,7 @@
 #pragma once
 
 #include <batbox/config/Config.hpp>
+#include <batbox/autonomous/Engine.hpp>
 #include <batbox/tools/ToolRegistry.hpp>
 #include <batbox/permissions/PermissionGate.hpp>
 #include <batbox/core/CancelToken.hpp>
@@ -73,6 +74,8 @@ struct AppArgs {
     bool         print_mode{false};   ///< --print : headless, no TUI
     std::string  prompt_flag;         ///< --prompt "text"  (headless input)
     PrintFormat  print_format{PrintFormat::Plain}; ///< --print-format plain|json|markdown
+    bool         autonomous{false};  ///< persistent unattended conversation engine
+    batbox::autonomous::Options engine;
 
     // -- Session resumption -------------------------------------------------
     std::string  resume_id;           ///< --resume <session-id>

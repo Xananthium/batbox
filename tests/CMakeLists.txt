@@ -2047,3 +2047,26 @@ add_test(
 set_tests_properties(lockdown_fake_mirrors PROPERTIES
     LABELS   "meta;lockdown;static-analysis"
     TIMEOUT  30)
+
+# Exercise the actual native autonomous executable with loopback inference and
+# memory fixtures. These tests do not require a GPU or external network access.
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_Interpreter_FOUND)
+    add_test(NAME autonomous_control_services
+        COMMAND ${Python3_EXECUTABLE} -m unittest discover
+            -s ${CMAKE_CURRENT_SOURCE_DIR} -p "test_engine_*.py")
+    set_tests_properties(autonomous_control_services PROPERTIES
+        LABELS "integration;autonomous" TIMEOUT 90)
+    add_test(NAME autonomous_engine_lifecycle
+        COMMAND ${CMAKE_COMMAND} -E env
+            BATBOX_AUTONOMOUS_BIN=$<TARGET_FILE:batbox>
+            ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_autonomous_engine.py)
+    set_tests_properties(autonomous_engine_lifecycle PROPERTIES
+        LABELS "integration;autonomous" TIMEOUT 180)
+    add_test(NAME native_worker_lifecycle
+        COMMAND ${CMAKE_COMMAND} -E env
+            BATBOX_AUTONOMOUS_BIN=$<TARGET_FILE:batbox>
+            ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/integration/test_native_workers.py)
+    set_tests_properties(native_worker_lifecycle PROPERTIES
+        LABELS "integration;autonomous;workers" TIMEOUT 90)
+endif()

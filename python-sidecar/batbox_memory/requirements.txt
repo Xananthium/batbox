@@ -1,0 +1,21 @@
+# CPU-only PyTorch must be installed separately from https://download.pytorch.org/whl/cpu.
+# Keep this environment isolated from the serving vLLM environment.
+fastembed==0.9.0
+openai>=3.3.1,<4
+python-igraph==0.11.8
+pandas
+pyarrow
+scipy
+tiktoken==0.7.0
+tenacity==8.5.0
+networkx==3.4.2
+nest_asyncio
+einops
+transformers==4.45.2
+litellm==1.73.1
+boto3
+aiohttp
+python-dotenv
+jsonschema
+importlib-metadata
+# HippoRAG is installed --no-deps at a pinned revision; see README.

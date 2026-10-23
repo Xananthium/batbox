@@ -41,6 +41,8 @@
 
 #include <batbox/agents/AgentEvent.hpp>
 #include <batbox/agents/AgentSpec.hpp>
+#include <batbox/agents/WorkerRuntime.hpp>
+#include <batbox/agents/AgentJournal.hpp>
 #include <batbox/agents/AgentSupervisor.hpp>    // for AgentSnapshot
 #include <batbox/config/Config.hpp>
 #include <batbox/core/CancelToken.hpp>
@@ -116,6 +118,18 @@ public:
     /// Destructor: requests stop and joins the jthread (jthread does this by
     /// default, but we also call cancel() to ensure cooperative exit).
     ~SubAgent();
+
+    // Configure before start(). The callbacks release an active permit while
+    // parked, then reacquire it before the next inference/tool turn.
+    void configure_runtime(WorkerRuntimeFactory factory,
+                           std::filesystem::path working_dir,
+                           std::filesystem::path sessions_dir,
+                           std::shared_ptr<AgentJournal> journal,
+                           bool continuous,
+                           std::function<void()> on_park,
+                           std::function<bool(const CancelToken&)> on_resume);
+    void close_durably();
+    bool continuous() const noexcept { return continuous_; }
 
     // -------------------------------------------------------------------------
     // start() — launch the jthread and begin the conversation loop
@@ -278,7 +292,15 @@ private:
     AgentEventQueue&    event_queue_;
 
     // Runtime config (non-owning reference; outlives this SubAgent).
-    const batbox::config::Config& cfg_;
+    const batbox::config::Config cfg_;
+
+    WorkerRuntimeFactory runtime_factory_;
+    std::filesystem::path working_dir_;
+    std::filesystem::path sessions_dir_;
+    std::shared_ptr<AgentJournal> journal_;
+    bool continuous_ = false;
+    std::function<void()> on_park_;
+    std::function<bool(const CancelToken&)> on_resume_;
 
     // Called once when the jthread exits (releases supervisor semaphore slot).
     std::function<void()> on_exit_;

@@ -553,6 +553,24 @@ class FakeOpenAIHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         path = self.path.rstrip("/")
 
+        if path == "/tokenize":
+            if not self._check_auth():
+                return
+            req = json.loads(self._read_body())
+            if req.get("model") == "restricted-tools-test" and [t["function"]["name"] for t in req.get("tools", [])] != ["Echo"]:
+                self._send_json(400, {"error": "tool schema selection mismatch"})
+                return
+            if req.get("model") == "template-test" and req.get("chat_template_kwargs") != {"enable_thinking": False}:
+                self._send_json(400, {"error": "template kwargs mismatch"})
+                return
+            # A deterministic test tokenizer, deliberately NOT the byte/4
+            # estimator. This proves the caller trusts the endpoint count.
+            count = sum(len((m.get("content") or "").split()) + 3
+                        for m in req.get("messages", []))
+            count += len(json.dumps(req.get("tools", [])).split())
+            self._send_json(200, {"count": count, "max_model_len": 200000})
+            return
+
         # ------------------------------------------------------------------
         # Non-streaming paths (CPP 4.5)
         # ------------------------------------------------------------------
@@ -566,6 +584,39 @@ class FakeOpenAIHandler(BaseHTTPRequestHandler):
             except json.JSONDecodeError:
                 self._send_json(400, {"error": {"message": "bad JSON"}})
                 return
+
+            if req.get("model") == "template-test" and req.get("chat_template_kwargs") != {"enable_thinking": False}:
+                self._send_json(400, {"error": "template kwargs mismatch"})
+                return
+            if req.get("model") == "restricted-tools-test" and [t["function"]["name"] for t in req.get("tools", [])] != ["Echo"]:
+                self._send_json(400, {"error": "tool schema selection mismatch"})
+                return
+            if not req.get("stream") and req.get("model") in {"empty-summary-test", "truncated-summary-test"}:
+                response = json.loads(json.dumps(CHAT_RESPONSE_OK))
+                response["choices"][0]["message"]["content"] = "" if req["model"] == "empty-summary-test" else "incomplete"
+                response["choices"][0]["finish_reason"] = "length" if req["model"] == "truncated-summary-test" else "stop"
+                self._send_json(200, response)
+                return
+
+            if req.get("model") in {"bounded-summary-test", "bounded-summary-fail"}:
+                content = "\n".join(m.get("content") or "" for m in req.get("messages", []))
+                count = sum(len((m.get("content") or "").split()) + 3 for m in req.get("messages", []))
+                if req.get("stream"):
+                    if count >= 100000 or req["messages"][-1]["role"] != "user":
+                        self._send_json(400, {"error": "compacted continuation is oversized or has no user turn"})
+                        return
+                else:
+                    if count > 90000 or req.get("max_tokens") != 20000:
+                        self._send_json(400, {"error": "summary exceeds its exact input budget or lacks output reserve"})
+                        return
+                    response = json.loads(json.dumps(CHAT_RESPONSE_OK))
+                    markers = [m for m in ("GROUP_HEAD_MARKER", "GROUP_TAIL_MARKER", "https://evidence.example/source")
+                               if m in content]
+                    response["choices"][0]["message"]["content"] = "Summary of earlier context: completed Read result. " + " ".join(markers)
+                    if req["model"] == "bounded-summary-fail" and "GROUP_TAIL_MARKER" in content:
+                        response["choices"][0]["message"]["content"] = ""
+                    self._send_json(200, response)
+                    return
 
             # If stream=true, route to the appropriate streaming branch.
             if req.get("stream"):

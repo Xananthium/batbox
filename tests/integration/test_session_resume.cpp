@@ -249,6 +249,32 @@ TEST_SUITE("SessionStore — load") {
         auto res = store.load(Uuid::v4().to_string());
         CHECK_FALSE(res.has_value());
     }
+
+    TEST_CASE("restart recovers a gzip transcript before its index update") {
+        TmpDir tmp;
+        SessionStore store(tmp.path);
+        auto created = store.new_session("local-model", "/tmp/recovery");
+        REQUIRE(created.has_value());
+        const auto id = *created;
+        REQUIRE(store.append_message(id, user_msg("durable before compression")));
+        auto transcript = store.load(id);
+        REQUIRE(transcript.has_value());
+        const auto plain = tmp.path / (id + ".json");
+        // The file conversion finishes, but a crash prevents SessionStore's
+        // refreshed index record from being written.
+        auto compressed = save_compressed(plain, *transcript);
+        REQUIRE(compressed.has_value());
+        REQUIRE_FALSE(fs::exists(plain));
+        SessionStore restarted(tmp.path);
+        auto restored = restarted.load(id);
+        REQUIRE(restored.has_value());
+        REQUIRE(restored->messages.size() == 1);
+        CHECK(restored->messages.front()["content"] == "durable before compression");
+        REQUIRE(restarted.append_message(id, assistant_msg("resumed")));
+        auto after = restarted.load(id);
+        REQUIRE(after.has_value());
+        CHECK(after->messages.size() == 2);
+    }
 }
 
 // =============================================================================

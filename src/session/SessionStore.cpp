@@ -176,7 +176,7 @@ SessionStore::append_message(const std::string& session_id, const Json& message)
         }
     }
 
-    if (current_path.empty()) {
+    if (current_path.empty() || !fs::exists(current_path)) {
         // Attempt to resolve from index.
         auto recs = read_latest_per_id(index_path_, 1024);
         if (!recs) {
@@ -189,7 +189,7 @@ SessionStore::append_message(const std::string& session_id, const Json& message)
                 break;
             }
         }
-        if (current_path.empty()) {
+        if (current_path.empty() || !fs::exists(current_path)) {
             // Last resort: try canonical name.
             auto try_json    = sessions_dir_ / (session_id + ".json");
             auto try_json_gz = sessions_dir_ / (session_id + ".json.gz");
@@ -314,7 +314,7 @@ SessionStore::load(const std::string& session_id)
     }
 
     // 3. Fallback: try canonical filenames.
-    if (path.empty()) {
+    if (path.empty() || !fs::exists(path)) {
         auto try_json    = sessions_dir_ / (session_id + ".json");
         auto try_json_gz = sessions_dir_ / (session_id + ".json.gz");
         if (fs::exists(try_json))         path = try_json;

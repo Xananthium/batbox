@@ -20,8 +20,8 @@ std::string compose_standing_reminder(const std::vector<StandingHandle>& handles
     out.reserve(shown * 96 + 256);
     out += "<warm_subagents>\n";
     out += "You have warm subagent(s) standing by for follow-up. Their context "
-           "is still loaded — interrogate one by its handle instead of "
-           "re-spawning to ask a follow-up question.\n";
+           "is still loaded. Use SendMessage with a worker handle to deliver a follow-up, "
+           "and TaskOutput to read its result. TaskOutput with agent_id=all lists current workers.\n";
     for (std::size_t i = 0; i < shown; ++i) {
         const StandingHandle& h = handles[i];
         out += "- ";

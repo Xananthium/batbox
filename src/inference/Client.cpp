@@ -199,7 +199,53 @@ bool is_overflow_error(std::string_view error_message) noexcept {
 // ---------------------------------------------------------------------------
 
 Client::Client(const batbox::config::Config& cfg)
-    : cfg_(cfg) {}
+    : cfg_(cfg) {
+    if (cfg.api.enable_thinking.has_value())
+        chat_template_kwargs_ = batbox::Json{{"enable_thinking", *cfg.api.enable_thinking}};
+}
+
+Result<std::size_t> Client::count_prompt_tokens(const ChatRequest& req,
+                                               const CancelToken& ct) {
+    if (ct.is_cancelled()) return batbox::Err(std::string("cancelled"));
+    std::string root = cfg_.api.base_url;
+    while (!root.empty() && root.back() == '/') root.pop_back();
+    if (root.ends_with("/v1")) root.resize(root.size() - 3);
+    batbox::Json body = req;
+    // These are exactly the template-bearing fields of the completion request.
+    for (auto it = body.begin(); it != body.end();) {
+        if (it.key() != "messages" && it.key() != "model" && it.key() != "tools")
+            it = body.erase(it);
+        else ++it;
+    }
+    body["add_generation_prompt"] = true;
+    if (!chat_template_kwargs_.is_null())
+        body["chat_template_kwargs"] = chat_template_kwargs_;
+    const auto response = cpr::Post(
+        cpr::Url{root + "/tokenize"},
+        cpr::Header{{"Content-Type", "application/json"},
+                    {"Authorization", "Bearer " + cfg_.api.api_key}},
+        cpr::Body{body.dump()},
+        cpr::Timeout{static_cast<std::int32_t>(cfg_.api.request_timeout_sec) * 1000},
+        cpr::ProgressCallback{[&ct](cpr::cpr_pf_arg_t, cpr::cpr_pf_arg_t,
+                                   cpr::cpr_pf_arg_t, cpr::cpr_pf_arg_t, intptr_t) {
+            return !ct.is_cancelled();
+        }});
+    if (ct.is_cancelled()) return batbox::Err(std::string("cancelled"));
+    if (response.error.code != cpr::ErrorCode::OK)
+        return batbox::Err("tokenize transport: " + response.error.message);
+    if (response.status_code != 200)
+        return batbox::Err("tokenize http " + std::to_string(response.status_code)
+                           + ": " + response.text.substr(0, 200));
+    try {
+        const auto data = batbox::Json::parse(response.text);
+        if (!data.contains("count") || !data["count"].is_number_integer()
+                || data["count"].get<std::int64_t>() < 0)
+            return batbox::Err(std::string("tokenize: invalid count"));
+        return data["count"].get<std::size_t>();
+    } catch (const std::exception& e) {
+        return batbox::Err(std::string("tokenize parse: ") + e.what());
+    }
+}
 
 // ---------------------------------------------------------------------------
 // completions_url()
@@ -224,6 +270,8 @@ Result<ChatResponse> Client::chat(const ChatRequest& req) {
     wire_req.stream_options_include_usage = std::nullopt;
 
     batbox::Json body_json = wire_req;
+    if (!chat_template_kwargs_.is_null())
+        body_json["chat_template_kwargs"] = chat_template_kwargs_;
 
     const std::string provider = resolve_provider_hint(
         cfg_.api.provider_hint, cfg_.api.base_url);
@@ -334,10 +382,12 @@ Result<UsageDelta> Client::stream_chat(
 
     std::string body_str;
 
-    if (provider_needs_quirks(provider)) {
+    if (provider_needs_quirks(provider) || !chat_template_kwargs_.is_null()) {
         // Quirk path: build the nlohmann tree so apply_provider_quirks can
         // erase fields, then dump once.
         batbox::Json body_json = wire_req;
+        if (!chat_template_kwargs_.is_null())
+            body_json["chat_template_kwargs"] = chat_template_kwargs_;
         apply_provider_quirks(provider, body_json, headers);
         body_str = body_json.dump();
     } else {
@@ -388,12 +438,14 @@ Result<UsageDelta> Client::stream_chat(
     // For quirk-requiring providers: parse the pre-built body, apply mutations,
     // redump once.  This path costs one extra parse + dump but avoids N dumps
     // over N retry attempts (the previous behaviour).
-    if (provider_needs_quirks(provider)) {
+    if (provider_needs_quirks(provider) || !chat_template_kwargs_.is_null()) {
         auto parsed = batbox::parse(body_str);
         if (!parsed) {
             return batbox::Err("internal: body_str is not valid JSON: " + parsed.error());
         }
         batbox::Json body_json = std::move(parsed.value());
+        if (!chat_template_kwargs_.is_null())
+            body_json["chat_template_kwargs"] = chat_template_kwargs_;
         // Build a temporary headers map for apply_provider_quirks.  We only
         // use the headers to determine if Authorization should be erased; the
         // actual Authorization header is reconstructed in stream_chat_impl.

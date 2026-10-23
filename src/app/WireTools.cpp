@@ -87,8 +87,25 @@
 
 #include <cassert>
 #include <memory>
+#include <unordered_map>
 
 namespace batbox::app {
+
+namespace {
+// Every worker registry must share the same in-process store and scheduler.
+// Separate TaskStore mutexes for one path lose concurrent updates; separate cron
+// instances execute every scheduled job once per worker.
+template<class Store>
+std::shared_ptr<Store> shared_store(const std::filesystem::path& path) {
+    static std::mutex mutex;
+    static std::unordered_map<std::string, std::weak_ptr<Store>> stores;
+    std::lock_guard lock(mutex);
+    const auto key = std::filesystem::absolute(path).lexically_normal().string();
+    auto existing = stores[key].lock();
+    if (!existing) { existing = std::make_shared<Store>(path); stores[key] = existing; }
+    return existing;
+}
+} // namespace
 
 void wire_tools(
     batbox::tools::ToolRegistry&                  registry,
@@ -178,7 +195,7 @@ void wire_tools(
     // Group 3 — TaskStore family (4 tools)
     // All four CRUD tools share one TaskStore backed by ~/.batbox/tasks.json.
     // -------------------------------------------------------------------------
-    auto task_store = std::make_shared<batbox::tools::TaskStore>(
+    auto task_store = shared_store<batbox::tools::TaskStore>(
         cfg.general.config_dir / "tasks.json");
 
     // 16. TaskCreate — persist task with id/title/status/due to tasks.json
@@ -199,7 +216,7 @@ void wire_tools(
     // The scheduler's background thread is started inside the CronScheduler
     // constructor; it polls every 1 s and is joined in ~CronScheduler().
     // -------------------------------------------------------------------------
-    auto cron_scheduler = std::make_shared<batbox::tools::CronScheduler>(
+    auto cron_scheduler = shared_store<batbox::tools::CronScheduler>(
         cfg.general.config_dir / "cron.json");
 
     // 20. CronCreate — schedule repeating task; scheduler thread checks every 1 s
@@ -316,8 +333,8 @@ void wire_tools(
     // A miscount here is a programming error; abort at startup rather than
     // silently shipping an incomplete tool surface.
     // -------------------------------------------------------------------------
-    assert(registry.size() == 39 &&
-           "wire_tools: expected exactly 39 tools — "
+    assert(registry.size() == 41 &&
+           "wire_tools: expected exactly 41 tools — "
            "a tool was added or removed without updating this count");
 
     // -------------------------------------------------------------------------

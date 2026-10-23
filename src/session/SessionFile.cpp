@@ -88,36 +88,43 @@ static std::chrono::system_clock::time_point iso8601_to_tp(const std::string& s)
 // ---------------------------------------------------------------------------
 static Result<void> write_atomic(const std::filesystem::path& dest,
                                   const std::string& data) {
-    auto tmp = dest;
-    tmp += ".tmp";
-
-    {
-        std::ofstream f(tmp, std::ios::binary | std::ios::trunc);
-        if (!f.is_open()) {
-            return Err("cannot open temp file for write: " + tmp.string());
-        }
-        f.write(data.data(), static_cast<std::streamsize>(data.size()));
-        if (!f) {
-            return Err("write failure: " + tmp.string());
-        }
-        f.flush();
+    std::string temporary = dest.string() + ".tmp.XXXXXX";
+    const int fd = ::mkstemp(temporary.data());
+    if (fd < 0) return Err("cannot create temporary session file: " + dest.string());
+    auto fail = [&](const std::string& operation) -> Result<void> {
+        const std::string reason = std::strerror(errno);
+        ::close(fd);
+        ::unlink(temporary.c_str());
+        return Err(operation + ": " + dest.string() + ": " + reason);
+    };
+    std::size_t offset = 0;
+    while (offset < data.size()) {
+        const auto written = ::write(fd, data.data() + offset, data.size() - offset);
+        if (written < 0 && errno == EINTR) continue;
+        if (written <= 0) return fail("session write failed");
+        offset += static_cast<std::size_t>(written);
     }
-
-    // fsync before rename so data is durable on crash.
-    {
-        int fd = ::open(tmp.c_str(), O_WRONLY);
-        if (fd != -1) {
-            ::fsync(fd);
-            ::close(fd);
-        }
+    if (::fsync(fd) != 0) return fail("session fsync failed");
+    if (::close(fd) != 0) {
+        const std::string reason = std::strerror(errno);
+        ::unlink(temporary.c_str());
+        return Err("session close failed: " + dest.string() + ": " + reason);
     }
-
-    std::error_code ec;
-    std::filesystem::rename(tmp, dest, ec);
-    if (ec) {
-        std::filesystem::remove(tmp, ec);
-        return Err("rename failed: " + dest.string());
+    if (::rename(temporary.c_str(), dest.c_str()) != 0) {
+        const std::string reason = std::strerror(errno);
+        ::unlink(temporary.c_str());
+        return Err("session rename failed: " + dest.string() + ": " + reason);
     }
+    // A synced temporary file does not make its replacement directory entry
+    // durable. Acknowledging the append requires both barriers.
+    const auto parent = dest.parent_path().empty() ? std::filesystem::path(".") : dest.parent_path();
+    const int dirfd = ::open(parent.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    if (dirfd < 0) return Err("cannot open session directory for fsync: " + parent.string());
+    const int synced = ::fsync(dirfd);
+    const int sync_errno = errno;
+    ::close(dirfd);
+    if (synced != 0)
+        return Err("session directory fsync failed: " + parent.string() + ": " + std::strerror(sync_errno));
     return {};
 }
 

@@ -27,6 +27,19 @@ using namespace batbox;
 
 TEST_SUITE("Config::load_from_env — complete BATBOX_* env-overlay coverage") {
 
+    TEST_CASE("thinking template is optional and supports either explicit value") {
+        auto defaults = Config::load_from_env({});
+        REQUIRE(defaults.has_value());
+        CHECK_FALSE(defaults->api.enable_thinking.has_value());
+        for (const auto& value : {"true", "false"}) {
+            auto cfg = Config::load_from_env({{"BATBOX_ENABLE_THINKING", value}});
+            REQUIRE(cfg.has_value());
+            REQUIRE(cfg->api.enable_thinking.has_value());
+            CHECK(*cfg->api.enable_thinking == (std::string(value) == "true"));
+        }
+        CHECK_FALSE(Config::load_from_env({{"BATBOX_ENABLE_THINKING", "invalid"}}).has_value());
+    }
+
     // -----------------------------------------------------------------------
     // API group
     // -----------------------------------------------------------------------

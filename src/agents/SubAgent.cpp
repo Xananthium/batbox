@@ -15,8 +15,14 @@
 #include <batbox/agents/SubAgent.hpp>
 #include <batbox/conversation/Conversation.hpp>
 #include <batbox/core/CancelToken.hpp>
+#include <batbox/core/Uuid.hpp>
+#include <batbox/core/Paths.hpp>
+#include <batbox/tools/ToolRegistry.hpp>
 #include <batbox/inference/Provider.hpp>   // AC1 (DIS-988): ProviderRegistry seam
 
+#include <algorithm>
+#include <chrono>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -68,7 +74,8 @@ SubAgent::~SubAgent() {
     // Request stop so the run() loop can exit cooperatively, then jthread
     // destructor joins.  Calling cancel() here is safe if already cancelled.
     cancel();
-    // jthread joins in its own destructor (requests stop + joins).
+    if (thread_.joinable()) thread_.join();
+    terminate_interrogations(nullptr);
 }
 
 // =============================================================================
@@ -105,8 +112,22 @@ void SubAgent::cancel() {
 // =============================================================================
 
 void SubAgent::enqueue_message(std::string_view message) {
-    std::lock_guard<std::mutex> lock{msg_mutex_};
-    pending_messages_.emplace_back(std::string(message));
+    // Publish under the same mutex as the park predicate to prevent a lost
+    // wakeup between checking the inbox and entering condition_variable::wait.
+    {
+        std::lock_guard wake_lock{interrogate_mutex_};
+        const auto status = status_.load();
+        if (terminated_ || status == SubAgentStatus::done ||
+            status == SubAgentStatus::failed || status == SubAgentStatus::cancelled) return;
+        std::string entry(message);
+        if (journal_) {
+            entry = "[worker-message:" + Uuid::v4().to_string() + "]\n" + entry;
+            journal_->update([&](Json& j) { j["inbox"].push_back(entry); });
+        }
+        std::lock_guard lock{msg_mutex_};
+        pending_messages_.push_back(std::move(entry));
+    }
+    interrogate_cv_.notify_one();
 }
 
 // =============================================================================
@@ -134,6 +155,10 @@ std::future<std::string> SubAgent::interrogate(std::string question) {
         if (!terminated_
             && standing_.load(std::memory_order_acquire)
             && !child_token_.is_cancelled()) {
+            if (journal_) {
+                question = "[worker-message:" + Uuid::v4().to_string() + "]\n" + question;
+                journal_->update([&](Json& j) { j["inbox"].push_back(question); });
+            }
             interrogations_.push_back(
                 PendingInterrogation{std::move(question), prom});
             enqueued = true;
@@ -255,481 +280,258 @@ void SubAgent::set_status(SubAgentStatus s) {
 // Blueprint contract: batbox::agents::SubAgent::run (row 16761)
 // =============================================================================
 
+void SubAgent::configure_runtime(WorkerRuntimeFactory factory,
+    std::filesystem::path working_dir, std::filesystem::path sessions_dir,
+    std::shared_ptr<AgentJournal> journal, bool continuous,
+    std::function<void()> on_park,
+    std::function<bool(const CancelToken&)> on_resume) {
+    runtime_factory_ = std::move(factory);
+    working_dir_ = std::move(working_dir);
+    sessions_dir_ = std::move(sessions_dir);
+    journal_ = std::move(journal);
+    continuous_ = continuous;
+    on_park_ = std::move(on_park);
+    on_resume_ = std::move(on_resume);
+    if (journal_) {
+        const auto j = journal_->read();
+        for (const auto& entry : j.value("inbox", Json::array()))
+            pending_messages_.push_back(entry.get<std::string>());
+        if (j.value("standing", false)) promote();
+    }
+}
+
+void SubAgent::close_durably() {
+    if (journal_) journal_->update([](Json& j) { j["recoverable"] = false; });
+}
+
 void SubAgent::run(std::stop_token /*st*/) {
-    // -------------------------------------------------------------------------
-    // Guard: ensure on_exit_ fires when we leave, regardless of path.
-    // -------------------------------------------------------------------------
     struct ExitGuard {
-        std::function<void()>& fn;
-        ~ExitGuard() { if (fn) fn(); }
-    } exit_guard{on_exit_};
+        SubAgent* self;
+        ~ExitGuard() {
+            self->terminate_interrogations(nullptr);
+            if (self->on_exit_) self->on_exit_();
+        }
+    } exit_guard{this};
+    std::shared_ptr<std::promise<std::string>> pending_answer;
+    struct Reaper {
+        SubAgent* self;
+        std::shared_ptr<std::promise<std::string>>& answer;
+        ~Reaper() { self->terminate_interrogations(answer); }
+    } reaper{this, pending_answer};
 
     try {
-    // -------------------------------------------------------------------------
-    // Early cancellation check — avoid constructing expensive infrastructure if
-    // the parent already cancelled the token before the jthread even started.
-    // -------------------------------------------------------------------------
-    if (child_token_.is_cancelled()) {
-        set_status(SubAgentStatus::cancelled);
-        event_queue_.push(AgentEvent::make_cancelled(id_, "pre_start"));
-        return;
-    }
-
-    // -------------------------------------------------------------------------
-    // Post Started event.
-    // -------------------------------------------------------------------------
-    event_queue_.push(AgentEvent::make_started(id_, spec_.name));
-
-    // -------------------------------------------------------------------------
-    // Build per-agent inference dependencies.
-    // Apply the agent's model override if specified.
-    // -------------------------------------------------------------------------
-    batbox::config::Config agent_cfg = cfg_;
-    if (spec_.model.has_value()) {
-        agent_cfg.api.default_model =
-            batbox::config::resolve_model_alias(spec_.model.value(), cfg_);
-    }
-
-    // -------------------------------------------------------------------------
-    // AC1 (DIS-988) — optional endpoint override.
-    //
-    // A standing subagent runs on the local 3090 (free compute), not the single
-    // usually-cloud cfg.api endpoint.  AgentSpec::model overrides only the model
-    // *name*; this moves the *endpoint*.  Mechanism mirrors tools::SubagentDistiller
-    // (DIS-980): overwrite agent_cfg.api.* so the inference client resolves
-    // provider identity / canonical model / usage from a self-consistent Config.
-    // nullopt → agent_cfg keeps cfg.api unchanged (existing behaviour & tests).
-    if (spec_.endpoint.has_value()) {
-        const auto& ep = spec_.endpoint.value();
-        if (ep.use_distill_endpoint) {
-            // "Run on the local distill endpoint" selector — reuse cfg.distill.*.
-            agent_cfg.api.base_url            = cfg_.distill.base_url;
-            agent_cfg.api.api_key             = cfg_.distill.api_key;
-            agent_cfg.api.default_model       = cfg_.distill.model;
-            agent_cfg.api.request_timeout_sec = cfg_.distill.request_timeout_sec;
-        } else {
-            if (!ep.base_url.empty()) agent_cfg.api.base_url      = ep.base_url;
-            agent_cfg.api.api_key                                 = ep.api_key;
-            if (!ep.model.empty())    agent_cfg.api.default_model = ep.model;
+        if (child_token_.is_cancelled()) {
+            set_status(SubAgentStatus::cancelled);
+            event_queue_.push(AgentEvent::make_cancelled(id_, "pre_start"));
+            return;
         }
-        // Let the provider auto-detect (ollama/openai) from the new base_url.
-        agent_cfg.api.provider_hint.clear();
-    }
-
-    // Resolve the provider via the S8 ProviderRegistry (not a hand-rolled Client):
-    // this is the single seam that maps Config → provider identity, and supplies
-    // the S9 context-ownership predicate.  Conversation still consumes a Client&
-    // (the Provider abstraction is not yet wired into Conversation — deferred S8
-    // work, out of scope here), so we read the predicate and construct the Client
-    // from the same agent_cfg the registry resolved against.
-    const bool provider_owns_context =
-        batbox::inference::ProviderRegistry::create(agent_cfg)->manages_own_context();
-
-    batbox::inference::Client   client{agent_cfg};
-    batbox::session::SessionStore store{}; // uses default sessions dir
-
-    // Accumulate the current turn's output into a line buffer so we can
-    // split on newlines and update last_5_lines_ correctly.
-    std::string line_buffer;
-
-    // on_delta callback: called by Conversation::run_turn for each SSE token.
-    auto on_delta = [this, &line_buffer](std::string_view chunk) {
-        // Push TokenAppended event to the shared queue.
-        event_queue_.push(AgentEvent::make_token_appended(
-            id_, std::string(chunk)));
-
-        // Accumulate into line_buffer; flush complete lines to last_5_lines_.
-        for (char c : chunk) {
-            if (c == '\n') {
-                if (!line_buffer.empty()) {
-                    append_output_line(line_buffer);
-                    line_buffer.clear();
-                }
+        event_queue_.push(AgentEvent::make_started(id_, spec_.name));
+        config::Config agent_cfg = cfg_;
+        if (spec_.model)
+            agent_cfg.api.default_model = config::resolve_model_alias(*spec_.model, cfg_);
+        if (spec_.endpoint) {
+            const auto& ep = *spec_.endpoint;
+            if (ep.use_distill_endpoint) {
+                agent_cfg.api.base_url = cfg_.distill.base_url;
+                agent_cfg.api.api_key = cfg_.distill.api_key;
+                agent_cfg.api.default_model = cfg_.distill.model;
+                agent_cfg.api.request_timeout_sec = cfg_.distill.request_timeout_sec;
             } else {
-                line_buffer += c;
+                if (!ep.base_url.empty()) agent_cfg.api.base_url = ep.base_url;
+                if (!ep.api_key.empty()) agent_cfg.api.api_key = ep.api_key;
+                if (!ep.model.empty()) agent_cfg.api.default_model = ep.model;
             }
+            agent_cfg.api.provider_hint.clear();
         }
+        inference::Client client{agent_cfg};
+        session::SessionStore store{sessions_dir_.empty()
+            ? paths::config_dir() / "sessions" : sessions_dir_};
+        WorkerRuntime runtime;
+        if (runtime_factory_) runtime = runtime_factory_(agent_cfg, spec_);
+        if (runtime_factory_ && (!runtime.registry || !runtime.gate))
+            throw std::runtime_error("Worker runtime factory did not provide tools and permissions");
 
-        // Update token count under the snapshot lock.
-        {
-            std::lock_guard<std::mutex> lock{snapshot_mutex_};
+        std::string turn_output;
+        std::string line_buffer;
+        auto on_delta = [&](std::string_view chunk) {
+            turn_output.append(chunk);
+            event_queue_.push(AgentEvent::make_token_appended(id_, std::string(chunk)));
+            for (const char c : chunk) {
+                if (c == '\n') { append_output_line(line_buffer); line_buffer.clear(); }
+                else line_buffer += c;
+            }
+            std::lock_guard lock(snapshot_mutex_);
             ++token_count_;
-        }
-    };
-
-    // -------------------------------------------------------------------------
-    // Construct the Conversation: owns messages_ and drives inference turns
-    // on this thread only.
-    // -------------------------------------------------------------------------
-    batbox::conversation::Conversation conv{
-        client,
-        store,
-        agent_cfg,
-        /*working_dir=*/{},
-        on_delta
-    };
-
-    // S9 (DIS-988 AC1): if the resolved provider owns its own context window,
-    // batbox stands down its compaction for this agent's conversation.  Default
-    // false for every current OpenAI-compatible endpoint — no behaviour change.
-    conv.set_manages_own_context(provider_owns_context);
-
-    if (resume_from_.has_value()) {
-        // ---------------------------------------------------------------------
-        // DIS-1021 — RESUME path: reload a CLOSED subagent from its durable log.
-        //
-        // restore() reloads recorded tool RESULTS as messages but NEVER
-        // re-dispatches the tool CALLS (design note §3), and adopts the original
-        // session_id_ from the file — so appends made by this resumed run
-        // continue the SAME log.  We do NOT call set_session_identity() /
-        // start_session() here: the file header already carries agent_id +
-        // endpoint, and restore() already adopted the session id.
-        //
-        // adopt_restored() re-seeds this store's identity maps so the next
-        // append_message() preserves the index agent_id/model/created_at instead
-        // of clobbering them with empty values (this store did not create the
-        // session).
-        // ---------------------------------------------------------------------
-        store.adopt_restored(*resume_from_);
-
-        if (auto rr = conv.restore(*resume_from_); !rr) {
-            set_status(SubAgentStatus::failed);
-            event_queue_.push(AgentEvent::make_errored(
-                id_, "resume restore failed: " + rr.error()));
-            return;
-        }
-    } else {
-        // ---------------------------------------------------------------------
-        // DIS-1020 — FRESH path: turn the session journal ON for this subagent.
-        //
-        // The subagent owns the same journaling Conversation as the main chat, but
-        // until now nothing recorded WHO ran or on WHICH endpoint.  We attach the
-        // agent id and a resolved-endpoint REFERENCE blob, then OPEN the session
-        // eagerly (before the first turn) so session_id_ is non-empty and every
-        // append_message inside run_turn() writes to disk — making this subagent's
-        // whole context durable instead of vanishing when the window closes.
-        //
-        // api_key handling (Paulina refinement b): we persist an endpoint REFERENCE,
-        // never the raw key.  `api_key_ref` names where the key is re-resolved from
-        // at resume time (cfg.distill / cfg.api / inline-omitted); base_url + model +
-        // use_distill_endpoint pin the provider so resume targets the right endpoint
-        // (e.g. the local 3090 distill endpoint, not cfg.api).  These logs are
-        // local-only and are never synced off this box.
-        batbox::Json endpoint_ref = batbox::Json::object();
-        endpoint_ref["base_url"] = agent_cfg.api.base_url;
-        endpoint_ref["model"]    = agent_cfg.api.default_model;
-        if (spec_.endpoint.has_value()) {
-            const auto& ep = spec_.endpoint.value();
-            endpoint_ref["use_distill_endpoint"] = ep.use_distill_endpoint;
-            endpoint_ref["api_key_ref"] =
-                ep.use_distill_endpoint ? "cfg.distill"
-                                        : (ep.api_key.empty() ? "cfg.api" : "inline");
+        };
+        conversation::Conversation conv{client, store, agent_cfg, working_dir_, on_delta,
+            runtime.registry, runtime.gate, runtime.plan_mode, runtime.config_mutex};
+        conv.set_allowed_tools(spec_.allowed_tools);
+        conv.set_manages_own_context(inference::ProviderRegistry::create(agent_cfg)->manages_own_context());
+        if (resume_from_) {
+            store.adopt_restored(*resume_from_);
+            if (auto result = conv.restore(*resume_from_); !result)
+                throw std::runtime_error("Worker restore failed: " + result.error());
+            if (auto result = conv.recover_interrupted_tools(); !result)
+                throw std::runtime_error("Worker tool recovery failed: " + result.error());
+            // Route new peer/child work through this live handle while the
+            // adopted session header retains the original durable lineage.
+            conv.set_session_identity(id_, resume_from_->endpoint);
         } else {
-            endpoint_ref["use_distill_endpoint"] = false;
-            endpoint_ref["api_key_ref"]          = "cfg.api";
+            Json endpoint{{"base_url", agent_cfg.api.base_url}, {"model", agent_cfg.api.default_model},
+                {"use_distill_endpoint", spec_.endpoint && spec_.endpoint->use_distill_endpoint},
+                {"api_key_ref", spec_.endpoint && spec_.endpoint->use_distill_endpoint ? "cfg.distill" : "cfg.api"}};
+            conv.set_session_identity(id_, std::move(endpoint));
+            if (auto result = conv.start_session(); !result)
+                throw std::runtime_error("Worker journal open failed: " + result.error());
         }
-        conv.set_session_identity(id_, std::move(endpoint_ref));
+        if (journal_) journal_->update([&](Json& j) {
+            j["session_id"] = conv.session_id();
+            j["status"] = "running";
+            j["tool_count"] = runtime.registry ? runtime.registry->size() : 0;
+            j["exact_compaction_tokens"] = agent_cfg.compact.exact_token_threshold;
+        });
 
-        if (auto sres = conv.start_session(); !sres) {
-            // Non-fatal: a failed journal must not kill the subagent's actual
-            // work.  Log via an output line so it surfaces in the snapshot, and
-            // continue in RAM-only mode (pre-DIS-1020 behaviour).
-            append_output_line("[journal] session open failed: " + sres.error());
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Standing-mode interrogation state (S2/S3, DIS-988).
-    //   pending_answer — promise to fulfil at the next quiescence when the
-    //                    current turn was driven by an interrogation.
-    //   interrogation_reaper — fires on ANY exit from run() (return, cancel,
-    //                    eviction, exception unwind), closing the interrogation
-    //                    channel so no parent blocked on interrogate().get()
-    //                    ever hangs (AC5).  Declared after `conv` so it is
-    //                    destroyed before `conv`.
-    // -------------------------------------------------------------------------
-    std::shared_ptr<std::promise<std::string>> pending_answer;
-    struct InterrogationReaper {
-        SubAgent*                                    self;
-        std::shared_ptr<std::promise<std::string>>*  slot;
-        ~InterrogationReaper() { self->terminate_interrogations(*slot); }
-    } interrogation_reaper{this, &pending_answer};
-
-    // -------------------------------------------------------------------------
-    // Deliver the initial user prompt.
-    //
-    // FRESH path: initial_prompt_ is the agent's first user turn — always
-    // delivered.
-    //
-    // DIS-1021 RESUME path: initial_prompt_ is reinterpreted as an OPTIONAL
-    // follow-up user turn against the restored history.  An empty prompt means
-    // "continue forward from restored history with no new user message", so the
-    // loop's first run_turn() picks up where the prior run left off.
-    // -------------------------------------------------------------------------
-    if (resume_from_.has_value()) {
-        if (!initial_prompt_.empty()) {
-            conv.user_message(initial_prompt_);
-        }
-    } else {
-        conv.user_message(initial_prompt_);
-    }
-
-    // -------------------------------------------------------------------------
-    // S11 doom-loop guard (DIS-1044) — bound the OUTER turn-cycle loop.
-    //
-    // Each individual run_turn() is already capped at cfg.tools.max_tool_turns
-    // tool-calls (the main-conversation guard).  This counter bounds how MANY
-    // run_turn() cycles this subagent runs across its whole life — the surface
-    // this liberation track created and the one the main-conversation guard does
-    // NOT cover.
-    //
-    // COUNTING SEMANTICS (the one judgment call Sherry flagged): every inference
-    // turn counts toward this ONE shared cap — the initial prompt, every
-    // peer-message turn, AND every interrogation turn alike.  Peer/interrogation
-    // turns are NOT exempted, deliberately: the doom-loops this guard exists to
-    // stop (two standing agents ping-ponging peer-messages, a closed agent under
-    // repeated interrogation, a self-perpetuating investigation) ARE the peer and
-    // interrogation re-entry paths — exempting them would exempt exactly the
-    // surfaces we are guarding.  That is safe because tripping the cap is a CLEAN,
-    // resumable termination (see the trip block below), not a destructive kill: a
-    // legitimately long-lived busy standing agent that reaches the ceiling is
-    // recycled losslessly (gold already in the notepad/journal; restartable via
-    // the DIS-1021 resume log), so a single generous ceiling protects the runaway
-    // case without penalising the legitimate one.  cfg.agents.max_subagent_turn_cycles
-    // (default 100) is the ceiling; <= 0 disables the guard (defensive — config
-    // validation already forbids that, so only a hand-built Config can disable it).
-    // -------------------------------------------------------------------------
-    const int max_turn_cycles = agent_cfg.agents.max_subagent_turn_cycles;
-    int       turn_cycles     = 0;
-
-    // -------------------------------------------------------------------------
-    // Conversation loop.
-    // -------------------------------------------------------------------------
-    while (true) {
-        // Check for cancellation before starting a new turn.  Cancellation is
-        // checked BEFORE the doom-loop guard so a stop request always wins (AC4).
-        if (child_token_.is_cancelled()) {
-            if (!line_buffer.empty()) {
-                append_output_line(line_buffer);
-                line_buffer.clear();
+        auto deliver = [&](const std::string& message) {
+            // An inbox acknowledgement may have been interrupted after its
+            // transcript append. Stable message IDs make that boundary idempotent.
+            const auto& history = conv.messages();
+            const bool recorded = message.starts_with("[worker-message:") &&
+                std::any_of(history.begin(), history.end(), [&](const auto& m) { return m.content == message; });
+            if (!recorded) {
+                if (auto result = conv.user_message_durable(message); !result)
+                    throw std::runtime_error("Worker prompt persistence failed: " + result.error());
             }
-            set_status(SubAgentStatus::cancelled);
-            event_queue_.push(AgentEvent::make_cancelled(id_, "stop_requested"));
-            return;
+            if (journal_) journal_->update([&](Json& j) {
+                auto& inbox = j["inbox"];
+                auto found = std::find(inbox.begin(), inbox.end(), Json(message));
+                if (found != inbox.end()) inbox.erase(found);
+            });
+        };
+        if (!resume_from_ || conv.messages().empty()) {
+            std::string prompt;
+            if (!spec_.prompt_body.empty()) prompt = "Agent role instructions:\n" + spec_.prompt_body + "\n\n";
+            prompt += initial_prompt_.empty() && journal_
+                ? journal_->read().value("prompt", "") : initial_prompt_;
+            deliver(prompt);
+        } else if (!initial_prompt_.empty()) {
+            deliver(initial_prompt_);
         }
+        auto peer_messages = drain_pending_messages();
+        for (const auto& message : peer_messages) deliver(message);
 
-        // S11 doom-loop guard (DIS-1044): if this subagent has already run its
-        // budgeted number of outer turn-cycles, terminate CLEANLY before running
-        // another one.  This is an ADDITIONAL exit alongside cancellation, error,
-        // and natural completion — never a replacement (AC4): we only reach here
-        // when none of those fired, i.e. the loop WOULD otherwise re-enter
-        // run_turn() via a peer-message or interrogation.  The exit mirrors the
-        // closed/quiescent path (flush → build summary → Completed) so whatever
-        // gold is in the notepad/journal is preserved and any completion-keyed
-        // harvest fires identically; we then annotate WHY with a DoomLoopGuard
-        // event carrying the count, set the terminal `done` status (clean, NOT
-        // failed — no error spiral, no throw), and return.  Any in-flight
-        // interrogation promise is released with the empty sentinel by the
-        // InterrogationReaper as this frame unwinds (the question was delivered
-        // but never run — sentinel is the honest "not answered" signal).
-        if (max_turn_cycles > 0 && turn_cycles >= max_turn_cycles) {
-            if (!line_buffer.empty()) {
-                append_output_line(line_buffer);
-                line_buffer.clear();
-            }
-            std::string summary;
-            {
-                std::lock_guard<std::mutex> lock{snapshot_mutex_};
-                for (const auto& line : last_5_lines_) {
-                    if (!summary.empty()) summary += '\n';
-                    summary += line;
+        // Restoring a quiescent standing window must not ask the model to
+        // repeat its last completed action merely because the process restarted.
+        bool need_turn = !resume_from_ || !initial_prompt_.empty() || !peer_messages.empty();
+        if (resume_from_ && !need_turn) {
+            const auto& history = conv.messages();
+            need_turn = history.empty() || history.back().role != conversation::Role::Assistant
+                || (history.back().tool_calls && !history.back().tool_calls->empty());
+        }
+        int cycles = 0;
+        while (!child_token_.is_cancelled()) {
+            if (need_turn) {
+                if (!continuous_ && agent_cfg.agents.max_subagent_turn_cycles > 0 &&
+                    cycles >= agent_cfg.agents.max_subagent_turn_cycles) {
+                    event_queue_.push(AgentEvent::make_doom_loop_guard(id_, cycles));
+                    event_queue_.push(AgentEvent::make_completed(id_, last_result()));
+                    if (journal_) journal_->update([](Json& j) { j["recoverable"] = false; j["status"] = "completed"; });
+                    set_status(SubAgentStatus::done);
+                    return;
                 }
-                last_result_  = summary;
-                current_step_ = "doom-loop guard";
-            }
-            // DoomLoopGuard FIRST, then Completed: a consumer that stops at the
-            // first terminal event (e.g. collect_until_terminal) still observes
-            // the guard annotation in the same drained batch as the Completed.
-            event_queue_.push(AgentEvent::make_doom_loop_guard(id_, turn_cycles));
-            event_queue_.push(AgentEvent::make_completed(id_, summary));
-            set_status(SubAgentStatus::done);
-            return;
-        }
-
-        // Update current_step for snapshot.
-        {
-            std::lock_guard<std::mutex> lock{snapshot_mutex_};
-            current_step_ = "inference";
-        }
-
-        // Run one inference turn.
-        // Vend a fresh linked child token for this turn (CancelToken is move-only;
-        // child_token_ must remain valid for is_cancelled() checks).
-        auto [turn_src, turn_tok] = child_token_.child();
-        (void)turn_src;  // turn_src kept alive until end of loop iteration
-        auto turn_result = conv.run_turn(std::move(turn_tok));
-
-        if (!turn_result.has_value()) {
-            const std::string& err = turn_result.error();
-
-            // Flush partial line.
-            if (!line_buffer.empty()) {
-                append_output_line(line_buffer);
-                line_buffer.clear();
-            }
-
-            if (err == "cancelled" || child_token_.is_cancelled()) {
-                set_status(SubAgentStatus::cancelled);
-                event_queue_.push(AgentEvent::make_cancelled(id_, err));
-            } else {
-                set_status(SubAgentStatus::failed);
-                event_queue_.push(AgentEvent::make_errored(id_, err));
-            }
-            return;
-        }
-
-        // S11 (DIS-1044): a productive inference turn completed — count it toward
-        // the per-subagent turn-cycle cap.  Checked at the TOP of the next
-        // iteration so the (cap+1)-th re-entry is the one refused.
-        ++turn_cycles;
-
-        // Flush any remaining partial line from this turn.
-        if (!line_buffer.empty()) {
-            append_output_line(line_buffer);
-            line_buffer.clear();
-        }
-
-        // Check for cancellation after turn completes.
-        if (child_token_.is_cancelled()) {
-            set_status(SubAgentStatus::cancelled);
-            event_queue_.push(AgentEvent::make_cancelled(id_, "stop_requested"));
-            return;
-        }
-
-        // Drain any peer messages enqueued during this turn.
-        auto pending = drain_pending_messages();
-
-        if (pending.empty()) {
-            // -----------------------------------------------------------------
-            // Quiescent: no pending peer messages.  Build the result summary.
-            // -----------------------------------------------------------------
-            const bool standing = standing_.load(std::memory_order_acquire);
-
-            // DIS-1001 test seam: fire AFTER `standing` is cached but BEFORE we act
-            // on it, so a racing promote() can set standing_=true (too late for the
-            // cached read) and observe this agent as `running` at its step 1, while
-            // this loop still commits to the closed exit it already decided on.
-            // Null in production (one mutex-guarded copy per quiescence).
-            {
-                std::function<void()> qhook;
                 {
-                    std::lock_guard<std::mutex> lock{test_hook_mutex_};
-                    qhook = quiescence_hook_for_test_;
+                    std::lock_guard lock(snapshot_mutex_);
+                    current_step_ = "inference";
                 }
-                if (qhook) qhook();
-            }
-
-            std::string summary;
-            {
-                std::lock_guard<std::mutex> lock{snapshot_mutex_};
-                for (const auto& line : last_5_lines_) {
-                    if (!summary.empty()) summary += '\n';
-                    summary += line;
+                if (journal_) journal_->update([](Json& j) { j["status"] = "running"; });
+                turn_output.clear();
+                auto [source, token] = child_token_.child();
+                auto result = conv.run_turn(std::move(token));
+                if (!result) {
+                    if (child_token_.is_cancelled() || result.error() == "cancelled") break;
+                    throw std::runtime_error(result.error());
                 }
-                last_result_  = summary;
-                current_step_ = standing ? "standing (warm)" : "done";
+                ++cycles;
+                if (!line_buffer.empty()) { append_output_line(line_buffer); line_buffer.clear(); }
+                {
+                    std::lock_guard lock(snapshot_mutex_);
+                    last_result_ = turn_output;
+                    current_step_ = standing_.load() ? "standing (warm)" : "done";
+                }
+                if (journal_) journal_->update([&](Json& j) {
+                    j["status"] = standing_.load() ? "standing" : "completed";
+                    j["last_result"] = turn_output;
+                    j["completed_turns"] = j.value("completed_turns", 0ULL) + 1;
+                    j["prompt_tokens"] = conv.last_prompt_tokens();
+                    j["compactions"] = conv.compaction_count();
+                });
+                if (pending_answer) { pending_answer->set_value(turn_output); pending_answer.reset(); }
+                event_queue_.push(AgentEvent::make_completed(id_, turn_output));
             }
-
-            // If this turn was driven by an interrogation, answer it now and
-            // clear the slot so the reaper never double-fulfils the promise.
-            if (pending_answer) {
-                try { pending_answer->set_value(summary); } catch (...) {}
-                pending_answer.reset();
+            if (child_token_.is_cancelled()) break;
+            peer_messages = drain_pending_messages();
+            if (!peer_messages.empty()) {
+                conv.compact_for_standing_turn();
+                for (const auto& message : peer_messages) deliver(message);
+                need_turn = true;
+                continue;
             }
-
-            // Surface the result either way (the parent / status line reads it).
-            event_queue_.push(AgentEvent::make_completed(id_, summary));
-
-            // -----------------------------------------------------------------
-            // Closed mode (default, every non-promoted agent): collapse the
-            // window and exit.  conv is destroyed here — existing behaviour.
-            // Only here do we transition to the terminal `done` status.
-            // -----------------------------------------------------------------
+            const bool standing = standing_.load(std::memory_order_acquire);
+            std::function<void()> hook;
+            { std::lock_guard lock(test_hook_mutex_); hook = quiescence_hook_for_test_; }
+            if (hook) hook();
             if (!standing) {
+                // Serialize natural close with enqueue_message: any message
+                // accepted before close gets its own turn, never a lost wakeup.
+                std::lock_guard close_lock(interrogate_mutex_);
+                { std::lock_guard inbox_lock(msg_mutex_);
+                  if (!pending_messages_.empty()) { need_turn = false; continue; } }
+                if (journal_) journal_->update([](Json& j) { j["recoverable"] = false; });
                 set_status(SubAgentStatus::done);
                 return;
             }
-
-            // -----------------------------------------------------------------
-            // Standing mode (S2/S3, DIS-988): PARK with the Conversation still
-            // alive on this stack — the window is NOT collapsed to a string.
-            // Status stays `running` (NOT done): the warm window is alive, which
-            // is what lets the supervisor distinguish a parked-and-warm agent
-            // from a truly-exited one (so promote() on a corpse stays a safe
-            // no-op rather than double-releasing its slot — AC5).
-            // Wait for the next interrogation (or cancel/eviction).
-            // -----------------------------------------------------------------
-            std::string next_question;
             {
-                std::unique_lock<std::mutex> lock{interrogate_mutex_};
-                interrogate_cv_.wait(lock, [this] {
-                    return !interrogations_.empty()
-                           || child_token_.is_cancelled();
-                });
-
-                if (child_token_.is_cancelled()) {
-                    // LRU-evicted or parent-cancelled.  Lossless by
-                    // construction: the gold is already in the notepad (S6),
-                    // reachable via the re-injected pad after the window dies.
-                    // The reaper fulfils any queued interrogations with the
-                    // sentinel as this frame unwinds.
-                    set_status(SubAgentStatus::done);
-                    event_queue_.push(AgentEvent::make_cancelled(id_, "evicted"));
-                    return;
-                }
-
-                PendingInterrogation pi = std::move(interrogations_.front());
-                interrogations_.pop_front();
-                next_question  = std::move(pi.question);
-                pending_answer = std::move(pi.answer);
+                std::lock_guard lock(snapshot_mutex_);
+                current_step_ = "standing (warm)";
             }
-
-            // Resume the warm window: compact accumulated history to the
-            // notepad before the follow-up turn so we don't re-send full raw
-            // tool output over stateless HTTP (DIS-1178: closes the 3.4x
-            // token gap DIS-1018 measured).  The notepad (S6) stores the gold
-            // out-of-band; compaction (S5) prunes raw tool-output bodies to
-            // tombstones.  Context that was NOT engulfed (the parent's source)
-            // is NOT re-engulfed — the warm window stays exactly as wide as
-            // the original run.
+            if (on_park_) on_park_();
+            std::string question;
+            {
+                std::unique_lock lock(interrogate_mutex_);
+                auto ready = [&] {
+                    std::lock_guard inbox_lock(msg_mutex_);
+                    return child_token_.is_cancelled() || !interrogations_.empty() || !pending_messages_.empty();
+                };
+                if (continuous_) interrogate_cv_.wait_for(lock, std::chrono::seconds(2), ready);
+                else interrogate_cv_.wait(lock, ready);
+                if (child_token_.is_cancelled()) break;
+                if (!interrogations_.empty()) {
+                    auto pending = std::move(interrogations_.front());
+                    interrogations_.pop_front();
+                    question = std::move(pending.question);
+                    pending_answer = std::move(pending.answer);
+                }
+            }
+            if (on_resume_ && !on_resume_(child_token_)) break;
             conv.compact_for_standing_turn();
-
-            event_queue_.push(AgentEvent::make_step_began(
-                id_, "interrogate", next_question.substr(0, 80)));
-            conv.user_message(next_question);
-            continue;
+            peer_messages = drain_pending_messages();
+            for (const auto& message : peer_messages) deliver(message);
+            if (!question.empty()) deliver(question);
+            else if (peer_messages.empty() && continuous_)
+                deliver("Continue your assigned role with one concrete useful step. Consult shared tasks and memory, "
+                        "verify your result, record evidence and the next action, and coordinate through the native task tools. "
+                        "Avoid repeating completed work. If blocked, inspect the cause and record what is needed.");
+            need_turn = true;
         }
-
-        // Compact before peer-message re-entry for the same reason as the
-        // interrogation path: follow-up turns carry a compacted summary, not
-        // raw accumulated tool output (DIS-1178).
-        conv.compact_for_standing_turn();
-
-        // Deliver each injected message as a new user turn and continue the loop.
-        for (const auto& msg : pending) {
-            conv.user_message(msg);
-            event_queue_.push(AgentEvent::make_step_began(
-                id_, "peer_message", msg.substr(0, 80)));
-        }
-
-        // Loop back to run_turn.
-    }
-
+        if (journal_) journal_->update([](Json& j) { j["status"] = "interrupted"; });
+        set_status(SubAgentStatus::cancelled);
+        event_queue_.push(AgentEvent::make_cancelled(id_, "stop_requested"));
     } catch (const std::exception& ex) {
-        // Catch any uncaught exception from inference/session/conversation setup.
-        // Post an Errored event so the TUI and supervisor see the failure.
-        // The ExitGuard will fire on_exit_ after this catch block returns.
         set_status(SubAgentStatus::failed);
+        append_output_line(ex.what());
+        if (journal_) {
+            try { journal_->update([&](Json& j) { j["status"] = "errored"; j["last_error"] = ex.what(); }); }
+            catch (...) {}
+        }
         event_queue_.push(AgentEvent::make_errored(id_, ex.what()));
     } catch (...) {
         set_status(SubAgentStatus::failed);

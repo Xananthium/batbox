@@ -47,6 +47,10 @@ void SubAgent::start() {
 }
 
 void SubAgent::cancel() {}
+void SubAgent::close_durably() {}
+void SubAgent::configure_runtime(WorkerRuntimeFactory, std::filesystem::path,
+    std::filesystem::path, std::shared_ptr<AgentJournal>, bool,
+    std::function<void()>, std::function<bool(const CancelToken&)>) {}
 
 void SubAgent::enqueue_message(std::string_view /*message*/) {}
 

@@ -1,5 +1,7 @@
 # src/conversation
 
+Autonomous exact compaction measures the complete request with the serving tokenizer. If the latest completed tool group alone exceeds 100,000 tokens, it can summarize that whole group and add an explicit continuation turn. Summary inputs are measured and split at UTF-8 boundaries into at most 90,000-token chunks, then reduced with a 20,000-token reasoning/output allowance. A failed or incomplete chunk leaves the active context and transcript unchanged; successful adoption requires a durable checkpoint. Original tool bodies remain in the transcript.
+
 Conversation engine implementations: message handling, compaction, context estimation, plan mode, system prompt, and tool call orchestration.
 
 ## Files
@@ -33,3 +35,42 @@ State machine transitions (Inactive/Planning/Approved); observer notification; i
 
 ### CMakeLists.txt
 Build rules for the conversation static library.
+
+
+### Autonomous exact context policy
+
+`Conversation::set_exact_compaction_tokens(100000)` opts a session into the serving
+backend's `/tokenize` endpoint. `BATBOX_EXACT_COMPACTION_TOKENS=100000` sets the
+same policy through `CompactConfig::exact_token_threshold` for all conversations,
+including native workers. Standing workers defer compaction to this exact gate.
+Counts include system instructions, messages, tool
+schemas, reminders, and the same stable chat-template options used for generation.
+The gate runs before every completion, including tool follow-ups. Tokenizer errors
+stop the request; they do not silently switch to a character estimate.
+
+At the threshold, `Compactor::compact` asks the configured model for a factual
+handoff and retains a recent suffix whose boundary is expanded to preserve tool
+call/result pairs. Empty or truncated summaries and oversized replacement contexts
+are rejected without changing the original history. A successful replacement is
+appended as a `context_checkpoint` record to the existing session transcript before
+it becomes active. `Conversation::restore` replays the newest checkpoint plus later
+messages; all earlier raw messages remain in the transcript.
+
+The persistent checkpoint, complete tool-group boundaries, stable prompt/schema
+prefixes, and bounded retry approach were informed by the user-provided
+`CLAUDECODE.tar` reference (`src/services/compact/autoCompact.ts`,
+`sessionMemoryCompact.ts`, and `src/services/api/promptCacheBreakDetection.ts`).
+This implementation uses Batbox's native data structures and local vLLM APIs;
+it does not import that archive's runtime or vendor-specific cache-edit protocol.
+
+Interactive sessions retain their existing estimator/notepad policy unless they
+opt into the exact policy. The native inference client's template options must be
+set once before running a session to keep tokenization and generation aligned.
+
+Autonomous prompt appends use `user_message_durable()` and advance their outer
+checkpoint only after it succeeds. Tool calls are parsed with `prepare_calls()`
+and their complete assistant intent is persisted before dispatch. The durable
+dispatch callback persists each result before permitting the following tool;
+a failed write stops dispatch. `recover_interrupted_tools()` closes missing
+results with an explicit unknown-outcome record on restart or same-process retry,
+without executing the interrupted action again.

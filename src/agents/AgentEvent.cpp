@@ -161,6 +161,11 @@ const char* AgentEvent::kind_label(Kind k) noexcept {
 void AgentEventQueue::push(AgentEvent event) {
     {
         std::lock_guard<std::mutex> lock{mutex_};
+        // Supervisors can run indefinitely without a TUI consumer. The durable
+        // session journal contains complete output; this queue is a bounded UI
+        // notification buffer, not the record of work.
+        constexpr std::size_t max_events = 8192;
+        if (queue_.size() >= max_events) queue_.pop_front();
         queue_.push_back(std::move(event));
     }
     // Increment dirty seq AFTER the item is in the queue so that a reader

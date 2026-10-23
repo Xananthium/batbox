@@ -84,6 +84,25 @@ int main(int argc, char** argv) {
                  args.print_mode,
                  "headless mode: output to stdout, no TUI");
 
+    cli.add_flag("--autonomous", args.autonomous,
+                 "run the persistent autonomous engine (no TUI)");
+    cli.add_option("--engine-state-dir", args.engine.state_dir,
+                   "durable engine state, inbox and replies (default ~/.batbox/autonomous)");
+    cli.add_option("--engine-letter-file", args.engine.letter_file,
+                   "human input file to watch (default ~/love_letters.txt)");
+    cli.add_option("--engine-project-root", args.engine.project_root,
+                   "Batbox source directory for self-inspection (default current directory)");
+    cli.add_option("--engine-memory-url", args.engine.memory_url,
+                   "memory and cached web service URL (default http://127.0.0.1:8771)");
+    cli.add_option("--engine-interval", args.engine.interval_seconds,
+                   "seconds between autonomous work cycles; inbox messages wake sooner")
+       ->check(CLI::Range(1, 86400));
+    cli.add_option("--engine-max-cycles", args.engine.max_cycles,
+                   "successful cycles before exit; zero means continuous");
+    cli.add_option("--engine-workers", args.engine.worker_count,
+                   "persistent native workers in addition to coordinator (default 3)")
+       ->check(CLI::Range(0, 16));
+
     // --print-format: controls how headless output is formatted (CPP A.1).
     // Accepts "plain" (default), "json", or "markdown".
     // Parsed into args.print_format enum.

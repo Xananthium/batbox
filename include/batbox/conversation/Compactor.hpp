@@ -2,8 +2,8 @@
 // =============================================================================
 // batbox::conversation::Compactor — protected-tail compaction.
 //
-// TWO sinks live here.  The DEFAULT, load-bearing one (S5, DIS-983) is the
-// NOTEPAD; the original LLM-summary sink is retained as a LEGACY path only.
+// TWO sinks live here. Interactive sessions default to notepad pruning.
+// Autonomous sessions explicitly use model summaries with durable checkpoints.
 //
 //   compact_to_notepad()  — THE SINK (S5).  Splits messages into "head"
 //     (older turns) and "tail" (last N kept verbatim).  It does NOT call a
@@ -17,12 +17,10 @@
 //     reason we can throw away the 63k-char tool dump that ate the window."
 //     Deterministic, network-free, fully authored, cache-friendly.
 //
-//   compact()  — LEGACY LLM summary path.  Sends the head to the model for a
-//     one-paragraph summary and returns [System summary] + verbatim tail.  This
-//     is exactly the lossy/unauthored sink S5 was built to replace; it is NO
-//     LONGER on the Conversation auto-compact path.  Kept (not deleted) so the
-//     existing summariser tests keep proving the head/tail split + status
-//     callback contract — i.e. demoted, not removed (DIS-983 design decision A).
+//   compact() — sends the older history to the configured model for a factual
+//     handoff and returns [System summary] + a verbatim, tool-pair-safe suffix.
+//     The autonomous exact-token policy validates the resulting size and saves
+//     a checkpoint before adopting it; the complete transcript stays on disk.
 //
 //   A status string is delivered via an optional callback so the TUI status-line
 //   can display it ("context compacted: 23 turns → 6 pruned to notepad + 10
@@ -139,7 +137,15 @@ public:
     [[nodiscard]] Result<std::vector<Message>>
     compact(const std::vector<Message>& msgs,
             batbox::inference::Client&  client,
-            batbox::CancelToken         ct);
+            const batbox::CancelToken&  ct,
+            const std::string&          model = {},
+            int                         max_summary_tokens = 1024,
+            std::size_t                 max_input_tokens = 0);
+
+    // Move a proposed boundary backwards to retain every tool call referenced
+    // by the protected suffix, including parallel and non-adjacent tool results.
+    [[nodiscard]] static std::size_t safe_tail_start(
+        const std::vector<Message>& msgs, std::size_t proposed);
 
     // -------------------------------------------------------------------------
     // compact_to_notepad()  — THE SINK (S5, DIS-983)

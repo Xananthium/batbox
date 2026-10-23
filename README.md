@@ -1,5 +1,11 @@
 # BatBox
 
+BatBox now also runs as a persistent autonomous system. `--autonomous` owns a
+durable conversation, processes issues, uses the native tools and subagents,
+retrieves source-backed memory, and continues work between user messages. The
+interactive harness remains available. The model, source, memory, credentials,
+and operating decisions stay under your control.
+
 Okay so listen. You use Claude Code. Or Codex. Or Cursor. Or Aider. They're
 good. They're, like, genuinely good. But every single one of them is a
 frontend that wires to exactly one company's API, and that company decides
@@ -18,7 +24,7 @@ you ──→ BatBox ──→ any OpenAI-compatible endpoint ──→ any mode
 That's the whole thing. Local Ollama on your laptop. LM Studio on the machine
 in the closet. DeepSeek. Kimi. GLM. Qwen. OpenAI if you really want. A janky
 $3/month API key you found on the internet. If it speaks OpenAI-compatible
-HTTP, BatBox speaks back. C++20. Single binary. No daemon, no account, no
+HTTP, BatBox speaks back. C++20. A native client with optional local services. No account, no
 phone-home, no marketplace, nobody between you and the model.
 
 This is the version of the tool where you own the wire.
@@ -31,11 +37,12 @@ A frontend. A CLI. A chat interface in your terminal. The TUI is FTXUI (real
 terminal rendering, not curses garbage). The HTTP is cpr. The streaming is
 SSE parsed inline so tokens show up as the model produces them. Slash
 commands for model switching, config inspection, reasoning depth, permission
-modes. Tool calling works. The binary is ~4MB.
+modes. Tool calling works. The coordinator and workers run in the native binary.
 
-It does not ship agents. It does not pretend to have opinions about your
-codebase. It does not run a coordination layer for you. **The agents are
-yours to build.** BatBox is the frontend they talk through.
+The interactive client is still a harness. Autonomous mode adds a coordinator
+and persistent native workers using that same conversation and tool machinery.
+**The agents remain yours to configure.** They use your selected endpoint and
+your files; there is no required hosted coordination service.
 
 What BatBox *does* ship is a schema. A pattern. A way of tracking what's in
 your codebase so the agents you write don't have to re-read everything every
@@ -159,6 +166,102 @@ namespaces clean.
 ---
 
 ## Run
+
+### Autonomous operation
+
+Configure a local OpenAI-compatible backend in `~/.batbox/engine.env`:
+
+```dotenv
+BATBOX_API_BASE_URL=http://127.0.0.1:8001/v1
+BATBOX_API_KEY=local
+BATBOX_DEFAULT_MODEL=your-served-model-id
+BATBOX_PROVIDER_HINT=openai
+BATBOX_CTX_LEN_DEFAULT=200000
+BATBOX_EXACT_COMPACTION_TOKENS=100000
+BATBOX_TASK_PARALLEL_LIMIT=4
+```
+
+For this server's Hauhau Gemma4 deployment, set `BATBOX_TEMPERATURE=0.6`
+and `BATBOX_TOP_P=0.9`. The backend supplies `top_k=64`, `min_p=0.05`,
+and `repetition_penalty=1.1`, matching the
+[model card](https://huggingface.co/HauhauCS/Gemma4-31B-QAT-Uncensored-HauhauCS-Balanced-MTP#recommended-sampling).
+Other models should use their own sampling configuration. Leave
+`BATBOX_ENABLE_THINKING` unset to inherit the model's chat-template default;
+explicit `true` or `false` is applied equally to token counting and generation.
+Conversation summaries use a separate deterministic summarization request.
+
+Run the engine:
+
+```bash
+./build/src/batbox --autonomous --env ~/.batbox/engine.env \
+  --engine-project-root "$PWD" --engine-state-dir ~/.batbox/autonomous \
+  --engine-letter-file ~/love_letters.txt
+```
+
+Autonomous operation uses the full native tool registry in unattended permission
+mode. The coordinator polls its durable inbox, reads changed letters, retrieves
+relevant memory, and advances its current goal. Source inspection, code changes,
+tests, and deployment are available to it. Tool intent and results are persisted
+so recovery can distinguish recorded actions from interrupted actions.
+
+With a backend supporting `/tokenize`, exact compaction measures the same
+messages, tool schemas, and template options as generation. At 100,000 tokens,
+the configured model summarizes earlier context and retains recent complete
+tool exchanges. Failed or truncated summaries do not discard history. A separate
+checkpoint restores compacted context; the original transcript remains available.
+Stable system instructions and tool definitions let the backend reuse prefix
+cache blocks across turns and compactions. Cache residency still depends on the
+serving backend; arbitrary middle-chunk KV fusion is a separate experiment in
+[KV-CACHE-CHUNKING](https://github.com/Xananthium/KV-CACHE-CHUNKING).
+
+The [memory service](python-sidecar/batbox_memory/README.md) provides an immediate
+durable queue acknowledgment, then computes CPU embeddings and indexes HippoRAG
+in the background. Memories retain source URI, content hash and capture time.
+Imported Heather/Maya memories are explicitly historical and attributed. Current
+server and program snapshots are separate, dated sources. Named Scrapling
+sessions preserve authenticated HTTP/browser state privately across restarts.
+
+The issue API runs with `python3 tools/engine_api.py`. Its listener remains
+available while the engine controls whether communication is enabled. The API
+uses the local `~/.batbox/autonomous/api.key` credential and exposes:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /v1/capabilities` | API location, enabled state and supported lifecycle |
+| `GET, POST /v1/issues` | List or create durable issues |
+| `GET, PATCH /v1/issues/{id}` | Read an issue or change its status |
+| `POST /v1/issues/{id}/comments` | Queue a message to the engine |
+| `GET /v1/status` | Current engine status |
+
+Issues support `backlog`, `todo`, `in_progress`, `in_review`, `done`, `blocked`,
+and `cancelled`. Replies become issue messages; answering does not automatically
+close an issue. Use the local CLI without handling credentials manually:
+
+```bash
+python3 tools/engine_chat.py create "Review memory quality" "Verify current facts against their sources."
+python3 tools/engine_chat.py list
+python3 tools/engine_chat.py show BB-1
+python3 tools/engine_chat.py comment BB-1 "Keep historical server details clearly dated."
+```
+
+[User service units](tools/systemd/) supervise the engine and API independently.
+An external watchdog detects stalled progress; crash reports feed back into the
+next engine run. Atomic releases retain a rollback binary:
+
+```bash
+python3 tools/engine_deploy.py --binary build/src/batbox --restart
+journalctl --user -u batbox-engine.service -f
+python3 tools/engine_deploy.py --rollback --restart
+```
+
+The supplied units use `~/batbox`, `~/.batbox/engine.env`, and the installed release
+path under `~/.local/lib/batbox-engine`. Adjust paths for another installation.
+Persistent services survive terminal logout when the user's service manager has
+lingering enabled. Hardware failures, exhausted storage, and broken dependencies
+still require attention; supervision is recovery infrastructure, not a guarantee
+of perpetual operation.
+
+### Interactive and single-turn operation
 
 Interactive TUI:
 ```bash

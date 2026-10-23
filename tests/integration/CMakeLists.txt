@@ -953,6 +953,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_conversation_basic.cpp)
         ${PROJECT_SOURCE_DIR}/src/agents/AgentEvent.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSpec.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSupervisor.cpp
+        ${PROJECT_SOURCE_DIR}/src/agents/AgentJournal.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/SubAgent.cpp
         ${PROJECT_SOURCE_DIR}/src/conversation/PlanMode.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ReasoningTagProfile.cpp
@@ -1157,6 +1158,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_cfg_snapshot_race.cpp)
         ${PROJECT_SOURCE_DIR}/src/agents/AgentEvent.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSpec.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSupervisor.cpp
+        ${PROJECT_SOURCE_DIR}/src/agents/AgentJournal.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/SubAgent.cpp
         ${PROJECT_SOURCE_DIR}/src/conversation/PlanMode.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ReasoningTagProfile.cpp
@@ -1250,6 +1252,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_conversation_tool_loop.cpp)
         ${PROJECT_SOURCE_DIR}/src/agents/AgentEvent.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSpec.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSupervisor.cpp
+        ${PROJECT_SOURCE_DIR}/src/agents/AgentJournal.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/SubAgent.cpp
         ${PROJECT_SOURCE_DIR}/src/conversation/PlanMode.cpp
         ${PROJECT_SOURCE_DIR}/src/inference/ReasoningTagProfile.cpp
@@ -1908,6 +1911,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_task_family.cpp)
         ${PROJECT_SOURCE_DIR}/src/tools/TaskStopTool.cpp
         ${PROJECT_SOURCE_DIR}/src/tools/SendMessageTool.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSupervisor.cpp
+        ${PROJECT_SOURCE_DIR}/src/agents/AgentJournal.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSpec.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentEvent.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/SubAgent.cpp
@@ -2212,6 +2216,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_demon_command.cpp)
         ${PROJECT_SOURCE_DIR}/src/tui/DemonPanel.cpp
         ${PROJECT_SOURCE_DIR}/src/tui/Events.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSupervisor.cpp
+        ${PROJECT_SOURCE_DIR}/src/agents/AgentJournal.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/SubAgent.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentEvent.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSpec.cpp
@@ -2390,6 +2395,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_subagent.cpp)
         ${PROJECT_SOURCE_DIR}/src/agents/SubAgent.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentEvent.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSupervisor.cpp
+        ${PROJECT_SOURCE_DIR}/src/agents/AgentJournal.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSpec.cpp
         ${PROJECT_SOURCE_DIR}/src/plugins/FrontmatterParser.cpp
         ${PROJECT_SOURCE_DIR}/src/conversation/Conversation.cpp
@@ -2537,6 +2543,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_status_stats_commands.cpp)
         ${PROJECT_SOURCE_DIR}/src/mcp/HttpTransport.cpp
         ${PROJECT_SOURCE_DIR}/src/mcp/WsTransport.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSupervisor.cpp
+        ${PROJECT_SOURCE_DIR}/src/agents/AgentJournal.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/SubAgent.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentEvent.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSpec.cpp
@@ -2677,6 +2684,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_agent_planning_commands.cpp)
         ${PROJECT_SOURCE_DIR}/src/plugins/FrontmatterParser.cpp
         ${PROJECT_SOURCE_DIR}/src/tools/TaskStore.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSupervisor.cpp
+        ${PROJECT_SOURCE_DIR}/src/agents/AgentJournal.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/SubAgent.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentEvent.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSpec.cpp
@@ -2768,6 +2776,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_workflow_dag.cpp)
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSpec.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentEvent.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSupervisor.cpp
+        ${PROJECT_SOURCE_DIR}/src/agents/AgentJournal.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/SubAgent.cpp
         ${PROJECT_SOURCE_DIR}/src/plugins/FrontmatterParser.cpp
         ${PROJECT_SOURCE_DIR}/src/conversation/Conversation.cpp
@@ -2845,6 +2854,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_agent_supervision_bounded.cpp)
     add_executable(test_agent_supervision_bounded
         ${CMAKE_CURRENT_SOURCE_DIR}/test_agent_supervision_bounded.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSupervisor.cpp
+        ${PROJECT_SOURCE_DIR}/src/agents/AgentJournal.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/SubAgent.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentEvent.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSpec.cpp
@@ -2929,6 +2939,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_agent_supervision_integration.cpp)
     add_executable(test_agent_supervision_integration
         ${CMAKE_CURRENT_SOURCE_DIR}/test_agent_supervision_integration.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSupervisor.cpp
+        ${PROJECT_SOURCE_DIR}/src/agents/AgentJournal.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/SubAgent.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentEvent.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSpec.cpp
@@ -3119,6 +3130,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_team_family.cpp)
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSpec.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentEvent.cpp
         ${PROJECT_SOURCE_DIR}/src/agents/AgentSupervisor.cpp
+        ${PROJECT_SOURCE_DIR}/src/agents/AgentJournal.cpp
         ${PROJECT_SOURCE_DIR}/src/plugins/FrontmatterParser.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/SubAgentStub.cpp
         # DIS-1045: clean-build link-list rot repair. AgentSupervisor.cpp now

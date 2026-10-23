@@ -39,7 +39,8 @@ std::string_view TaskOutputTool::name() const {
 
 std::string_view TaskOutputTool::description() const {
     return "Poll the current status and last output lines of a running sub-agent "
-           "by agent_id; returns status, current step, and up to 5 recent output lines.";
+           "by agent_id; returns status, current step, and up to 5 recent output lines. "
+           "Use agent_id=all to list available worker handles for coordination.";
 }
 
 // =============================================================================
@@ -90,6 +91,14 @@ ToolResult TaskOutputTool::run(const Json& args, ToolContext& ctx) {
     // --- Query supervisor for a snapshot of all agents ---
     const std::vector<batbox::agents::AgentSnapshot> snapshots =
         supervisor_.snapshot();
+    if (agent_id == "all") {
+        Json payload = Json::array();
+        for (const auto& snap : snapshots)
+            payload.push_back({{"agent_id", snap.id}, {"name", snap.name},
+                {"status", snap.status}, {"current_step", snap.current_step},
+                {"last_lines", snap.last_5_lines}});
+        return ToolResult::ok_json(std::move(payload));
+    }
 
     // --- Find the entry matching agent_id ---
     // Use a linear scan — there are at most a few dozen agents at any time.
@@ -110,7 +119,7 @@ ToolResult TaskOutputTool::run(const Json& args, ToolContext& ctx) {
             {"current_step", ""},
             {"last_lines",   Json::array()}
         };
-        return ToolResult::ok(payload.dump(2), std::move(payload));
+        return ToolResult::ok_json(std::move(payload));
     }
 
     // --- Build last_lines array (at most 5 entries) ---
@@ -131,7 +140,7 @@ ToolResult TaskOutputTool::run(const Json& args, ToolContext& ctx) {
         {"last_lines",   std::move(last_lines)}
     };
 
-    return ToolResult::ok(payload.dump(2), std::move(payload));
+    return ToolResult::ok_json(std::move(payload));
 }
 
 } // namespace batbox::tools

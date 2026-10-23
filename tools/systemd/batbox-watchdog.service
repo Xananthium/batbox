@@ -1,0 +1,7 @@
+[Unit]
+Description=Check BatBox autonomous engine heartbeat
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/batbox/tools/engine_supervisor.py watchdog
+TimeoutStartSec=60

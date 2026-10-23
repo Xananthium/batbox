@@ -72,6 +72,15 @@ ToolCallOrchestrator::ToolCallOrchestrator(
 
 void ToolCallOrchestrator::accumulate(const batbox::inference::ToolCallDelta& delta) {
     accumulator_.accumulate(delta);
+    prepared_ = false;
+}
+
+const std::vector<batbox::inference::ToolCall>& ToolCallOrchestrator::prepare_calls() {
+    if (!prepared_) {
+        original_calls_ = accumulator_.finalize().value();
+        prepared_ = true;
+    }
+    return original_calls_;
 }
 
 // =============================================================================
@@ -80,18 +89,30 @@ void ToolCallOrchestrator::accumulate(const batbox::inference::ToolCallDelta& de
 
 std::vector<Message>
 ToolCallOrchestrator::dispatch_all(batbox::tools::ToolContext& ctx) {
+    return dispatch_all_durable(ctx, {}).value();
+}
+
+Result<std::vector<Message>> ToolCallOrchestrator::dispatch_all_durable(
+        batbox::tools::ToolContext& ctx,
+        const std::function<Result<void>(const Message&)>& on_result) {
     auto logger = batbox::log::get("orchestrator");
 
     // ------------------------------------------------------------------
     // 1. Finalise the accumulator: JSON-parse all argument buffers.
     //    The outer Result is always Ok (errors are per-call in parse_error).
     // ------------------------------------------------------------------
-    auto finalize_result = accumulator_.finalize();
-    // finalize() always returns Ok per the ToolCallAccumulator contract.
-    const auto& calls = finalize_result.value();
+    const auto& calls = prepare_calls();
 
     std::vector<Message> tool_messages;
     tool_messages.reserve(calls.size());
+    auto emit = [&](Message message) -> Result<void> {
+        if (on_result) {
+            auto saved = on_result(message);
+            if (!saved) return batbox::Err(saved.error());
+        }
+        tool_messages.push_back(std::move(message));
+        return {};
+    };
 
     // ------------------------------------------------------------------
     // 2. Process each assembled ToolCall.
@@ -107,8 +128,8 @@ ToolCallOrchestrator::dispatch_all(batbox::tools::ToolContext& ctx) {
 
             const std::string body =
                 "tool call arguments parse error: " + call.parse_error;
-            tool_messages.push_back(
-                make_error_tool_message(call.id, call.name, body));
+            auto saved = emit(make_error_tool_message(call.id, call.name, body));
+            if (!saved) return batbox::Err(saved.error());
             continue;
         }
 
@@ -132,8 +153,8 @@ ToolCallOrchestrator::dispatch_all(batbox::tools::ToolContext& ctx) {
         if (decision.kind == batbox::permissions::Decision::Kind::Deny) {
             logger->info("ToolCallOrchestrator: tool '{}' denied by permission gate",
                          call.name);
-            tool_messages.push_back(
-                make_error_tool_message(call.id, call.name, "user denied tool call"));
+            auto saved = emit(make_error_tool_message(call.id, call.name, "user denied tool call"));
+            if (!saved) return batbox::Err(saved.error());
             continue;
         }
 
@@ -182,15 +203,16 @@ ToolCallOrchestrator::dispatch_all(batbox::tools::ToolContext& ctx) {
             const std::string& err_str = dispatch_result.error();
             logger->warn("ToolCallOrchestrator: dispatch error for tool '{}': {}",
                          call.name, err_str);
-            tool_messages.push_back(
-                make_error_tool_message(call.id, call.name, err_str));
+            auto saved = emit(make_error_tool_message(call.id, call.name, err_str));
+            if (!saved) return batbox::Err(saved.error());
         } else {
             // Successful dispatch — ToolResult may itself carry is_error=true
             // when the tool encountered a recoverable error (file not found, etc.)
             const batbox::tools::ToolResult& tr = dispatch_result.value();
             logger->debug("ToolCallOrchestrator: tool '{}' returned is_error={}",
                           call.name, tr.is_error);
-            tool_messages.push_back(make_tool_message(call.id, call.name, tr));
+            auto saved = emit(make_tool_message(call.id, call.name, tr));
+            if (!saved) return batbox::Err(saved.error());
         }
     }
 

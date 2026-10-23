@@ -447,6 +447,11 @@ static Result<void, std::string> apply_env(Config& cfg, const EnvMap& env) {
         if (!r) return Err(r.error());
         cfg.api.stream = *r;
     }
+    if (auto it = env.find("BATBOX_ENABLE_THINKING"); it != env.end() && !it->second.empty()) {
+        auto r = parse_bool("BATBOX_ENABLE_THINKING", it->second);
+        if (!r) return Err(r.error());
+        cfg.api.enable_thinking = *r;
+    }
     if (auto it = env.find("BATBOX_PROVIDER_HINT"); it != env.end()) {
         cfg.api.provider_hint = it->second;
     }
@@ -610,6 +615,11 @@ static Result<void, std::string> apply_env(Config& cfg, const EnvMap& env) {
         if (!r) return Err(r.error());
         cfg.compact.keep_last_n_turns_verbatim = *r;
     }
+    if (auto it = env.find("BATBOX_EXACT_COMPACTION_TOKENS"); it != env.end()) {
+        auto r = parse_int("BATBOX_EXACT_COMPACTION_TOKENS", it->second);
+        if (!r) return Err(r.error());
+        cfg.compact.exact_token_threshold = *r;
+    }
 
     // --- Distill group (S1+S4, DIS-980) --------------------------------------
     if (auto it = env.find("BATBOX_DISTILL_ENABLED"); it != env.end()) {
@@ -754,6 +764,11 @@ static void apply_settings_json(Config& cfg, const Json& j) {
     cfg.api.top_p               = jd("api", "top_p",              cfg.api.top_p);
     cfg.api.request_timeout_sec = ji("api", "request_timeout_sec",cfg.api.request_timeout_sec);
     cfg.api.stream              = jb("api", "stream",             cfg.api.stream);
+    if (j.contains("api") && j["api"].is_object() && j["api"].contains("enable_thinking")) {
+        const auto& thinking = j["api"]["enable_thinking"];
+        if (thinking.is_boolean()) cfg.api.enable_thinking = thinking.get<bool>();
+        else if (thinking.is_null()) cfg.api.enable_thinking.reset();
+    }
 
     // General
     if (const auto v = js("general", "config_dir"); !v.empty())
@@ -823,6 +838,7 @@ static void apply_settings_json(Config& cfg, const Json& j) {
     // Compact
     cfg.compact.auto_compact_at_pct       = ji("compact", "auto_compact_at_pct",       cfg.compact.auto_compact_at_pct);
     cfg.compact.keep_last_n_turns_verbatim= ji("compact", "keep_last_n_turns_verbatim", cfg.compact.keep_last_n_turns_verbatim);
+    cfg.compact.exact_token_threshold = ji("compact", "exact_token_threshold", cfg.compact.exact_token_threshold);
 
     // Distill (S1+S4, DIS-980)
     cfg.distill.enabled = jb("distill", "enabled", cfg.distill.enabled);
@@ -1015,6 +1031,10 @@ Result<void, std::string> Config::validate() const {
         return Err("BATBOX_KEEP_LAST_N_TURNS_VERBATIM: must be >= 0 (got " +
                    std::to_string(compact.keep_last_n_turns_verbatim) + ")");
     }
+    if (compact.exact_token_threshold < 0) {
+        return Err("BATBOX_EXACT_COMPACTION_TOKENS: must be >= 0 (got " +
+                   std::to_string(compact.exact_token_threshold) + ")");
+    }
     // If search engine is searxng, searxng_url must be URL-shaped if set.
     if (search.engine == SearchEngine::Searxng &&
         !search.searxng_url.empty() &&
@@ -1067,6 +1087,7 @@ Json Config::to_json() const {
     j["api"]["top_p"]              = api.top_p;
     j["api"]["request_timeout_sec"]= api.request_timeout_sec;
     j["api"]["stream"]             = api.stream;
+    j["api"]["enable_thinking"]    = api.enable_thinking ? Json(*api.enable_thinking) : Json(nullptr);
 
     j["general"]["config_dir"]           = general.config_dir.string();
     j["general"]["project_memory_file"]  = general.project_memory_file;
@@ -1108,6 +1129,7 @@ Json Config::to_json() const {
 
     j["compact"]["auto_compact_at_pct"]        = compact.auto_compact_at_pct;
     j["compact"]["keep_last_n_turns_verbatim"] = compact.keep_last_n_turns_verbatim;
+    j["compact"]["exact_token_threshold"] = compact.exact_token_threshold;
 
     j["distill"]["enabled"]                = distill.enabled;
     j["distill"]["base_url"]               = distill.base_url;

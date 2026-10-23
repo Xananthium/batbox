@@ -32,6 +32,8 @@
 #include <doctest/doctest.h>
 
 #include <batbox/conversation/Conversation.hpp>
+#include <batbox/conversation/Compactor.hpp>
+#include <batbox/conversation/ToolCallOrchestrator.hpp>
 #include <batbox/conversation/Message.hpp>
 #include <batbox/config/Config.hpp>
 #include <batbox/core/CancelToken.hpp>
@@ -216,8 +218,10 @@ public:
     }
 
     [[nodiscard]] batbox::tools::ToolResult
-    run(const batbox::Json& /*args*/, batbox::tools::ToolContext& /*ctx*/) override {
+    run(const batbox::Json& /*args*/, batbox::tools::ToolContext& ctx) override {
         ++call_count;
+        if (on_run) on_run();
+        if (on_context) on_context(ctx);
         batbox::tools::ToolResult r;
         r.body     = "stub result from " + name_;
         r.is_error = false;
@@ -228,6 +232,8 @@ public:
     [[nodiscard]] bool requires_confirmation() const override { return false; }
 
     std::atomic<int> call_count{0};
+    std::function<void()> on_run;
+    std::function<void(const batbox::tools::ToolContext&)> on_context;
 
 private:
     std::string name_;
@@ -393,7 +399,7 @@ TEST_SUITE("Conversation integration") {
     // -----------------------------------------------------------------------
     // AC4: Auto-compact triggers when auto_compact_at_pct = 1 (always fires).
     // -----------------------------------------------------------------------
-    TEST_CASE("run_turn: auto-compact reduces messages when threshold exceeded") {
+    TEST_CASE("run_turn: interactive compaction preserves authored user messages") {
         std::string script = find_fixture_script();
         REQUIRE_FALSE(script.empty());
 
@@ -428,10 +434,11 @@ TEST_SUITE("Conversation integration") {
         REQUIRE(res.has_value());
 
         const int count_after_run = static_cast<int>(conv.messages().size());
-        // After compaction the messages list is summarised:
-        //   1 summary + 2 verbatim (keep_last_n=2) + 1 assistant reply = 4 total.
-        // Without compaction it would be count_before_run+1 = 32.
-        CHECK(count_after_run < count_before_run);
+        // Interactive notepad compaction prunes tool bodies only. Authored user
+        // text remains verbatim even when the estimate triggers compaction.
+        CHECK(count_after_run == count_before_run + 1);
+        for (int i = 0; i < 30; ++i)
+            CHECK(conv.messages()[i].content == "This is test message number " + std::to_string(i));
     }
 
     // -----------------------------------------------------------------------
@@ -727,3 +734,329 @@ TEST_SUITE("Conversation tool-call loop") {
     }
 
 } // TEST_SUITE "Conversation tool-call loop"
+
+
+// Autonomous sessions use the serving tokenizer instead of a byte estimator.
+static std::size_t exact_test_count(Conversation& conv,
+                                    batbox::inference::Client& client,
+                                    const batbox::config::Config& cfg) {
+    batbox::inference::ChatRequest req;
+    req.model = cfg.api.default_model;
+    batbox::inference::WireMessage sys;
+    sys.role = "system";
+    sys.content = conv.compose_system_prompt();
+    req.messages.push_back(std::move(sys));
+    for (const auto& msg : conv.messages()) {
+        batbox::inference::WireMessage wire;
+        wire.role = std::string(to_wire_role(msg.role));
+        wire.content = msg.content;
+        req.messages.push_back(std::move(wire));
+    }
+    auto [source, token] = CancelToken::make_root();
+    auto result = client.count_prompt_tokens(req, token);
+    REQUIRE(result.has_value());
+    return result.value();
+}
+
+TEST_SUITE("Autonomous exact compaction") {
+    TEST_CASE("worker tool selection applies to schemas tokenizer and dispatch") {
+        FakeServer server;
+        REQUIRE(server.start(find_fixture_script()));
+        TmpDir temporary;
+        auto cfg = make_test_config(server.base_url());
+        cfg.api.default_model = "restricted-tools-test";
+        cfg.compact.exact_token_threshold = 100000;
+        batbox::inference::Client client{cfg};
+        batbox::session::SessionStore store{temporary.path};
+        auto [registry, stub] = make_registry("get_weather");
+        registry.register_tool(std::make_unique<StubTool>("Echo"));
+        auto [permission_store, gate] = make_allow_gate(temporary.path / "permissions.json");
+        Conversation conversation{client, store, cfg, temporary.path, nullptr, &registry, gate.get()};
+        conversation.set_allowed_tools({"Echo"});
+        REQUIRE(conversation.user_message_durable("Use the selected worker tools.").has_value());
+        auto [source, token] = CancelToken::make_root();
+        auto result = conversation.run_turn(std::move(token));
+        INFO((result.has_value() ? "success" : result.error()));
+        REQUIRE(result.has_value());
+        CHECK(stub->call_count == 0);
+        REQUIRE(conversation.messages().size() == 4);
+        CHECK(conversation.messages()[2].is_error.value_or(false));
+        CHECK(conversation.messages()[2].content.find("allowed_tools") != std::string::npos);
+    }
+
+    TEST_CASE("restored worker tool context preserves its agent identity and full default tools") {
+        FakeServer server;
+        REQUIRE(server.start(find_fixture_script()));
+        TmpDir temporary;
+        auto cfg = make_test_config(server.base_url());
+        batbox::inference::Client client{cfg};
+        batbox::session::SessionStore store{temporary.path};
+        Conversation previous{client, store, cfg, temporary.path};
+        previous.set_session_identity("worker-reliability", batbox::Json::object());
+        REQUIRE(previous.user_message_durable("Use the native tool.").has_value());
+        auto disk = store.load(previous.session_id());
+        REQUIRE(disk.has_value());
+        auto [registry, stub] = make_registry("get_weather");
+        auto [permission_store, gate] = make_allow_gate(temporary.path / "permissions.json");
+        Conversation restored{client, store, cfg, temporary.path, nullptr, &registry, gate.get()};
+        REQUIRE(restored.restore(*disk).has_value());
+        restored.set_allowed_tools({});
+        stub->on_context = [&](const batbox::tools::ToolContext& ctx) {
+            CHECK(ctx.agent_id == "worker-reliability");
+            CHECK_FALSE(ctx.allowed_tools.has_value());
+        };
+        auto [source, token] = CancelToken::make_root();
+        REQUIRE(restored.run_turn(std::move(token)).has_value());
+        CHECK(stub->call_count == 1);
+    }
+
+    TEST_CASE("durable user append reports failure without changing memory") {
+        TmpDir temporary;
+        auto cfg = make_test_config("http://127.0.0.1:1/v1");
+        batbox::inference::Client client{cfg};
+        batbox::session::SessionStore store{temporary.path};
+        Conversation conversation{client, store, cfg, temporary.path};
+        REQUIRE(conversation.start_session().has_value());
+        const auto path = temporary.path / (conversation.session_id() + ".json");
+        REQUIRE(fs::remove(path));
+        fs::create_directory(path);  // A reproducible write failure, including as root.
+        auto result = conversation.user_message_durable("This must not be lost.");
+        CHECK_FALSE(result.has_value());
+        CHECK(conversation.messages().empty());
+    }
+
+    TEST_CASE("tool intent is durable before side effects and interrupted pairs recover once") {
+        FakeServer server;
+        REQUIRE(server.start(find_fixture_script()));
+        TmpDir temporary;
+        auto cfg = make_test_config(server.base_url());
+        batbox::inference::Client client{cfg};
+        batbox::session::SessionStore store{temporary.path};
+        auto [registry, stub] = make_registry("get_weather");
+        auto [permission_store, gate] = make_allow_gate(temporary.path / "permissions.json");
+        Conversation conversation{client, store, cfg, temporary.path, nullptr, &registry, gate.get()};
+        REQUIRE(conversation.user_message_durable("Run the tool.").has_value());
+        bool saw_intent = false;
+        stub->on_run = [&] {
+            auto disk = store.load(conversation.session_id());
+            REQUIRE(disk.has_value());
+            const auto& intent = disk->messages.back();
+            REQUIRE(intent.at("role") == "assistant");
+            REQUIRE(intent.contains("tool_calls"));
+            REQUIRE_FALSE(intent.at("tool_calls").empty());
+            saw_intent = true;
+
+            // This is the exact durable transcript a process killed inside the
+            // tool would leave. Recovery must report uncertainty, never rerun it.
+            const auto recovery_path = temporary.path / "recovery";
+            batbox::session::SessionStore recovery_store{recovery_path};
+            REQUIRE(batbox::session::write_initial(
+                recovery_path / (conversation.session_id() + ".json"), *disk).has_value());
+            recovery_store.adopt_restored(*disk);
+            Conversation restored{client, recovery_store, cfg, temporary.path};
+            REQUIRE(restored.restore(*disk).has_value());
+            REQUIRE(restored.recover_interrupted_tools().has_value());
+            const auto repaired_size = restored.messages().size();
+            REQUIRE(restored.messages().back().role == Role::Tool);
+            CHECK(restored.messages().back().is_error.value_or(false));
+            CHECK(restored.messages().back().content.find("Outcome unknown") != std::string::npos);
+            REQUIRE(restored.recover_interrupted_tools().has_value());
+            CHECK(restored.messages().size() == repaired_size);
+            CHECK(stub->call_count == 1);
+        };
+        auto [source, token] = CancelToken::make_root();
+        REQUIRE(conversation.run_turn(std::move(token)).has_value());
+        CHECK(saw_intent);
+        CHECK(stub->call_count == 1);
+    }
+
+    TEST_CASE("failed result persistence stops later tool side effects") {
+        TmpDir temporary;
+        auto [registry, stub] = make_registry("get_weather");
+        auto [permission_store, gate] = make_allow_gate(temporary.path / "permissions.json");
+        ToolCallOrchestrator orchestrator{registry, *gate};
+        orchestrator.accumulate({0, "first", "get_weather", "{}"});
+        orchestrator.accumulate({1, "second", "get_weather", "{}"});
+        auto [source, token] = CancelToken::make_root();
+        batbox::tools::ToolContext ctx;
+        ctx.cwd = temporary.path;
+        ctx.cancel_token = std::move(token);
+        auto result = orchestrator.dispatch_all_durable(ctx, [&](const Message& msg) -> batbox::Result<void> {
+            CHECK(msg.tool_call_id == "first");
+            CHECK(stub->call_count == 1);
+            return batbox::Err(std::string("simulated disk failure"));
+        });
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error() == "simulated disk failure");
+        CHECK(stub->call_count == 1);
+    }
+
+    TEST_CASE("exact threshold config reads and validates the environment") {
+        auto config = batbox::config::Config::load_from_env({{"BATBOX_EXACT_COMPACTION_TOKENS", "100000"}});
+        REQUIRE(config.has_value());
+        CHECK(config->compact.exact_token_threshold == 100000);
+        CHECK(config->to_json()["compact"]["exact_token_threshold"] == 100000);
+        auto invalid = batbox::config::Config::load_from_env({{"BATBOX_EXACT_COMPACTION_TOKENS", "-1"}});
+        CHECK_FALSE(invalid.has_value());
+    }
+
+    TEST_CASE("threshold is exact and checkpoint survives restart without deleting transcript") {
+        FakeServer server;
+        REQUIRE(server.start(find_fixture_script()));
+        TmpDir temporary;
+        auto cfg = make_test_config(server.base_url());
+        cfg.api.default_model = "template-test";
+        cfg.compact.keep_last_n_turns_verbatim = 1;
+        batbox::inference::Client client{cfg};
+        client.set_chat_template_kwargs({{"enable_thinking", false}});
+        batbox::session::SessionStore store{temporary.path};
+        Conversation conversation{client, store, cfg, temporary.path};
+        std::string old;
+        for (int i = 0; i < 2000; ++i) old += "verified fact provenance ";
+        conversation.user_message(old);
+        conversation.user_message("Continue the current task.");
+        const auto count = exact_test_count(conversation, client, cfg);
+        SUBCASE("one token below threshold does not compact") {
+            conversation.set_exact_compaction_tokens(count + 1);
+            auto [source, token] = CancelToken::make_root();
+            REQUIRE(conversation.run_turn(std::move(token)).has_value());
+            CHECK(conversation.compaction_count() == 0);
+            CHECK(conversation.last_prompt_tokens() == count);
+            CHECK(conversation.messages().front().content == old);
+        }
+        SUBCASE("at threshold compacts and restores the active checkpoint") {
+            conversation.set_exact_compaction_tokens(count);
+            auto [source, token] = CancelToken::make_root();
+            auto result = conversation.run_turn(std::move(token));
+            INFO((result.has_value() ? "success" : result.error()));
+            REQUIRE(result.has_value());
+            CHECK(conversation.compaction_count() == 1);
+            CHECK(conversation.last_prompt_tokens() < count);
+            CHECK(conversation.messages().front().role == Role::System);
+            auto loaded = store.load(conversation.session_id());
+            REQUIRE(loaded.has_value());
+            CHECK(loaded.value().messages.front().at("content").get<std::string>() == old);
+            CHECK(loaded.value().messages.size() > conversation.messages().size());
+            Conversation restored{client, store, cfg, temporary.path};
+            REQUIRE(restored.restore(loaded.value()).has_value());
+            REQUIRE(restored.messages().size() == conversation.messages().size());
+            CHECK(restored.compaction_count() == 1);
+            for (std::size_t i = 0; i < restored.messages().size(); ++i)
+                CHECK(to_json(restored.messages()[i]) == to_json(conversation.messages()[i]));
+        }
+    }
+
+    TEST_CASE("failed summaries preserve every original message and write no checkpoint") {
+        FakeServer server;
+        REQUIRE(server.start(find_fixture_script()));
+        TmpDir temporary;
+        auto cfg = make_test_config(server.base_url());
+        cfg.compact.keep_last_n_turns_verbatim = 1;
+        cfg.compact.exact_token_threshold = 1;
+        SUBCASE("empty summary") { cfg.api.default_model = "empty-summary-test"; }
+        SUBCASE("truncated summary") { cfg.api.default_model = "truncated-summary-test"; }
+        batbox::inference::Client client{cfg};
+        batbox::session::SessionStore store{temporary.path};
+        Conversation conversation{client, store, cfg, temporary.path};
+        conversation.user_message("A verified original fact and its source.");
+        conversation.user_message("Continue.");
+        const auto original = conversation.messages();
+        auto [source, token] = CancelToken::make_root();
+        auto result = conversation.run_turn(std::move(token));
+        REQUIRE_FALSE(result.has_value());
+        CHECK(result.error().find("incomplete summary") != std::string::npos);
+        REQUIRE(conversation.messages().size() == original.size());
+        for (std::size_t i = 0; i < original.size(); ++i)
+            CHECK(to_json(conversation.messages()[i]) == to_json(original[i]));
+        auto loaded = store.load(conversation.session_id());
+        REQUIRE(loaded.has_value());
+        CHECK(loaded.value().messages.size() == original.size());
+        CHECK(conversation.compaction_count() == 0);
+    }
+
+    TEST_CASE("protected tail expands across all parallel tool pairs") {
+        std::vector<Message> history(6);
+        history[0].role = Role::User;
+        history[1].role = Role::Assistant;
+        history[1].tool_calls = std::vector<ToolCall>{
+            ToolCall{"a", "Read", {{"path", "alpha"}}},
+            ToolCall{"b", "Read", {{"path", "beta"}}}};
+        history[2].role = Role::Tool;
+        history[2].tool_call_id = "a";
+        history[3].role = Role::Assistant;
+        history[3].tool_calls = std::vector<ToolCall>{ToolCall{"c", "Read", {{"path", "gamma"}}}};
+        history[4].role = Role::Tool;
+        history[4].tool_call_id = "b";
+        history[5].role = Role::Tool;
+        history[5].tool_call_id = "c";
+        CHECK(Compactor::safe_tail_start(history, 5) == 1);
+        CHECK(Compactor::safe_tail_start(history, 2) == 1);
+        CHECK(Compactor::safe_tail_start(history, 0) == 0);
+        CHECK(Compactor::safe_tail_start(history, history.size()) == history.size());
+    }
+
+    TEST_CASE("a completed tool group larger than the threshold or context compacts losslessly on disk") {
+        std::size_t words = 110000;
+        bool fail_chunk = false;
+        SUBCASE("110k group exceeds compaction threshold") { words = 110000; }
+        SUBCASE("230k group exceeds the 200k serving window") { words = 230000; }
+        SUBCASE("a failed later chunk leaves the full original history intact") { words = 230000; fail_chunk = true; }
+        FakeServer server;
+        REQUIRE(server.start(find_fixture_script()));
+        TmpDir temporary;
+        auto cfg = make_test_config(server.base_url());
+        cfg.api.default_model = fail_chunk ? "bounded-summary-fail" : "bounded-summary-test";
+        cfg.api.default_model_ctx_len = 200000;
+        cfg.compact.exact_token_threshold = 100000;
+        batbox::inference::Client client{cfg};
+        batbox::session::SessionStore store{temporary.path};
+        Conversation conversation{client, store, cfg, temporary.path};
+        REQUIRE(conversation.user_message_durable("Inspect the completed evidence and continue.").has_value());
+        Message call;
+        call.role = Role::Assistant;
+        call.tool_calls = std::vector<ToolCall>{ToolCall{"large-read", "Read", {{"path", "evidence.txt"}}}};
+        REQUIRE(store.append_message(conversation.session_id(), to_json(call)).has_value());
+        Message output;
+        output.role = Role::Tool;
+        output.tool_call_id = "large-read";
+        output.tool_name = "Read";
+        output.content = "GROUP_HEAD_MARKER https://evidence.example/source ";
+        for (std::size_t i = 0; i < words; ++i) output.content += "fáct ";
+        output.content += "GROUP_TAIL_MARKER";
+        REQUIRE(store.append_message(conversation.session_id(), to_json(output)).has_value());
+        auto before = store.load(conversation.session_id());
+        REQUIRE(before.has_value());
+        REQUIRE(conversation.restore(before.value()).has_value());
+        auto [source, token] = CancelToken::make_root();
+        auto result = conversation.run_turn(std::move(token));
+        INFO((result ? "success" : result.error()));
+        if (fail_chunk) {
+            REQUIRE_FALSE(result.has_value());
+            CHECK(result.error().find("incomplete summary") != std::string::npos);
+            CHECK(conversation.compaction_count() == 0);
+            REQUIRE(conversation.messages().size() == 3);
+            CHECK(conversation.messages().back().content == output.content);
+            auto disk = store.load(conversation.session_id());
+            REQUIRE(disk.has_value());
+            CHECK(disk->messages.size() == 3);
+            CHECK(disk->messages.back().at("content").get<std::string>() == output.content);
+            return;
+        }
+        REQUIRE(result.has_value());
+        CHECK(conversation.compaction_count() == 1);
+        CHECK(conversation.last_prompt_tokens() < 100000);
+        REQUIRE(conversation.messages().front().role == Role::System);
+        CHECK(conversation.messages().front().content.find("GROUP_HEAD_MARKER") != std::string::npos);
+        CHECK(conversation.messages().front().content.find("GROUP_TAIL_MARKER") != std::string::npos);
+        CHECK(conversation.messages().front().content.find("https://evidence.example/source") != std::string::npos);
+        CHECK(conversation.messages()[1].role == Role::User);
+        auto durable = store.load(conversation.session_id());
+        REQUIRE(durable.has_value());
+        CHECK(durable->messages[2].at("content").get<std::string>() == output.content);
+        Conversation restored{client, store, cfg, temporary.path};
+        REQUIRE(restored.restore(*durable).has_value());
+        CHECK(restored.compaction_count() == 1);
+        CHECK(restored.messages().size() == conversation.messages().size());
+        CHECK(restored.messages().front().content == conversation.messages().front().content);
+    }
+}

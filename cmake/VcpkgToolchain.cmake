@@ -121,10 +121,10 @@ if(NOT _batbox_vcpkg_root)
 
   if(EXISTS "${_vcpkg_json_path}")
     file(READ "${_vcpkg_json_path}" _vcpkg_json_content)
-    string(REGEX MATCH "\"builtin-baseline\"[[:space:]]*:[[:space:]]*\"([a-f0-9]+)\""
-           _baseline_match "${_vcpkg_json_content}")
-    if(CMAKE_MATCH_1)
-      set(_baseline_sha "${CMAKE_MATCH_1}")
+    string(JSON _baseline_candidate ERROR_VARIABLE _baseline_error
+           GET "${_vcpkg_json_content}" builtin-baseline)
+    if(NOT _baseline_error)
+      set(_baseline_sha "${_baseline_candidate}")
     endif()
   endif()
 
@@ -212,7 +212,7 @@ if(NOT _batbox_vcpkg_root)
       )
       if(NOT _bootstrap_result EQUAL 0)
         message(FATAL_ERROR
-          "[batbox/vcpkg] bootstrap-vcpkg failed (exit ${_bootstrap_result}):\n${_bootstrap_error}")
+          "[batbox/vcpkg] bootstrap-vcpkg failed (exit ${_bootstrap_result}):\n${_bootstrap_output}\n${_bootstrap_error}")
       endif()
       message(STATUS "[batbox/vcpkg] vcpkg bootstrap complete.")
     else()

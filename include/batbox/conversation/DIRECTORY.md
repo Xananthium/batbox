@@ -99,3 +99,19 @@ Accumulates streaming tool_call deltas and dispatches the completed calls.
 - `ToolCallOrchestrator::ToolCallOrchestrator(registry, gate, progress_cb=nullptr)` — constructs with a reference to the ToolRegistry and PermissionGate
 - `ToolCallOrchestrator::accumulate(delta)` — feeds one StreamDelta into the ToolCallAccumulator; no-op when delta has no tool_calls
 - `ToolCallOrchestrator::dispatch_all(ctx) -> vector<Message>` — finalizes accumulated tool calls, runs the permission gate, dispatches each via registry.dispatch(), returns tool-result messages
+
+
+- `Conversation::set_exact_compaction_tokens(size_t)` — opt into serving-tokenizer
+  budgets and durable summaries; autonomous mode uses 100,000.
+- `last_prompt_tokens()` / `compaction_count()` — measured active context and
+  persisted compaction count for the engine status output.
+- `Compactor::safe_tail_start(messages, proposed)` — retain all assistant calls
+  referenced by tool results in the protected suffix.
+- `ToolCallOrchestrator::original_calls()` — preserve actual parsed arguments in
+  the conversation transcript instead of reconstructing empty argument objects.
+- `Conversation::user_message_durable(text)` — returns persistence errors and
+  changes active memory only after the user prompt reaches durable storage.
+- `Conversation::recover_interrupted_tools()` — records unknown outcomes for
+  unfinished tool pairs without replaying actions.
+- `ToolCallOrchestrator::prepare_calls()` / `dispatch_all_durable(ctx, callback)` —
+  allow intent journaling before execution and per-result journaling between tools.

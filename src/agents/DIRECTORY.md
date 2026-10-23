@@ -5,7 +5,10 @@ Agent subsystem implementations: event queue, spec loading, supervisor, team reg
 ## Files
 
 ### AgentEvent.cpp
-AgentEventQueue implementation: MPSC push/pop with condition variable and dirty_seq atomic.
+AgentEventQueue implementation: MPSC push/pop with condition variable and dirty_seq atomic. UI notifications are bounded to 8,192 entries; complete output remains in session journals.
+
+### AgentJournal.cpp
+Atomic, fsynced per-worker manifests. Records stable handles, role specifications, session IDs, recoverable state and acknowledged pending messages. Raw API keys are never stored.
 
 ### AgentLoader.cpp
 Scans user agent directories; parses .md frontmatter; detects dependency cycles via DFS.
@@ -14,13 +17,13 @@ Scans user agent directories; parses .md frontmatter; detects dependency cycles 
 AgentSpec::from_file() and AgentSpec::from_type() implementations; maps subagent_type strings to built-in specs.
 
 ### AgentSupervisor.cpp
-Semaphore-based spawn coordinator; tracks agent lifecycle; implements wait_all() with condition variable.
+Semaphore-based spawn coordinator; tracks agent lifecycle; implements wait_all() with condition variable. Standing workers release their permit only at quiescence and reacquire it before another turn. Autonomous workers retain their handles and resume their journals across restart. Managed continuous workers remain in the standing pool; completed in-memory history is bounded while durable transcripts remain available.
 
 ### Demon.cpp
 Demon::spec() and demon_make_spec() implementations; DemonRateLimiter budget tracking.
 
 ### SubAgent.cpp
-jthread-based single agent execution: inference loop, tool dispatch, event publishing, cooperative cancellation.
+jthread-based single agent execution: inference loop, tool dispatch, event publishing, cooperative cancellation. Receives an owning native runtime from the application factory, including tools, permissions and private plan/config state. Role instructions are appended after the shared system prefix. Exact compaction and optional thinking configuration are inherited from the coordinator. Durable inbox messages are acknowledged only after their transcript append, and interrupted tool results are marked unknown rather than replayed.
 
 ### Team.cpp
 Team blackboard (unordered_map) with mutex; broadcast queue; TeamRegistry singleton with shared_ptr map.

@@ -95,7 +95,7 @@ ToolResult TeamDeleteTool::run(const Json& args, ToolContext& ctx) {
         {"status", status}
     };
 
-    return ToolResult::ok(payload.dump(2), std::move(payload));
+    return ToolResult::ok_json(std::move(payload));
 }
 
 } // namespace batbox::tools

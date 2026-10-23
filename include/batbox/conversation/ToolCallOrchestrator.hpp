@@ -140,6 +140,9 @@ public:
     // -------------------------------------------------------------------------
     void accumulate(const batbox::inference::ToolCallDelta& delta);
 
+    // Parse without executing so callers can journal the complete intent first.
+    [[nodiscard]] const std::vector<batbox::inference::ToolCall>& prepare_calls();
+
     // -------------------------------------------------------------------------
     // dispatch_all — finalize, arbitrate, dispatch; return Tool messages
     //
@@ -160,6 +163,17 @@ public:
     [[nodiscard]] std::vector<Message>
     dispatch_all(batbox::tools::ToolContext& ctx);
 
+    // Persist each completed outcome before allowing the next action. A write
+    // failure stops dispatch immediately, leaving the journaled intent for
+    // recovery rather than executing more unrecordable side effects.
+    [[nodiscard]] Result<std::vector<Message>> dispatch_all_durable(
+        batbox::tools::ToolContext& ctx,
+        const std::function<Result<void>(const Message&)>& on_result);
+
+    [[nodiscard]] const std::vector<batbox::inference::ToolCall>& original_calls() const noexcept {
+        return original_calls_;
+    }
+
 private:
     // Injected (non-owning) dependencies.
     batbox::tools::ToolRegistry&       registry_;
@@ -170,6 +184,8 @@ private:
 
     // Accumulates ToolCallDelta fragments until finalize().
     batbox::inference::ToolCallAccumulator accumulator_;
+    std::vector<batbox::inference::ToolCall> original_calls_;
+    bool prepared_{false};
 };
 
 } // namespace batbox::conversation

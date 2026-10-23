@@ -80,6 +80,14 @@ struct ToolResult {
         return ToolResult{std::move(body), false, std::move(payload)};
     }
 
+    /// Serialize before moving. Passing payload.dump() and std::move(payload)
+    /// as sibling arguments permits the move to happen first, yielding "null"
+    /// as the model-visible result even while the UI receives the real payload.
+    [[nodiscard]] static ToolResult ok_json(Json payload) {
+        auto body = payload.dump(2);
+        return ToolResult{std::move(body), false, std::move(payload)};
+    }
+
     /// Produce an error result with a descriptive text body.
     [[nodiscard]] static ToolResult error(std::string body) {
         return ToolResult{std::move(body), true, std::nullopt};

@@ -38,6 +38,7 @@
 #include <atomic>
 #include <cstddef>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -102,6 +103,9 @@ struct ApiConfig {
     double        top_p            = 1.0;                          ///< BATBOX_TOP_P
     int           request_timeout_sec = 120;                       ///< BATBOX_REQUEST_TIMEOUT_SEC
     bool          stream           = true;                         ///< BATBOX_STREAM
+    // Unset preserves the provider's template default. An explicit value is
+    // used by both generation and exact prompt tokenization.
+    std::optional<bool> enable_thinking;                            ///< BATBOX_ENABLE_THINKING
     /// Provider hint for pre-request quirk handling.
     /// Valid values: openai | vllm | together | ollama | anthropic | groq | mistral | lm-studio | llama-cpp | auto
     /// When empty or "auto", the provider is detected from base_url.
@@ -243,6 +247,7 @@ struct SecurityConfig {
 struct CompactConfig {
     int  auto_compact_at_pct        = 80; ///< BATBOX_AUTO_COMPACT_AT_PCT
     int  keep_last_n_turns_verbatim = 10; ///< BATBOX_KEEP_LAST_N_TURNS_VERBATIM
+    int  exact_token_threshold      = 0;  ///< BATBOX_EXACT_COMPACTION_TOKENS; 0 = estimator
 };
 
 /// Closed tool-subagent distillation settings (S1+S4, DIS-980).

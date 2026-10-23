@@ -416,4 +416,42 @@ TEST_SUITE("StandingRegistry") {
         CHECK(sup.standing_count() == 0);
         CHECK(sup.available_slots_for_test() == 2);
     }
+    TEST_CASE("parked standing worker wakes for a peer message and returns its permit") {
+        const auto script = find_fixture_script();
+        REQUIRE_FALSE(script.empty());
+        FakeServer srv;
+        REQUIRE(srv.start(script));
+        hermetic_env(srv.base_url());
+        AgentSupervisor sup(1);
+        sup.set_agent_config(make_test_config(srv.base_url()));
+        AgentSpec spec; spec.name = "peer-receiver";
+        CancelSource root;
+        const auto id = sup.spawn(spec, "Initial task", "", root.token(), true);
+        CHECK_FALSE(sup.interrogate(id, "Establish a quiescent boundary").empty());
+        const auto before = sup.snapshot().front().token_count;
+        sup.enqueue_message(id, "PEER_WAKE_MARKER: perform another turn");
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+        bool woke = false;
+        while (std::chrono::steady_clock::now() < deadline) {
+            const auto snap = sup.snapshot().front();
+            if (snap.token_count > before && snap.current_step == "standing (warm)") {
+                woke = true;
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+        CHECK(woke);
+        root.request_stop();
+        sup.wait_all();
+        CHECK(sup.available_slots_for_test() == 1);
+    }
+
+    TEST_CASE("worker event notifications remain bounded without a UI consumer") {
+        AgentEventQueue events;
+        for (int i = 0; i < 12000; ++i)
+            events.push(batbox::agents::AgentEvent::make_token_appended("worker", "token"));
+        CHECK(events.size() <= 8192);
+        CHECK(events.dirty_seq() == 12000);
+    }
+
 }

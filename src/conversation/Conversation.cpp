@@ -82,7 +82,9 @@ Conversation::Conversation(batbox::inference::Client&                client,
     , session_id_()
     , messages_()
     , on_delta_cb_(std::move(on_delta_cb))
-{}
+{
+    exact_compact_tokens_ = static_cast<std::size_t>(std::max(0, cfg.compact.exact_token_threshold));
+}
 
 // =============================================================================
 // set_on_message_appended_cb()
@@ -158,7 +160,7 @@ void Conversation::set_standing_handles_provider(
 
 void Conversation::compact_for_standing_turn() {
     // Stand down when the provider manages its own context window (S9 rule).
-    if (manages_own_context_) {
+    if (manages_own_context_ || exact_compact_tokens_ > 0) {
         return;
     }
 
@@ -199,8 +201,8 @@ void Conversation::user_message(std::string_view text) {
 
     // Ensure the session exists before we try to append to it.
     // We ignore the error here — if session creation fails the message is still
-    // appended to the in-memory list.  Callers that need guaranteed persistence
-    // should check run_turn()'s return value which propagates session errors.
+    // appended to the in-memory list. Callers that need guaranteed persistence
+    // must use user_message_durable() before advancing their own checkpoint.
     if (session_id_.empty()) {
         (void)ensure_session_started();
     }
@@ -219,6 +221,44 @@ void Conversation::user_message(std::string_view text) {
     messages_.push_back(std::move(msg));
 }
 
+Result<void> Conversation::user_message_durable(std::string_view text) {
+    auto started = ensure_session_started();
+    if (!started) return batbox::Err(started.error());
+    Message msg;
+    msg.role = Role::User;
+    msg.content = std::string(text);
+    auto saved = store_.append_message(session_id_, to_json(msg));
+    if (!saved) return batbox::Err(saved.error());
+    batbox::perf::g_perf.set_first_token_ms(0);
+    submit_time_ = std::chrono::steady_clock::now();
+    messages_.push_back(std::move(msg));
+    return {};
+}
+
+Result<void> Conversation::recover_interrupted_tools() {
+    std::size_t start = messages_.size();
+    while (start > 0 && messages_[start - 1].role == Role::Tool) --start;
+    if (start == 0 || !messages_[start - 1].tool_calls) return {};
+    // Appending can reallocate messages_; retain a separate copy of the calls.
+    const auto calls = *messages_[start - 1].tool_calls;
+    for (const auto& call : calls) {
+        const bool recorded = std::any_of(messages_.begin() + start, messages_.end(),
+            [&](const Message& msg) { return msg.tool_call_id.value_or("") == call.id; });
+        if (recorded) continue;
+        Message interrupted;
+        interrupted.role = Role::Tool;
+        interrupted.tool_call_id = call.id;
+        interrupted.tool_name = call.name;
+        interrupted.is_error = true;
+        interrupted.content = "Execution was interrupted before its result was durably recorded. "
+            "Outcome unknown. Inspect persistent state before repeating this action.";
+        auto saved = store_.append_message(session_id_, to_json(interrupted));
+        if (!saved) return batbox::Err(saved.error());
+        messages_.push_back(std::move(interrupted));
+    }
+    return {};
+}
+
 // =============================================================================
 // run_turn()
 // =============================================================================
@@ -232,6 +272,9 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
     if (ct.is_cancelled()) {
         return batbox::Err(std::string("cancelled"));
     }
+
+    auto recovered = recover_interrupted_tools();
+    if (!recovered) return batbox::Err(recovered.error());
 
     // ---- PEXT2 3.4 (D-8): snapshot mutable Config fields under mutex ----
     //
@@ -374,7 +417,7 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
             batbox::conversation::compose_system_prompt(is_planning, working_dir_);
 
         batbox::inference::ChatRequest preflight_req =
-            build_chat_request(messages_, cfg_, registry_, sys_prompt_preflight);
+            build_chat_request(messages_, cfg_, registry_, sys_prompt_preflight, allowed_tools_);
         // PEXT2 3.4: use snapshotted model to avoid race with /model switch.
         preflight_req.model = current_model;
         // S6 (DIS-981): inject the notepad as a tail reminder BEFORE serializing,
@@ -400,7 +443,7 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
 
         // S5 (DIS-983): gate compaction on the S9 stand-down rule — skip
         // entirely when the active provider manages its own context window.
-        if (batbox::conversation::compaction_should_run(est >= threshold,
+        if (exact_compact_tokens_ == 0 && batbox::conversation::compaction_should_run(est >= threshold,
                                                         manages_own_context_)) {
             // S5: the sink is the NOTEPAD, not an LLM summary. Structurally
             // prune the raw tool-output bodies in the head to tombstones that
@@ -423,7 +466,7 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
 
             // Rebuild preflight_body_str after compaction so iteration 0 uses the compacted wire body.
             batbox::inference::ChatRequest post_compact_req =
-                build_chat_request(messages_, cfg_, registry_, sys_prompt_preflight);
+                build_chat_request(messages_, cfg_, registry_, sys_prompt_preflight, allowed_tools_);
             // PEXT2 3.4: use snapshotted model after compaction rebuild.
             post_compact_req.model = current_model;
             // S6 (DIS-981): re-inject the notepad tail reminder on the compacted
@@ -525,7 +568,7 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
             batbox::conversation::compose_system_prompt(is_planning, working_dir_);
 
         batbox::inference::ChatRequest req =
-            build_chat_request(messages_, cfg_, registry_, sys_prompt);
+            build_chat_request(messages_, cfg_, registry_, sys_prompt, allowed_tools_);
         // PEXT2 3.4: override req.model with the snapshotted model (race-free).
         req.model = current_model;
         // S6 (DIS-981): re-inject the working notepad as a TAIL reminder after
@@ -536,6 +579,17 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         batbox::conversation::apply_notepad_reminder(req, notepad_slice());
         // S2/S3 (DIS-988, AC4): warm-subagent status tail for tool_turn>0 too.
         batbox::conversation::apply_standing_reminder(req, standing_handles());
+
+        // Count before EVERY model request, including tool follow-ups. The
+        // tokenizer sees the same tools and template options as generation.
+        if (exact_compact_tokens_ > 0 && !manages_own_context_) {
+            auto prepared = prepare_exact_context(req, ct);
+            if (!prepared) return batbox::Err(prepared.error());
+            if (tool_turn == 0) {
+                preflight_body_str.clear();
+                batbox::inference::to_wire_string(req, preflight_body_str);
+            }
+        }
 
         // Instantiate ToolCallOrchestrator for this streaming turn (only when
         // the registry and gate are configured).
@@ -675,6 +729,7 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
             // error — or a second overflow — stays a normal error.
             if (!overflow_retry_used
                     && !manages_own_context_
+                    && exact_compact_tokens_ == 0
                     && batbox::inference::is_overflow_error(stream_res.error())) {
                 overflow_retry_used = true;
                 logger->warn(
@@ -776,6 +831,8 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
                                    ? gate_->current_mode()
                                    : batbox::permissions::PermissionMode::Default;
             ctx.session_id   = session_id_;
+            ctx.agent_id     = pending_agent_id_;
+            ctx.allowed_tools = allowed_tools_;
             ctx.cancel_token = std::move(ctx_tok);
 
             // ---- 4d. Emit tool-running indicator ----
@@ -811,33 +868,21 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
                                     final_count);
             }
 
-            // ---- 4d. Dispatch all accumulated tool calls ----
-            std::vector<Message> tool_messages = orch->dispatch_all(ctx);
-            // ctx_src goes out of scope here; dispatch is complete.
-
-            // ---- 4d2. Clear tool-running indicator ----
-            if (on_tool_done_cb_) {
-                on_tool_done_cb_();
-            }
-
-            // ---- 4e. Build assistant Message with tool_calls ----
-            // Reconstruct the tool_calls vector from the returned Tool messages
-            // correlation ids and names (these mirror the original calls).
+            // Journal every intended action BEFORE any tool executes. A crash
+            // during a tool must leave enough evidence to avoid blind replay.
             Message asst_tc;
             asst_tc.role    = Role::Assistant;
             asst_tc.content = accumulated_content; // often empty for tool-call turns
 
-            if (!tool_messages.empty()) {
+            const auto& calls = orch->prepare_calls();
+            if (!calls.empty()) {
                 std::vector<ToolCall> tcs;
-                tcs.reserve(tool_messages.size());
-                for (const auto& tm : tool_messages) {
+                tcs.reserve(calls.size());
+                for (const auto& original : calls) {
                     ToolCall tc;
-                    tc.id        = tm.tool_call_id.value_or("");
-                    tc.name      = tm.tool_name.value_or("");
-                    // Arguments are not reflected back on Tool messages;
-                    // use an empty JSON object — the wire format allows this
-                    // for the round-trip assistant message.
-                    tc.arguments = batbox::Json::object();
+                    tc.id        = original.id;
+                    tc.name      = original.name;
+                    tc.arguments = original.arguments;
                     tcs.push_back(std::move(tc));
                 }
                 asst_tc.tool_calls = std::move(tcs);
@@ -877,13 +922,13 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
                                         /*is_error=*/false);
             }
 
-            // ---- 4g. Persist and append each Tool message ----
-            for (auto& tm : tool_messages) {
+            // Each result reaches durable storage before the following action.
+            auto dispatched = orch->dispatch_all_durable(ctx, [&](const Message& tm) -> Result<void> {
                 auto append_tool = store_.append_message(session_id_, to_json(tm));
                 if (!append_tool) {
                     return batbox::Err(append_tool.error());
                 }
-                messages_.push_back(std::move(tm));
+                messages_.push_back(tm);
 
                 // Notify UI: a tool-result message was appended.
                 if (on_message_appended_cb_) {
@@ -894,7 +939,15 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
                                             appended_tm.content,
                                             tm_is_err);
                 }
-            }
+                return {};
+            });
+            if (on_tool_done_cb_) on_tool_done_cb_();
+            if (!dispatched) return batbox::Err(dispatched.error());
+
+            // Cancellation can stop dispatch between calls. Close every
+            // journaled pair before any later request or graceful restart.
+            auto recovered_tools = recover_interrupted_tools();
+            if (!recovered_tools) return batbox::Err(recovered_tools.error());
 
             logger->debug("Conversation::run_turn: tool-call turn {} / {} "
                           "complete, looping back",
@@ -940,9 +993,20 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
 Result<void> Conversation::restore(const batbox::session::SessionFile& sf) {
     messages_.clear();
     messages_.reserve(sf.messages.size());
+    compaction_count_ = 0;
+    last_prompt_tokens_ = 0;
 
     for (const auto& j : sf.messages) {
         try {
+            if (j.contains("context_checkpoint")) {
+                std::vector<Message> active;
+                for (const auto& item : j.at("context_checkpoint"))
+                    active.push_back(from_json(item));
+                messages_ = std::move(active);
+                compaction_count_ = j.value("compaction_count", std::size_t{0});
+                last_prompt_tokens_ = j.value("prompt_tokens_after", std::size_t{0});
+                continue;
+            }
             messages_.push_back(from_json(j));
         } catch (const std::exception& e) {
             return batbox::Err(std::string("restore: failed to parse message: ")
@@ -952,7 +1016,75 @@ Result<void> Conversation::restore(const batbox::session::SessionFile& sf) {
 
     working_dir_ = sf.working_dir;
     session_id_  = sf.id.to_string();
+    pending_agent_id_ = sf.agent_id;
+    pending_endpoint_ = sf.endpoint;
     return {};
+}
+
+Result<void> Conversation::prepare_exact_context(
+        batbox::inference::ChatRequest& req, const batbox::CancelToken& ct) {
+    auto counted = client_.count_prompt_tokens(req, ct);
+    if (!counted) return batbox::Err(counted.error());
+    last_prompt_tokens_ = counted.value();
+    if (last_prompt_tokens_ < exact_compact_tokens_) return {};
+
+    const auto before = last_prompt_tokens_;
+    const std::string system = req.messages.empty()
+        ? std::string{} : req.messages.front().content.value_or("");
+    // Usually preserve the configured suffix. If it alone consumes the budget,
+    // retry once with just the latest complete tool group. Originals are not
+    // touched until a validated checkpoint has been durably appended.
+    const int keeps[] = {std::max(1, cfg_.compact.keep_last_n_turns_verbatim), 1, 0};
+    for (int attempt = 0; attempt < 3; ++attempt) {
+        if (attempt == 1 && keeps[0] == 1) continue;
+        const int keep = keeps[attempt];
+        Compactor compactor{keep};
+        // Reserve generous reasoning/output space without reducing the model's
+        // configured context window. Oversized input is reduced in bounded chunks.
+        auto compacted = compactor.compact(messages_, client_, ct, req.model, 20000, 90000);
+        if (!compacted) return batbox::Err(compacted.error());
+        if (keep == 0) {
+            Message continuation;
+            continuation.role = Role::User;
+            continuation.content = "Continue the user's active task from the durable summary above. "
+                "Previously completed tool calls have already run; use their recorded results and "
+                "inspect persistent state before repeating an action.";
+            compacted.value().push_back(std::move(continuation));
+        }
+        auto candidate = build_chat_request(compacted.value(), cfg_, registry_, system, allowed_tools_);
+        candidate.model = req.model;
+        batbox::tools::NotepadStore notepad;
+        const auto key = batbox::tools::NotepadStore::session_key(session_id_, std::string{});
+        apply_notepad_reminder(candidate, notepad.reinjection_slice(key));
+        if (standing_handles_provider_)
+            apply_standing_reminder(candidate, standing_handles_provider_());
+        auto after = client_.count_prompt_tokens(candidate, ct);
+        if (!after) return batbox::Err(after.error());
+        if (after.value() >= exact_compact_tokens_ || after.value() >= before) continue;
+
+        Message boundary;
+        boundary.role = Role::System;
+        boundary.content = "Context compacted; complete earlier transcript retained on disk.";
+        auto checkpoint = to_json(boundary);
+        checkpoint["context_checkpoint"] = batbox::Json::array();
+        for (const auto& msg : compacted.value())
+            checkpoint["context_checkpoint"].push_back(to_json(msg));
+        checkpoint["prompt_tokens_before"] = before;
+        checkpoint["prompt_tokens_after"] = after.value();
+        checkpoint["compaction_count"] = compaction_count_ + 1;
+        auto saved = store_.append_message(session_id_, checkpoint);
+        if (!saved) return batbox::Err(saved.error());
+
+        messages_ = std::move(compacted.value());
+        req = std::move(candidate);
+        last_prompt_tokens_ = after.value();
+        ++compaction_count_;
+        batbox::log::get("conversation")->info(
+            "context-compacted: {} -> {} exact tokens; checkpoint {} persisted",
+            before, last_prompt_tokens_, compaction_count_);
+        return {};
+    }
+    return batbox::Err(std::string("compaction could not fit the latest complete turn below the token threshold; original history preserved"));
 }
 
 // =============================================================================
@@ -995,7 +1127,8 @@ batbox::inference::ChatRequest
 Conversation::build_chat_request(const std::vector<Message>&      messages,
                                   const batbox::config::Config&    cfg,
                                   batbox::tools::ToolRegistry*     registry,
-                                  const std::string&               system_prompt) {
+                                  const std::string&               system_prompt,
+                                  const std::optional<std::vector<std::string>>& allowed_tools) {
     batbox::inference::ChatRequest req;
     req.model = cfg.api.default_model;
 
@@ -1064,7 +1197,7 @@ Conversation::build_chat_request(const std::vector<Message>&      messages,
         //   { "type": "function", "function": { "name": "...", "description":
         //     "...", "parameters": {...} } }
         // We parse each into a ToolDef for the ChatRequest.
-        const auto schemas = registry->available_tool_schemas();
+        const auto schemas = registry->available_tool_schemas(allowed_tools);
         req.tools.reserve(schemas.size());
         for (const auto& schema_json : schemas) {
             batbox::inference::ToolDef td;

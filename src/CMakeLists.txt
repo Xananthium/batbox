@@ -77,8 +77,10 @@ add_executable(batbox
     main.cpp
     App.cpp
     AppShutdown.cpp
+    autonomous/Engine.cpp
     app/McpStatusPoller.cpp
     app/WireTools.cpp
+    app/WorkerRuntime.cpp
     app/WireTui.cpp
     app/WireCommands.cpp
     setup_sidecar.cpp

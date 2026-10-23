@@ -29,6 +29,7 @@
 #pragma once
 
 #include <batbox/agents/AgentSpec.hpp>
+#include <batbox/agents/WorkerRuntime.hpp>
 #include <batbox/core/CancelToken.hpp>
 
 #include <cstddef>
@@ -120,7 +121,8 @@ public:
     std::string spawn(const AgentSpec&  spec,
                       std::string_view  prompt,
                       std::string_view  parent_id,
-                      CancelToken       ct);
+                      CancelToken       ct,
+                      bool              standing = false);
 
     // -------------------------------------------------------------------------
     // snapshot — poll all agent states for the TUI ticker
@@ -268,6 +270,15 @@ public:
     /// concurrently with spawn(); the stored Config must outlive its agents
     /// (it is copied into the supervisor).
     void set_agent_config(const batbox::config::Config& cfg);
+
+    void set_worker_runtime_factory(WorkerRuntimeFactory factory);
+    void enable_durable_agents(const std::filesystem::path& directory,
+                               const std::filesystem::path& working_dir);
+    std::size_t restore_durable_agents(CancelToken ct);
+    void ensure_continuous_workers(std::size_t count, std::string_view goal,
+                                   CancelToken ct);
+    // Join while application-owned dependencies are still alive. Idempotent.
+    void shutdown();
 
     // =========================================================================
     // Test-only introspection / fault-injection (DIS-1001).

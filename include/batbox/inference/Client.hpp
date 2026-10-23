@@ -89,6 +89,17 @@ public:
     /// Construct a Client that reads API settings from @p cfg.
     explicit Client(const batbox::config::Config& cfg);
 
+    // Session-stable template options are shared by completions and /tokenize.
+    // Set before using the client; do not mutate between cached turns.
+    void set_chat_template_kwargs(batbox::Json kwargs) {
+        chat_template_kwargs_ = std::move(kwargs);
+    }
+    [[nodiscard]] const std::string& model_name() const noexcept {
+        return cfg_.api.default_model;
+    }
+    [[nodiscard]] Result<std::size_t> count_prompt_tokens(
+        const ChatRequest& req, const CancelToken& ct);
+
     // -------------------------------------------------------------------------
     // chat() — non-streaming POST
     // -------------------------------------------------------------------------
@@ -162,6 +173,7 @@ public:
 
 private:
     const batbox::config::Config& cfg_;
+    batbox::Json chat_template_kwargs_;
 
     // Core SSE streaming implementation — shared by both stream_chat overloads.
     // Both overloads converge here after serialising and applying provider quirks.

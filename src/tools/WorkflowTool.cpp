@@ -201,7 +201,7 @@ ToolResult WorkflowTool::run(const Json& args, ToolContext& ctx) {
         {"outputs", std::move(outputs_json)}
     };
 
-    return ToolResult::ok(payload.dump(2), std::move(payload));
+    return ToolResult::ok_json(std::move(payload));
 }
 
 } // namespace batbox::tools

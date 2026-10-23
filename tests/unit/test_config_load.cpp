@@ -39,6 +39,7 @@ TEST_SUITE("Config::load_default — field sanity") {
         CHECK(cfg.api.top_p             == doctest::Approx(1.0));
         CHECK(cfg.api.request_timeout_sec == 120);
         CHECK(cfg.api.stream);
+        CHECK_FALSE(cfg.api.enable_thinking.has_value());
     }
 
     TEST_CASE("general defaults are sane") {
@@ -47,6 +48,19 @@ TEST_SUITE("Config::load_default — field sanity") {
         CHECK(cfg.general.project_memory_file == "BATBOX.md");
         CHECK(cfg.general.log_level == LogLevel::Info);
         CHECK_FALSE(cfg.general.log_file.empty());
+    }
+
+    TEST_CASE("thinking template preserves provider default unless explicitly set") {
+        auto defaults = Config::load_from_env({});
+        REQUIRE(defaults.has_value());
+        CHECK_FALSE(defaults->api.enable_thinking.has_value());
+        for (const auto& value : {"true", "false"}) {
+            auto cfg = Config::load_from_env({{"BATBOX_ENABLE_THINKING", value}});
+            REQUIRE(cfg.has_value());
+            REQUIRE(cfg->api.enable_thinking.has_value());
+            CHECK(*cfg->api.enable_thinking == (std::string(value) == "true"));
+        }
+        CHECK_FALSE(Config::load_from_env({{"BATBOX_ENABLE_THINKING", "invalid"}}).has_value());
     }
 
     TEST_CASE("UI defaults are sane") {

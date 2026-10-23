@@ -112,6 +112,7 @@
 #include <batbox/tools/ToolRegistry.hpp>
 #include <batbox/mcp/McpServerRegistry.hpp>
 #include <batbox/agents/AgentSupervisor.hpp>
+#include <batbox/app/WorkerRuntime.hpp>
 #include <batbox/agents/Team.hpp>
 #include <batbox/plugins/SkillLoader.hpp>
 #include <batbox/conversation/PlanMode.hpp>
@@ -241,7 +242,7 @@ static void sigterm_handler(int /*sig*/) noexcept {
 // App::print_splash
 // ---------------------------------------------------------------------------
 void App::print_splash(const AppArgs& args) {
-    if (args.subagent || args.print_mode) {
+    if (args.subagent || args.print_mode || args.autonomous) {
         return; // suppress in headless / sub-agent mode
     }
     std::cout << kBatAscii
@@ -525,6 +526,7 @@ int App::run(const AppArgs& args) {
         return 1;
     }
     auto config = std::move(*config_result);
+    if (args.autonomous && !args.model.empty()) config.api.default_model = args.model;
     BATBOX_LOG_INFO("config loaded: model={}", config.api.default_model);
 
     // ------------------------------------------------------------------
@@ -593,7 +595,11 @@ int App::run(const AppArgs& args) {
     // Subsystems required by wire_tools() — lightweight; no sidecar or MCP.
     std::mutex               cfg_mutex_hl;
     batbox::mcp::McpServerRegistry   mcp_registry_hl;
-    batbox::agents::AgentSupervisor  supervisor_hl;
+    batbox::agents::AgentSupervisor supervisor_hl(config.tools.task_parallel_limit);
+    supervisor_hl.set_agent_config(config);
+    batbox::app::configure_worker_runtime(supervisor_hl, args.nuclear
+        ? batbox::permissions::PermissionMode::Nuclear
+        : batbox::permissions::PermissionMode::AcceptEdits);
     batbox::agents::TeamRegistry&    team_registry_hl =
         batbox::agents::TeamRegistry::instance();
     batbox::sidecar::SidecarManager  sidecar_mgr_hl(config.sidecar);
@@ -610,8 +616,21 @@ int App::run(const AppArgs& args) {
         supervisor_hl,
         team_registry_hl,
         skill_loader_hl,
-        plan_mode_hl);
+        plan_mode_hl,
+        (args.autonomous || args.nuclear)
+            ? batbox::tools::ExitPlanModeTool::ConfirmFn{[](const std::string&) { return true; }}
+            : batbox::tools::ExitPlanModeTool::ConfirmFn{});
     BATBOX_LOG_INFO("tool registry ready (headless): {} tools", tool_registry_hl.size());
+
+    if (args.autonomous) {
+        auto options = args.engine;
+        options.goal = args.prompt;
+        auto [mcp_source, mcp_token] = batbox::CancelToken::make_root();
+        for (const auto& [server, error] : mcp_registry_hl.start_all(std::move(mcp_token)))
+            BATBOX_LOG_WARN("MCP startup (autonomous, {}): {}", server, error);
+        BATBOX_LOG_INFO("entering autonomous mode with full native tool registry");
+        return batbox::autonomous::run(options, config, tool_registry_hl, supervisor_hl);
+    }
 
     // PermissionGate for headless mode: non-interactive (no TUI callback).
     // Nuclear mode if --nuclear, otherwise AcceptEdits (approve read + write
@@ -738,7 +757,11 @@ int App::run(const AppArgs& args) {
     batbox::mcp::McpServerRegistry mcp_registry;
 
     // Agent supervisor — semaphore-bounded sub-agent thread pool (max 4).
-    batbox::agents::AgentSupervisor supervisor;
+    batbox::agents::AgentSupervisor supervisor(config.tools.task_parallel_limit);
+    supervisor.set_agent_config(config);
+    batbox::app::configure_worker_runtime(supervisor, args.nuclear
+        ? batbox::permissions::PermissionMode::Nuclear
+        : batbox::permissions::PermissionMode::Default);
 
     // Team registry — singleton; access via TeamRegistry::instance().
     batbox::agents::TeamRegistry& team_registry = batbox::agents::TeamRegistry::instance();

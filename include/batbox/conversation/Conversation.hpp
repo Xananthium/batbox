@@ -165,6 +165,15 @@ public:
     // -------------------------------------------------------------------------
     void user_message(std::string_view text);
 
+    // Autonomous callers must not advance their own checkpoint unless the
+    // prompt is durable. On failure this leaves messages_ unchanged.
+    [[nodiscard]] Result<void> user_message_durable(std::string_view text);
+
+    // Close an interrupted trailing tool group without replaying any action.
+    // Missing results are explicitly marked as unknown, including on retries
+    // within the same process after a persistence failure.
+    [[nodiscard]] Result<void> recover_interrupted_tools();
+
     // -------------------------------------------------------------------------
     // run_turn()
     //
@@ -206,6 +215,14 @@ public:
     //   Result<void> run_turn(CancelToken ct)
     // -------------------------------------------------------------------------
     [[nodiscard]] Result<void> run_turn(batbox::CancelToken ct);
+
+    // Autonomous sessions opt in to the backend tokenizer and durable summaries.
+    // Zero retains the existing interactive estimator/notepad policy.
+    void set_exact_compaction_tokens(std::size_t threshold) noexcept {
+        exact_compact_tokens_ = threshold;
+    }
+    [[nodiscard]] std::size_t last_prompt_tokens() const noexcept { return last_prompt_tokens_; }
+    [[nodiscard]] std::size_t compaction_count() const noexcept { return compaction_count_; }
 
     // -------------------------------------------------------------------------
     // restore()
@@ -289,6 +306,14 @@ public:
     // already-written session header.  Idempotent; safe before run_turn().
     // -------------------------------------------------------------------------
     void set_session_identity(std::string agent_id, batbox::Json endpoint);
+
+    // Empty retains the complete native registry. A worker may explicitly
+    // request a subset through its AgentSpec; apply that same subset to schema
+    // exposure and actual dispatch.
+    void set_allowed_tools(std::vector<std::string> names) {
+        allowed_tools_ = names.empty() ? std::nullopt
+            : std::optional<std::vector<std::string>>(std::move(names));
+    }
 
     // -------------------------------------------------------------------------
     // set_manages_own_context()  — S9 stand-down wiring (S5, DIS-983, AC5)
@@ -538,6 +563,12 @@ public:
     [[nodiscard]] std::string compose_system_prompt(bool plan_mode = false) const;
 
 private:
+    std::size_t exact_compact_tokens_{0};
+    std::size_t last_prompt_tokens_{0};
+    std::size_t compaction_count_{0};
+    [[nodiscard]] Result<void> prepare_exact_context(
+        batbox::inference::ChatRequest& req, const batbox::CancelToken& ct);
+
     // Injected dependencies (all non-owning references / pointers).
     batbox::inference::Client&            client_;
     batbox::session::SessionStore&        store_;
@@ -566,6 +597,7 @@ private:
     // session is lazily/eagerly started.  Empty agent_id + null endpoint (the
     // default) reproduce the pre-DIS-1020 main-session record exactly.
     std::string  pending_agent_id_;
+    std::optional<std::vector<std::string>> allowed_tools_;
     batbox::Json pending_endpoint_;  ///< object or null
 
     // Conversation history (internal representation).
@@ -659,7 +691,8 @@ private:
     build_chat_request(const std::vector<Message>&       messages,
                        const batbox::config::Config&     cfg,
                        batbox::tools::ToolRegistry*      registry = nullptr,
-                       const std::string&                system_prompt = {});
+                       const std::string&                system_prompt = {},
+                       const std::optional<std::vector<std::string>>& allowed_tools = std::nullopt);
 };
 
 } // namespace batbox::conversation
