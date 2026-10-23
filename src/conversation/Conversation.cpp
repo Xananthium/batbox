@@ -13,6 +13,7 @@
 #include <batbox/conversation/PlanMode.hpp>
 #include <batbox/conversation/SystemPrompt.hpp>
 #include <batbox/conversation/ToolCallOrchestrator.hpp>
+#include <batbox/conversation/ToolOutputArchive.hpp>
 
 #include <batbox/conversation/Compactor.hpp>
 #include <batbox/conversation/ContextWindow.hpp>
@@ -623,6 +624,7 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         // For tool-call follow-up iterations (tool_turn > 0) the messages_ vector
         // has grown with tool results; use the ChatRequest overload which rebuilds
         // and serialises the body from the updated req.
+        auto last_reasoning_progress = std::chrono::steady_clock::time_point{};
         auto on_delta_fn = [&](const batbox::inference::StreamDelta& delta) {
                 // S10 (DIS-975): route the delta through the unified reasoning
                 // channel.  This isolates reasoning whether the model emitted it
@@ -634,6 +636,14 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
                 const std::string visible = reasoning_acc.accumulate(delta);
                 const bool reasoning_grew =
                     reasoning_acc.reasoning().size() > reasoning_before;
+                if (reasoning_grew && !ct.is_cancelled() && on_context_progress_cb_) {
+                    const auto now = std::chrono::steady_clock::now();
+                    if (last_reasoning_progress == std::chrono::steady_clock::time_point{} ||
+                        now - last_reasoning_progress >= std::chrono::seconds(1)) {
+                        last_reasoning_progress = now;
+                        on_context_progress_cb_("reasoning_delta");
+                    }
+                }
 
                 // TUI-T15: Detect the start of the reasoning phase.  Reasoning now
                 // starts on the first reasoning text from EITHER source (structured
@@ -937,6 +947,7 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
                     return batbox::Err(append_tool.error());
                 }
                 messages_.push_back(tm);
+                archive_large_tool_output(messages_.back());
 
                 // Notify UI: a tool-result message was appended.
                 if (on_message_appended_cb_) {
@@ -1026,7 +1037,18 @@ Result<void> Conversation::restore(const batbox::session::SessionFile& sf) {
     session_id_  = sf.id.to_string();
     pending_agent_id_ = sf.agent_id;
     pending_endpoint_ = sf.endpoint;
+    for (auto& message : messages_) archive_large_tool_output(message);
     return {};
+}
+
+void Conversation::archive_large_tool_output(Message& message) {
+    if (message.role != Role::Tool) return;
+    auto view = archive_tool_output(message.content, store_.directory() / "tool-output");
+    if (!view) {
+        batbox::log::get("conversation")->warn("{}; original tool result retained", view.error());
+    } else if (view.value()) {
+        message.content = std::move(*view.value());
+    }
 }
 
 Result<void> Conversation::prepare_exact_context(

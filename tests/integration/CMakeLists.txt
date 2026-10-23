@@ -3932,3 +3932,14 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_nuclear_no_modals.cpp)
 endif()
 
 endif()
+
+# Legacy integration targets compile Conversation.cpp directly. Keep its archive
+# helper and crypto dependency in those targets as well as the component library.
+get_property(_conversation_test_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+foreach(_target IN LISTS _conversation_test_targets)
+    get_target_property(_sources ${_target} SOURCES)
+    if("${PROJECT_SOURCE_DIR}/src/conversation/Conversation.cpp" IN_LIST _sources)
+        target_sources(${_target} PRIVATE ${PROJECT_SOURCE_DIR}/src/conversation/ToolOutputArchive.cpp)
+        target_link_libraries(${_target} PRIVATE OpenSSL::Crypto)
+    endif()
+endforeach()

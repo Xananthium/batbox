@@ -1,0 +1,83 @@
+{
+  "status": "passed_cpu_validation_ready_for_root_deploy",
+  "utc": "2026-10-23T17:57:24.585997+00:00",
+  "git_head_before_root_commit": "17ebe64271c8c27005d7745f73c5d4ed5d904d51",
+  "artifact_check": {
+    "active_view_bytes": 17285,
+    "exact_bytes_reconstructed": true,
+    "files_mode": "0600",
+    "original_bytes": 1048580,
+    "original_lines": 23908,
+    "original_sha256": "383b07520bcc4a1bcf4349d1954cc5365fba2db2dfcdb4667007970fb3ceb60b",
+    "page_bytes_max": 65536,
+    "pages": 17,
+    "read_tool_page_succeeded": true
+  },
+  "source_files": {
+    "include/batbox/conversation/ToolOutputArchive.hpp": "96fefbefc8cd671a499f69f2091f904aeedda0fa09d4c09343a2bad1dbe6c7c5",
+    "src/conversation/ToolOutputArchive.cpp": "171a32378bd61e6c9d957fc18f1fe7f7072815dcf8ad5eaa7aede583bfa59e31",
+    "include/batbox/conversation/Conversation.hpp": "ccc7593ce6daa21f7d158bb389b45f5b2d118a5c62a760b58a48b8319125d90f",
+    "src/conversation/Conversation.cpp": "38be293aa7c1d7c6416181617f19ba77b10cc6f4ea7d7a8a825be3e6eceae116",
+    "include/batbox/session/SessionStore.hpp": "5affb42ab5dda90f19e72e7252f580568366ac1f3608b027e85f11814127b593",
+    "src/conversation/CMakeLists.txt": "f5da54c2e77d3a4a45a657b2d13c9edd6a13f43d79ae3d58b9dd66a350c5950f",
+    "vcpkg.json": "d52a4f5d6b48be5699040a608680d57685f14594d5f953458b87276303bd97d4",
+    "tests/CMakeLists.txt": "b7ccfa1d32a3864204621b333acd4c81dca6f820ec4e026748ae859ab9277f07",
+    "tests/integration/CMakeLists.txt": "5f777d72104576427a935130db6490a2e2a86b8ec0ec45368123c2fe70600dc0",
+    "tests/unit/test_tool_output_archive.cpp": "26adb0fef8080830ca0f4b0c98fbad759fe3063255deebf211369c56c5ab9300",
+    "tests/integration/test_conversation_basic.cpp": "fe6d41f684004a9cc9e40f7bb056b97577185ff6b432b7b2d1bd00cccebf0894",
+    "tests/fixtures/fake_openai_server.py": "7155787db470336ba3743918bab94c0e57604bf0a4ff15f8fce69b1f2826e9f3"
+  },
+  "tests": {
+    "tool_output_archive": {
+      "cases": 4,
+      "assertions": 158,
+      "passed": true,
+      "real_worker_fixture": true,
+      "independent_python_sha256_matched": true,
+      "log_sha256": "2b433807907d04868d889706f5ccd88f277fd5f754a3beb7329c23440b3eabc9"
+    },
+    "conversation_basic": {
+      "cases": 22,
+      "assertions": 326,
+      "passed": true,
+      "real_worker_fixture": true,
+      "log_sha256": "63e71152768aa82b6de3b6824a7f4485f8dc3c56cf75718026d21ec8f7a0da0d"
+    }
+  },
+  "binaries": {
+    "build/src/batbox": "500fc1120de216b337315501b4b1409d8d0a06934118f87260caa74ce71e95ac",
+    "build/tests/test_tool_output_archive": "9775003ba9c344b9639011ed5c301e8b0405153b0dbee634bf3d3fc6329e2e0b",
+    "build/tests/integration/test_conversation_basic": "df8444ce2cff031585c7e16c7736cedfa9dec0e7ee573388ef6ad8e3a0b03cac"
+  },
+  "semantics": {
+    "single_tool_archive_threshold_bytes": 524288,
+    "head_bytes": 12288,
+    "tail_bytes": 4096,
+    "max_page_bytes": 65536,
+    "context_window_changed": false,
+    "exact_compaction_threshold_changed": false,
+    "full_original_journal_preserved": true,
+    "fresh_and_restored_active_contexts_covered": true,
+    "complete_tool_groups_preserved": true,
+    "failure_retains_original_active_body": true,
+    "stable_system_prompt_covered": true,
+    "files_mode": "0600",
+    "archive_directory_mode": "0700",
+    "atomic_files_and_fsync": true,
+    "existing_artifacts_verified_before_reuse": true
+  },
+  "reasoning_progress_hook": {
+    "event": "reasoning_delta",
+    "only_actual_growth": true,
+    "maximum_callbacks_per_second": 1,
+    "native_liveness_tests_owner": "worker_runtime"
+  },
+  "gpu_calls": 0,
+  "production_services_modified": false,
+  "raw_fixture_published": false,
+  "limits": [
+    "The17,285-byte view measurement is bytes, not backend tokens.",
+    "No live model or production worker recovery run performed by this agent; root owns deployment and live verification.",
+    "Original tool result means all bytes delivered by the tool; archival cannot recover any earlier tool-level output truncation."
+  ]
+}

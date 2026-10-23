@@ -56,6 +56,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -224,7 +225,7 @@ public:
         if (on_run) on_run();
         if (on_context) on_context(ctx);
         batbox::tools::ToolResult r;
-        r.body     = "stub result from " + name_;
+        r.body     = result_body.value_or("stub result from " + name_);
         r.is_error = false;
         return r;
     }
@@ -233,6 +234,7 @@ public:
     [[nodiscard]] bool requires_confirmation() const override { return false; }
 
     std::atomic<int> call_count{0};
+    std::optional<std::string> result_body;
     std::function<void()> on_run;
     std::function<void(const batbox::tools::ToolContext&)> on_context;
 
@@ -760,6 +762,103 @@ static std::size_t exact_test_count(Conversation& conv,
 }
 
 TEST_SUITE("Autonomous exact compaction") {
+    TEST_CASE("fresh oversized tool result is durable before bounded inference and restores without replay") {
+        FakeServer server;
+        REQUIRE(server.start(find_fixture_script()));
+        TmpDir temporary;
+        auto cfg = make_test_config(server.base_url());
+        cfg.api.default_model = "archive-tool-test";
+        cfg.api.default_model_ctx_len = 200000;
+        cfg.compact.exact_token_threshold = 100000;
+        batbox::inference::Client client{cfg};
+        batbox::session::SessionStore store{temporary.path};
+        auto [registry, stub] = make_registry("get_weather");
+        auto [permission_store, gate] = make_allow_gate(temporary.path / "permissions.json");
+        std::string original;
+        if (const auto fixture = std::getenv("BATBOX_ARCHIVE_REAL_TOOL_FIXTURE")) {
+            std::ifstream file(fixture, std::ios::binary);
+            original.assign(std::istreambuf_iterator<char>(file), {});
+        } else {
+            for (int i = 0; i < 24000; ++i)
+                original += "/project/build/vcpkg/package-" + std::to_string(i) + "/include/header.hpp\n";
+        }
+        REQUIRE(original.size() >= 512 * 1024);
+        stub->result_body = original;
+        Conversation conversation{client, store, cfg, temporary.path, nullptr, &registry, gate.get()};
+        REQUIRE(conversation.user_message_durable("Inspect the tool output and continue.").has_value());
+        const auto system = conversation.compose_system_prompt();
+        auto [source, token] = CancelToken::make_root();
+        REQUIRE(conversation.run_turn(std::move(token)).has_value());
+        REQUIRE(stub->call_count == 1);
+        REQUIRE(conversation.messages().size() == 4);
+        const auto& view = conversation.messages()[2];
+        CHECK(view.content.size() < 20 * 1024);
+        CHECK(view.content.find("SHA256:") != std::string::npos);
+        CHECK(view.tool_call_id == (*conversation.messages()[1].tool_calls)[0].id);
+        CHECK(conversation.compaction_count() == 0);
+        CHECK(conversation.compose_system_prompt() == system);
+        auto disk = store.load(conversation.session_id());
+        REQUIRE(disk.has_value());
+        CHECK(bool(disk->messages[2]["content"].get<std::string>() == original));
+        const auto original_json = disk->messages;
+        Conversation restored{client, store, cfg, temporary.path, nullptr, &registry, gate.get()};
+        REQUIRE(restored.restore(*disk).has_value());
+        CHECK(bool(restored.messages()[2].content == view.content));
+        auto [restart_source, restart_token] = CancelToken::make_root();
+        REQUIRE(restored.run_turn(std::move(restart_token)).has_value());
+        CHECK(stub->call_count == 1);
+        auto after = store.load(conversation.session_id());
+        REQUIRE(after.has_value());
+        for (std::size_t i = 0; i < original_json.size(); ++i)
+            CHECK(bool(after->messages[i] == original_json[i]));
+    }
+
+    TEST_CASE("restored checkpoint archives active large tool groups while preserving raw journal") {
+        TmpDir temporary;
+        auto cfg = make_test_config("http://127.0.0.1:1/v1");
+        batbox::inference::Client client{cfg};
+        batbox::session::SessionStore store{temporary.path};
+        Conversation conversation{client, store, cfg, temporary.path};
+        REQUIRE(conversation.user_message_durable("Retain this session.").has_value());
+        Message call;
+        call.role = Role::Assistant;
+        call.tool_calls = std::vector<ToolCall>{ToolCall{"large", "Bash", {{"command", "ls -R ."}}}};
+        Message output;
+        output.role = Role::Tool;
+        output.tool_call_id = "large";
+        output.tool_name = "Bash";
+        output.is_error = true;
+        output.content = std::string(1024 * 1024, 'x');
+        REQUIRE(store.append_message(conversation.session_id(), to_json(call)).has_value());
+        REQUIRE(store.append_message(conversation.session_id(), to_json(output)).has_value());
+        auto before = store.load(conversation.session_id());
+        REQUIRE(before.has_value());
+        auto checkpoint = to_json(Message{});
+        checkpoint["context_checkpoint"] = before->messages;
+        checkpoint["compaction_count"] = 1;
+        checkpoint["prompt_tokens_after"] = 12000;
+        REQUIRE(store.append_message(conversation.session_id(), checkpoint).has_value());
+        auto disk = store.load(conversation.session_id());
+        REQUIRE(disk.has_value());
+        const auto raw_journal = disk->messages;
+        REQUIRE(conversation.restore(*disk).has_value());
+        REQUIRE(conversation.messages().size() == 3);
+        CHECK(conversation.messages().back().content.size() < 20 * 1024);
+        CHECK(conversation.messages().back().tool_call_id == output.tool_call_id);
+        CHECK(conversation.messages().back().is_error.value_or(false));
+        CHECK(bool(store.load(conversation.session_id())->messages == raw_journal));
+        // A corrupt artifact must not replace the full active body on restore.
+        for (const auto& item : fs::directory_iterator(temporary.path / "tool-output")) {
+            if (item.path().filename().string().size() == 68) {
+                std::ofstream(item.path(), std::ios::binary) << "corrupt";
+            }
+        }
+        Conversation failed_archive{client, store, cfg, temporary.path};
+        REQUIRE(failed_archive.restore(*disk).has_value());
+        CHECK(bool(failed_archive.messages().back().content == output.content));
+        CHECK(bool(store.load(conversation.session_id())->messages == raw_journal));
+    }
+
     TEST_CASE("worker tool selection applies to schemas tokenizer and dispatch") {
         FakeServer server;
         REQUIRE(server.start(find_fixture_script()));
@@ -1003,7 +1102,7 @@ TEST_SUITE("Autonomous exact compaction") {
         CHECK(Compactor::safe_tail_start(history, history.size()) == history.size());
     }
 
-    TEST_CASE("a completed tool group larger than the threshold or context compacts losslessly on disk") {
+    TEST_CASE("when archival is unavailable an oversized completed tool group still compacts losslessly on disk") {
         std::size_t words = 110000;
         bool fail_chunk = false;
         SUBCASE("110k group exceeds compaction threshold") { words = 110000; }
@@ -1018,6 +1117,9 @@ TEST_SUITE("Autonomous exact compaction") {
         cfg.compact.exact_token_threshold = 100000;
         batbox::inference::Client client{cfg};
         batbox::session::SessionStore store{temporary.path};
+        // Exercise the existing exact-compactor fallback when artifacts cannot
+        // be published. Ordinary successful archival has separate coverage.
+        std::ofstream(temporary.path / "tool-output") << "blocked archive destination";
         Conversation conversation{client, store, cfg, temporary.path};
         std::vector<std::string> progress;
         conversation.set_on_context_progress_cb([&](std::string_view operation) {

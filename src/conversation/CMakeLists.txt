@@ -7,6 +7,7 @@
 # =============================================================================
 
 add_library(batbox_conversation STATIC)
+find_package(OpenSSL REQUIRED COMPONENTS Crypto)
 
 set_target_properties(batbox_conversation PROPERTIES
     CXX_STANDARD          20
@@ -28,6 +29,7 @@ target_link_libraries(batbox_conversation
         batbox_tools
         batbox_permissions
         batbox_agents
+        OpenSSL::Crypto
 )
 
 # ---------------------------------------------------------------------------
@@ -47,6 +49,7 @@ target_sources(batbox_conversation
         Message.cpp          # CPP 3.1 — Message / ToolCall / UsageDelta structs
         ContextWindow.cpp        # CPP 3.2 — token counting + auto-compact trigger
         ToolCallOrchestrator.cpp
+        ToolOutputArchive.cpp
         PlanMode.cpp          # CPP 3.3 — plan-mode state machine
         Compactor.cpp         # CPP 3.5 — summarise-by-LLM + verbatim tail
         NotepadReminder.cpp   # DIS-981 S6 — per-turn notepad tail re-injection

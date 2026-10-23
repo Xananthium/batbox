@@ -22,12 +22,23 @@
 
 #include <algorithm>
 #include <chrono>
+#include <ctime>
 #include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace batbox::agents {
+namespace {
+std::string utc_now() {
+    const auto now = std::time(nullptr);
+    std::tm tm{};
+    gmtime_r(&now, &tm);
+    char out[32];
+    std::strftime(out, sizeof(out), "%Y-%m-%dT%H:%M:%SZ", &tm);
+    return out;
+}
+}
 
 // =============================================================================
 // Construction
@@ -117,13 +128,15 @@ void SubAgent::enqueue_message(std::string_view message) {
     {
         std::lock_guard wake_lock{interrogate_mutex_};
         const auto status = status_.load();
-        if (terminated_ || status == SubAgentStatus::done ||
-            status == SubAgentStatus::failed || status == SubAgentStatus::cancelled) return;
+        const bool closed = terminated_ || status == SubAgentStatus::done ||
+            status == SubAgentStatus::failed || status == SubAgentStatus::cancelled;
+        if (closed && (!journal_ || !journal_->read().value("recoverable", false))) return;
         std::string entry(message);
         if (journal_) {
             entry = "[worker-message:" + Uuid::v4().to_string() + "]\n" + entry;
             journal_->update([&](Json& j) { j["inbox"].push_back(entry); });
         }
+        if (closed) return; // recovery will load this durable inbox
         std::lock_guard lock{msg_mutex_};
         pending_messages_.push_back(std::move(entry));
     }
@@ -353,12 +366,28 @@ void SubAgent::run(std::stop_token /*st*/) {
 
         std::string turn_output;
         std::string line_buffer;
+        auto progress = [&](std::string_view operation, std::string_view phase) {
+            { std::lock_guard lock(snapshot_mutex_); current_step_ = phase; }
+            if (journal_) journal_->update([&](Json& j) {
+                j["phase"] = phase;
+                j["updated_at"] = utc_now();
+                j["last_progress_at"] = j["updated_at"];
+                j["last_operation"] = operation;
+                j["progress_sequence"] = j.value("progress_sequence", 0ULL) + 1;
+            });
+        };
+        auto last_stream_progress = std::chrono::steady_clock::time_point{};
         auto on_delta = [&](std::string_view chunk) {
             turn_output.append(chunk);
             event_queue_.push(AgentEvent::make_token_appended(id_, std::string(chunk)));
             for (const char c : chunk) {
                 if (c == '\n') { append_output_line(line_buffer); line_buffer.clear(); }
                 else line_buffer += c;
+            }
+            const auto now = std::chrono::steady_clock::now();
+            if (!chunk.empty() && now - last_stream_progress >= std::chrono::seconds(1)) {
+                progress("stream_delta_received", "streaming");
+                last_stream_progress = now;
             }
             std::lock_guard lock(snapshot_mutex_);
             ++token_count_;
@@ -367,6 +396,23 @@ void SubAgent::run(std::stop_token /*st*/) {
             runtime.registry, runtime.gate, runtime.plan_mode, runtime.config_mutex};
         conv.set_allowed_tools(spec_.allowed_tools);
         conv.set_manages_own_context(inference::ProviderRegistry::create(agent_cfg)->manages_own_context());
+        conv.set_on_context_progress_cb([&](std::string_view operation) {
+            progress(operation, operation == "reasoning_delta" ? "reasoning" :
+                (operation.starts_with("compaction_") ? "compacting" : "context_prepared"));
+        });
+        conv.set_on_tool_running_cb([&](std::string_view, std::string_view, int) {
+            progress("tool_batch_started", "tools_running");
+        });
+        conv.set_on_message_appended_cb([&](std::string_view role, std::string_view,
+                                           std::string_view, bool) {
+            progress(role == "tool" ? "tool_result_persisted" :
+                     (role == "assistant" ? "assistant_message_persisted" : "message_persisted"),
+                     role == "tool" ? "tool_result" : "message_recorded");
+        });
+        conv.set_on_reasoning_started_cb([&] { progress("reasoning_started", "reasoning"); });
+        conv.set_on_usage_delta_cb([&](uint32_t, double) {
+            progress("model_usage_received", "model_response");
+        });
         if (resume_from_) {
             store.adopt_restored(*resume_from_);
             if (auto result = conv.restore(*resume_from_); !result)
@@ -387,6 +433,8 @@ void SubAgent::run(std::stop_token /*st*/) {
         if (journal_) journal_->update([&](Json& j) {
             j["session_id"] = conv.session_id();
             j["status"] = "running";
+            j["phase"] = "restored";
+            j["updated_at"] = utc_now();
             j["tool_count"] = runtime.registry ? runtime.registry->size() : 0;
             j["exact_compaction_tokens"] = agent_cfg.compact.exact_token_threshold;
         });
@@ -442,8 +490,13 @@ void SubAgent::run(std::stop_token /*st*/) {
                     std::lock_guard lock(snapshot_mutex_);
                     current_step_ = "inference";
                 }
-                if (journal_) journal_->update([](Json& j) { j["status"] = "running"; });
+                if (journal_) journal_->update([](Json& j) {
+                    j["status"] = "running";
+                    j["phase"] = "preparing_turn";
+                    j["updated_at"] = utc_now();
+                });
                 turn_output.clear();
+                last_stream_progress = {};
                 auto [source, token] = child_token_.child();
                 auto result = conv.run_turn(std::move(token));
                 if (!result) {
@@ -463,6 +516,13 @@ void SubAgent::run(std::stop_token /*st*/) {
                     j["completed_turns"] = j.value("completed_turns", 0ULL) + 1;
                     j["prompt_tokens"] = conv.last_prompt_tokens();
                     j["compactions"] = conv.compaction_count();
+                    j["recovery_failures"] = 0;
+                    j["phase"] = "turn_completed";
+                    j["last_operation"] = "turn_completed";
+                    j["updated_at"] = utc_now();
+                    j["last_progress_at"] = j["updated_at"];
+                    j["progress_sequence"] = j.value("progress_sequence", 0ULL) + 1;
+                    j.erase("retry_delay_seconds");
                 });
                 if (pending_answer) { pending_answer->set_value(turn_output); pending_answer.reset(); }
                 event_queue_.push(AgentEvent::make_completed(id_, turn_output));
@@ -522,14 +582,25 @@ void SubAgent::run(std::stop_token /*st*/) {
                         "Avoid repeating completed work. If blocked, inspect the cause and record what is needed.");
             need_turn = true;
         }
-        if (journal_) journal_->update([](Json& j) { j["status"] = "interrupted"; });
+        if (journal_) journal_->update([](Json& j) {
+            j["status"] = "interrupted";
+            j["phase"] = "interrupted";
+            j["updated_at"] = utc_now();
+        });
         set_status(SubAgentStatus::cancelled);
         event_queue_.push(AgentEvent::make_cancelled(id_, "stop_requested"));
     } catch (const std::exception& ex) {
         set_status(SubAgentStatus::failed);
         append_output_line(ex.what());
         if (journal_) {
-            try { journal_->update([&](Json& j) { j["status"] = "errored"; j["last_error"] = ex.what(); }); }
+            try { journal_->update([&](Json& j) {
+                j["status"] = "errored";
+                j["failed_phase"] = j.value("phase", "unknown");
+                j["phase"] = "errored";
+                j["last_error"] = ex.what();
+                j["last_error_at"] = utc_now();
+                j["updated_at"] = j["last_error_at"];
+            }); }
             catch (...) {}
         }
         event_queue_.push(AgentEvent::make_errored(id_, ex.what()));

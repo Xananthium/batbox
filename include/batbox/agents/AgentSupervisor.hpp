@@ -308,6 +308,7 @@ public:
                                             std::function<void()>   hook);
 
 private:
+    std::size_t restore_durable_agents_locked(CancelToken ct);
     struct Impl;
     Impl* impl_; ///< Pimpl — hides semaphore, jthreads, and map from callers.
 };

@@ -16,6 +16,7 @@
     "cli11",
     "doctest",
     "utfcpp",
+    "openssl",
     {
       "name": "ixwebsocket",
       "features": [

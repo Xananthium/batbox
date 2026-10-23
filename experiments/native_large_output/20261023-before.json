@@ -1,0 +1,57 @@
+{
+  "observed_at": "2026-10-23T17:43:22.590776+00:00",
+  "deployed_binary": "39fac52a29c01fc5ed4af9a498b9b5b5e773630806e3be78145d22920e84de15",
+  "configured_context": 200000,
+  "compaction_threshold": 100000,
+  "request_timeout_seconds": 600,
+  "workers": [
+    {
+      "role": "runtime-maintainer-1",
+      "status": "errored",
+      "last_error": "transport: Operation timed out after 600000 milliseconds with 0 bytes received",
+      "completed_turns": 0,
+      "session_message_count": 27,
+      "oversized_results": [
+        {
+          "message_index": 26,
+          "message_id": "f3eb7260-e961-40ae-bef0-30feb5088d69",
+          "tool_name": "Bash",
+          "timestamp_ms": 1792769476628,
+          "bytes": 1048580,
+          "lines": 23908,
+          "sha256": "383b07520bcc4a1bcf4349d1954cc5365fba2db2dfcdb4667007970fb3ceb60b",
+          "stored_with_full_transcript": true
+        }
+      ]
+    },
+    {
+      "role": "verification-monitor-3",
+      "status": "errored",
+      "last_error": "transport: Operation timed out after 600000 milliseconds with 0 bytes received",
+      "completed_turns": 0,
+      "session_message_count": 7,
+      "oversized_results": [
+        {
+          "message_index": 6,
+          "message_id": "6b41c944-751d-48bc-91c1-63564b8ef63c",
+          "tool_name": "Bash",
+          "timestamp_ms": 1792769306803,
+          "bytes": 1048374,
+          "lines": 23905,
+          "sha256": "134889e056574b17d2407d937d7f403b78e08a1a67e1cd738200c53ffdcd645a",
+          "stored_with_full_transcript": true
+        }
+      ]
+    }
+  ],
+  "diagnosis_limits": "The sessions contain oversized directory listings and have not completed a turn. A new 600-second timeout was observed. No blocked-process backtrace was captured; the compaction mechanism is established from source and reproductions rather than an exact captured production stack.",
+  "later_coordinator_observation": {
+    "observed_at": "2026-10-23T17:47:41.053142+00:00",
+    "last_error": {
+      "at": "2026-10-23T17:45:31Z",
+      "message": "transport: Operation timed out after 600000 milliseconds with 510886 bytes received"
+    },
+    "last_prompt_tokens": 86011,
+    "meaning": "The600-second streaming request received510886bytes but didnotcomplete. Prior coordinator heartbeat was unchanged throughout. Receivedbytes alone do not establish answer correctness or token throughput."
+  }
+}

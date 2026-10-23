@@ -64,6 +64,13 @@ endmacro()
 # ---------------------------------------------------------------------------
 
 # CPP 0.5 — CancelToken
+batbox_add_unit_test(test_tool_output_archive
+    unit/test_tool_output_archive.cpp batbox_core)
+target_sources(test_tool_output_archive PRIVATE
+    ${PROJECT_SOURCE_DIR}/src/conversation/ToolOutputArchive.cpp
+    ${PROJECT_SOURCE_DIR}/src/tools/ReadTool.cpp)
+target_link_libraries(test_tool_output_archive PRIVATE OpenSSL::Crypto batbox_permissions batbox_config)
+
 batbox_add_unit_test(test_cancel_token
     unit/test_cancel_token.cpp  batbox_core)
 

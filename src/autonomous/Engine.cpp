@@ -525,9 +525,15 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
     struct WorkerShutdown {
         agents::AgentSupervisor& supervisor;
         CancelSource& source;
-        void stop() { source.request_stop(); supervisor.shutdown(); }
+        std::jthread maintenance;
+        void stop() {
+            source.request_stop();
+            maintenance.request_stop();
+            if (maintenance.joinable()) maintenance.join();
+            supervisor.shutdown();
+        }
         ~WorkerShutdown() { stop(); }
-    } worker_shutdown{supervisor, worker_source};
+    } worker_shutdown{supervisor, worker_source, {}};
     auto worker_child = [&] {
         auto [child_source, child] = worker_token.child();
         return std::move(child);
@@ -537,6 +543,24 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
         const auto restored = supervisor.restore_durable_agents(worker_child());
         supervisor.ensure_continuous_workers(opts.worker_count, state.at("goal").get<std::string>(), worker_child());
         event("workers_started", {{"desired_workers", opts.worker_count}, {"restored_workers", restored}});
+        // Recovery must not wait for a coordinator's potentially long model or
+        // compaction call. This loop never publishes a coordinator heartbeat:
+        // only actual worker callbacks record progress in each worker journal.
+        worker_shutdown.maintenance = std::jthread(
+            [&supervisor, &worker_token, count = opts.worker_count,
+             goal = state.at("goal").get<std::string>()](std::stop_token stop) {
+                while (!stop.stop_requested() && !worker_token.is_cancelled()) {
+                    for (int i = 0; i < 10 && !stop.stop_requested() && !worker_token.is_cancelled(); ++i)
+                        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    if (stop.stop_requested() || worker_token.is_cancelled()) break;
+                    try {
+                        auto [source, token] = worker_token.child();
+                        supervisor.ensure_continuous_workers(count, goal, std::move(token));
+                    } catch (const std::exception& e) {
+                        std::cerr << "Worker maintenance failed: " << e.what() << '\n';
+                    }
+                }
+            });
     }
     auto flush_memory = [&] {
         std::vector<fs::path> pending;
@@ -556,8 +580,6 @@ int run(const Options& input, config::Config& cfg, tools::ToolRegistry& registry
     while (!stop_requested && (!opts.max_cycles || completed_this_run < opts.max_cycles)) {
         try {
             publish_status("preparing");
-            if (opts.worker_count > 0)
-                supervisor.ensure_continuous_workers(opts.worker_count, state.at("goal").get<std::string>(), worker_child());
             try { flush_memory(); request(opts.memory_url, "/ingest", Json::object()); }
             catch (const std::exception& e) { event("memory_unavailable", {{"error", e.what()}}); }
 

@@ -112,6 +112,9 @@ public:
 
     ~SessionStore() = default;
 
+    // Immutable storage root for durable sidecar artifacts belonging to these sessions.
+    [[nodiscard]] const std::filesystem::path& directory() const noexcept { return sessions_dir_; }
+
     // -------------------------------------------------------------------------
     // new_session()
     //

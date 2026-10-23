@@ -568,6 +568,9 @@ public:
     [[nodiscard]] std::string compose_system_prompt(bool plan_mode = false) const;
 
 private:
+    // Preserve full on-disk messages; archive only pathological tool bodies in
+    // the active view. Failed archive writes leave that view unchanged.
+    void archive_large_tool_output(Message& message);
     std::size_t exact_compact_tokens_{0};
     std::size_t last_prompt_tokens_{0};
     std::size_t compaction_count_{0};

@@ -256,6 +256,10 @@ struct AgentSupervisor::Impl {
     std::filesystem::path durable_dir;
     std::filesystem::path working_dir;
     std::unordered_map<std::string, std::shared_ptr<AgentJournal>> journals;
+    // Serialize recovery/managed-slot discovery without holding agents_mutex
+    // across joins or disk I/O. Normal tool calls can still inspect live agents.
+    std::mutex durable_maintenance_mutex;
+    std::unordered_map<std::string, std::chrono::steady_clock::time_point> retry_at;
     std::atomic<bool> shutting_down{false};
     std::mutex resume_mutex;
     std::unordered_map<std::string, std::string> resumed_sessions;
@@ -546,6 +550,7 @@ std::string AgentSupervisor::spawn(const AgentSpec& spec, std::string_view promp
 
 std::string AgentSupervisor::resume_subagent(std::string_view target_agent_id,
     std::string_view follow_up, CancelToken ct) {
+    std::lock_guard maintenance_lock(impl_->durable_maintenance_mutex);
     // Explicit resumes share a session log, so permit one live writer even if
     // multiple peers request a follow-up through different generation handles.
     std::lock_guard resume_lock(impl_->resume_mutex);
@@ -636,12 +641,15 @@ std::vector<AgentSnapshot> AgentSupervisor::snapshot() const {
 // =============================================================================
 
 void AgentSupervisor::cancel(std::string_view agent_id) {
+    std::lock_guard maintenance_lock(impl_->durable_maintenance_mutex);
     std::shared_lock<std::shared_mutex> lk(impl_->agents_mutex);
     const auto it = impl_->agents.find(std::string(agent_id));
     if (it != impl_->agents.end()) {
         // SubAgent::cancel() is thread-safe and non-blocking.
         it->second->close_durably();
         it->second->cancel();
+    } else if (auto saved = impl_->journals.find(std::string(agent_id)); saved != impl_->journals.end()) {
+        saved->second->update([](Json& j) { j["recoverable"] = false; });
     }
     // No-op if agent_id is unknown or the agent has already terminated.
 }
@@ -653,11 +661,19 @@ void AgentSupervisor::cancel(std::string_view agent_id) {
 void AgentSupervisor::enqueue_message(std::string_view agent_id,
                                        std::string_view message)
 {
+    std::lock_guard maintenance_lock(impl_->durable_maintenance_mutex);
     std::shared_lock<std::shared_mutex> lk(impl_->agents_mutex);
     const auto it = impl_->agents.find(std::string(agent_id));
     if (it != impl_->agents.end()) {
         // SubAgent::enqueue_message() is thread-safe and non-blocking.
         it->second->enqueue_message(message);
+    } else if (auto saved = impl_->journals.find(std::string(agent_id)); saved != impl_->journals.end()) {
+        // A recoverable worker temporarily has no thread while backing off.
+        // Accept peer work into the same durable inbox for its next generation.
+        saved->second->update([&](Json& j) {
+            if (j.value("recoverable", false))
+                j["inbox"].push_back("[worker-message:" + Uuid::v4().to_string() + "]\n" + std::string(message));
+        });
     }
     // No-op if agent_id is unknown or the agent has already terminated.
 }
@@ -865,21 +881,32 @@ void AgentSupervisor::enable_durable_agents(const std::filesystem::path& directo
 }
 
 std::size_t AgentSupervisor::restore_durable_agents(CancelToken ct) {
+    std::lock_guard lock(impl_->durable_maintenance_mutex);
+    return restore_durable_agents_locked(std::move(ct));
+}
+
+std::size_t AgentSupervisor::restore_durable_agents_locked(CancelToken ct) {
     if (impl_->durable_dir.empty() || impl_->shutting_down.load()) return 0;
     std::size_t restored_count = 0;
     session::SessionStore store(impl_->durable_dir / "sessions");
     for (const auto& entry : std::filesystem::directory_iterator(impl_->durable_dir)) {
+        if (ct.is_cancelled() || impl_->shutting_down.load()) break;
         if (!entry.is_regular_file() || entry.path().extension() != ".json") continue;
+        std::shared_ptr<AgentJournal> journal;
+        std::string id;
         try {
             std::ifstream input(entry.path());
             Json state; input >> state;
             if (!state.value("recoverable", false)) continue;
-            const auto id = state.at("agent_id").get<std::string>();
+            id = state.at("agent_id").get<std::string>();
             if (entry.path().stem().string() != id)
                 throw std::runtime_error("Worker manifest ID does not match its filename");
             std::unique_ptr<SubAgent> old;
             {
                 std::unique_lock lock(impl_->agents_mutex);
+                auto& saved = impl_->journals[id];
+                if (!saved) saved = std::make_shared<AgentJournal>(entry.path(), state);
+                journal = saved;
                 if (auto found = impl_->agents.find(id); found != impl_->agents.end()) {
                     const auto status = found->second->status();
                     if (status == SubAgentStatus::running || status == SubAgentStatus::queued) continue;
@@ -889,6 +916,31 @@ std::size_t AgentSupervisor::restore_durable_agents(CancelToken ct) {
                 }
             }
             old.reset(); // join before clearing the old generation's exit marker
+            // A failing worker publishes its final manifest while unwinding.
+            // Reuse that synchronized journal after joining, never the earlier
+            // disk snapshot (which may also predate an acknowledged inbox item).
+            state = journal->read();
+            if (!state.value("recoverable", false)) {
+                impl_->retry_at.erase(id);
+                continue;
+            }
+            if (state.value("status", "") == "errored") {
+                auto retry = impl_->retry_at.find(id);
+                if (retry == impl_->retry_at.end()) {
+                    const auto failures = std::min(31U, state.value("recovery_failures", 0U) + 1U);
+                    const auto delay = std::chrono::seconds(std::min(60U, 2U << std::min(5U, failures - 1U)));
+                    impl_->retry_at[id] = std::chrono::steady_clock::now() + delay;
+                    journal->update([&](Json& j) {
+                        j["phase"] = "retry_wait";
+                        j["recovery_failures"] = failures;
+                        j["retry_delay_seconds"] = delay.count();
+                        j["retry_not_before_epoch_ms"] = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::system_clock::now().time_since_epoch() + delay).count();
+                    });
+                    continue;
+                }
+                if (std::chrono::steady_clock::now() < retry->second) continue;
+            }
             {
                 std::lock_guard lock(impl_->standing_mutex);
                 impl_->exited.erase(id);
@@ -902,24 +954,39 @@ std::size_t AgentSupervisor::restore_durable_agents(CancelToken ct) {
             } else sf = store.find_session_for_agent(id);
             auto spec = spec_from_json(state.at("spec"), impl_->default_cfg_);
             const auto prompt = sf ? std::string{} : state.value("prompt", "");
-            auto journal = std::make_shared<AgentJournal>(entry.path(), state);
+            journal->update([](Json& j) {
+                j["status"] = "queued";
+                j["phase"] = "recovering";
+                j["recovery_attempts"] = j.value("recovery_attempts", 0ULL) + 1;
+                j.erase("retry_not_before_epoch_ms");
+            });
+            impl_->retry_at.erase(id);
             auto [source, token] = ct.child();
             impl_->launch(id, spec, prompt, state.value("parent_id", ""), std::move(token),
-                          std::move(journal), std::move(sf));
+                          journal, std::move(sf));
             ++restored_count;
         } catch (const std::exception& e) {
             BATBOX_LOG_ERROR("Worker recovery failed for {}: {}", entry.path().string(), e.what());
+            if (journal) {
+                impl_->retry_at.erase(id);
+                try { journal->update([&](Json& j) {
+                    j["status"] = "errored";
+                    j["phase"] = "recovery_failed";
+                    j["last_error"] = e.what();
+                }); } catch (...) {}
+            }
         }
     }
     return restored_count;
 }
 
 void AgentSupervisor::ensure_continuous_workers(std::size_t count, std::string_view goal, CancelToken ct) {
+    std::lock_guard lock(impl_->durable_maintenance_mutex);
     if (impl_->durable_dir.empty() || impl_->shutting_down.load()) return;
     // A worker that failed a transient model request is reopened from its own
     // durable history on the next supervisor cycle, retaining the same handle.
     auto [restore_source, restore_token] = ct.child();
-    restore_durable_agents(std::move(restore_token));
+    restore_durable_agents_locked(std::move(restore_token));
     std::unordered_set<std::size_t> present;
     {
         std::shared_lock lock(impl_->agents_mutex);

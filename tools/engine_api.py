@@ -20,6 +20,13 @@ from urllib.parse import urlsplit
 
 STATUSES = {"backlog", "todo", "in_progress", "in_review", "done", "blocked", "cancelled"}
 MAX_BODY = 131072
+WORKER_STATUS_FIELDS = {
+    "status", "phase", "updated_at", "last_progress_at", "last_operation",
+    "progress_sequence", "failed_phase", "last_error_at", "retry_delay_seconds",
+    "retry_not_before_epoch_ms", "recovery_failures", "recovery_attempts",
+    "completed_turns", "prompt_tokens", "compactions", "exact_compaction_tokens",
+    "tool_count", "recoverable", "continuous", "managed_slot",
+}
 
 
 def now():
@@ -105,6 +112,63 @@ class IssueStore:
             return data
         except (OSError, ValueError):
             return {"enabled": False, "error": "communication state unavailable"}
+
+    def engine_status(self):
+        """Overlay current worker receipts without refreshing coordinator time.
+
+        Worker journals are individually atomic, not a transaction spanning all
+        workers. Reading them is observation, never evidence of new progress.
+        """
+        path = self.root / "status.json"
+        engine = json.loads(path.read_text()) if path.exists() else {"state": "not_started"}
+        snapshot_at = engine.get("updated_at")
+        observed_at = now()
+        workers = {}
+        for item in engine.get("workers", []):
+            if not isinstance(item, dict) or not isinstance(item.get("id"), str):
+                continue
+            # Do not accidentally publish future snapshot fields containing
+            # prompts, inboxes, session content or model output.
+            workers[item["id"]] = {k: v for k, v in item.items()
+                if k in WORKER_STATUS_FIELDS | {"id", "name", "tokens"}
+                and isinstance(v, (str, int, bool))}
+        directory = self.root / "workers"
+        # A worker may be absent from the coordinator snapshot while backing
+        # off. Include its durable handle even before the next coordinator turn.
+        ids = set(workers)
+        ids.update(p.stem for p in directory.glob("*.json"))
+        for agent_id in sorted(ids):
+            worker = workers.get(agent_id, {"id": agent_id})
+            try:
+                if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", agent_id):
+                    raise ValueError("invalid worker id")
+                journal = json.loads((directory / (agent_id + ".json")).read_text())
+                if (not isinstance(journal, dict) or journal.get("agent_id") != agent_id
+                        or not isinstance(journal.get("status"), str)):
+                    raise ValueError("invalid worker journal")
+                if agent_id not in workers and not journal.get("recoverable", False):
+                    continue
+                # The coordinator's token counter belongs to its old snapshot;
+                # do not present it alongside current journal fields as live.
+                worker = {k: v for k, v in worker.items() if k in {"id", "name"}}
+                worker.update({k: v for k, v in journal.items() if k in WORKER_STATUS_FIELDS
+                               and isinstance(v, (str, int, bool))})
+                spec = journal.get("spec")
+                if isinstance(spec, dict) and isinstance(spec.get("name"), str):
+                    worker["name"] = spec["name"]
+                worker["status_source"] = "worker_journal"
+                worker["journal_read_at"] = observed_at
+            except (OSError, ValueError) as exc:
+                if agent_id not in workers:
+                    continue
+                worker["status_source"] = "coordinator_snapshot"
+                worker["journal_error"] = "missing" if isinstance(exc, FileNotFoundError) else "unavailable"
+            worker["coordinator_snapshot_at"] = snapshot_at
+            workers[agent_id] = worker
+        engine["coordinator_snapshot_at"] = snapshot_at
+        engine["worker_journals_read_at"] = observed_at
+        engine["workers"] = list(workers.values())
+        return engine
 
     @staticmethod
     def number(key):
@@ -262,8 +326,7 @@ def handler(store):
                     raise ValueError("JSON object required")
             store.reconcile()
             if path == "/v1/status" and self.command == "GET":
-                p = store.root / "status.json"
-                return self.respond(200, {"communication": control, "engine": json.loads(p.read_text()) if p.exists() else {"state": "not_started"}})
+                return self.respond(200, {"communication": control, "engine": store.engine_status()})
             if path == "/v1/issues":
                 if self.command == "GET":
                     return self.respond(200, {"issues": store.list()})

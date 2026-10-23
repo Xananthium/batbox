@@ -49,6 +49,24 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 EXPECTED_BEARER = "Bearer test-key-123"
 
+
+def archive_request_error(req):
+    if req.get("model") != "archive-tool-test":
+        return None
+    pending = set()
+    for message in req.get("messages", []):
+        if message.get("role") == "assistant":
+            if pending:
+                return "incomplete tool group before assistant"
+            pending = {call["id"] for call in message.get("tool_calls", [])}
+        elif message.get("role") == "tool":
+            if message.get("tool_call_id") not in pending:
+                return "orphan or duplicated tool result"
+            pending.remove(message["tool_call_id"])
+            if len((message.get("content") or "").encode()) >= 512 * 1024:
+                return "oversized raw tool result reached inference"
+    return "incomplete final tool group" if pending else None
+
 # ---------------------------------------------------------------------------
 # Hard-coded non-streaming response bodies (CPP 4.5)
 # ---------------------------------------------------------------------------
@@ -557,6 +575,9 @@ class FakeOpenAIHandler(BaseHTTPRequestHandler):
             if not self._check_auth():
                 return
             req = json.loads(self._read_body())
+            if error := archive_request_error(req):
+                self._send_json(400, {"error": error})
+                return
             if req.get("model") == "restricted-tools-test" and [t["function"]["name"] for t in req.get("tools", [])] != ["Echo"]:
                 self._send_json(400, {"error": "tool schema selection mismatch"})
                 return
@@ -583,6 +604,10 @@ class FakeOpenAIHandler(BaseHTTPRequestHandler):
                 req = json.loads(body)
             except json.JSONDecodeError:
                 self._send_json(400, {"error": {"message": "bad JSON"}})
+                return
+
+            if error := archive_request_error(req):
+                self._send_json(400, {"error": error})
                 return
 
             if req.get("model") == "template-test" and req.get("chat_template_kwargs") != {"enable_thinking": False}:
