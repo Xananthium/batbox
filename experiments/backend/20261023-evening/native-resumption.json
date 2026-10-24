@@ -1,0 +1,99 @@
+{
+  "verified_at": "2026-10-24T01:27:51.948958+00:00",
+  "units": {
+    "batbox-engine.service": {
+      "MainPID": "249453",
+      "ActiveState": "active",
+      "SubState": "running"
+    },
+    "batbox-memory.service": {
+      "MainPID": "252218",
+      "ActiveState": "active",
+      "SubState": "running"
+    },
+    "batbox-api.service": {
+      "MainPID": "179989",
+      "ActiveState": "active",
+      "SubState": "running"
+    },
+    "batbox-watchdog.timer": {
+      "ActiveState": "active",
+      "SubState": "waiting"
+    }
+  },
+  "native_identity": {
+    "pid": 249453,
+    "path": "/home/isnotreal/.local/lib/batbox-engine/releases/5f14dc916f2dc4b3f852/batbox",
+    "sha256": "5f14dc916f2dc4b3f8524e99e99b4538c7b1bbce65ae73d8da4a29f719c467ad"
+  },
+  "native_source_commit": "1ba420613696f32ff8be93c60f3ed545ac3fda46",
+  "native_sampling_env": {
+    "BATBOX_TEMPERATURE": "0.85",
+    "BATBOX_TOP_P": "0.9"
+  },
+  "backend_sampling": {
+    "temperature": 0.85,
+    "top_k": 64,
+    "top_p": 0.9,
+    "min_p": 0.05,
+    "repetition_penalty": 1.1
+  },
+  "backend_activation": "sampling-profile-activation.json",
+  "same_coordinator_session": true,
+  "same_worker_sessions": true,
+  "worker_count": 3,
+  "native_active_requests": 4,
+  "production_context_limit": 200000,
+  "compact_at_tokens": 100000,
+  "mtp_depth": 2,
+  "public_authenticated_api_status": 200,
+  "completed_tool_calls_since_resume": 47,
+  "tool_names": {
+    "Bash": 22,
+    "Read": 5,
+    "Glob": 15,
+    "TaskList": 1,
+    "TodoWrite": 2,
+    "Grep": 1,
+    "MemoryRemember": 1
+  },
+  "tool_errors_since_resume": 17,
+  "latest_completed_tool_at": "2026-10-24T01:27:44.745000+00:00",
+  "completed_worker_turn_deltas": [
+    1,
+    1,
+    1
+  ],
+  "backend_cache_counters_since_backend_restart": {
+    "vllm:prefix_cache_queries_total": 4024347.0,
+    "vllm:prefix_cache_hits_total": 3086400.0,
+    "vllm:num_preemptions_total": 0.0
+  },
+  "memory": {
+    "nodes": 282,
+    "embeddings": 1461,
+    "graph_index": 101,
+    "queue": {
+      "ready": 454
+    },
+    "embedding_device": "CPUExecutionProvider",
+    "workers": {
+      "batbox-memory": true,
+      "batbox-sources": true,
+      "batbox-hipporag": true
+    }
+  },
+  "graph": {
+    "state": "indexing",
+    "nodes": 2941,
+    "edges": 14836,
+    "last_error": null
+  },
+  "limits": [
+    "Tool dispatch is observed, including failed path/schema attempts; it is not proof that every task succeeds.",
+    "The original long-session repetition cause remains unresolved; selected sampling is supported by a small synthetic panel.",
+    "Graph readiness and current-source coverage are separate from CPU embedding readiness.",
+    "Server-wide cache counters can include other backend clients.",
+    "Raw native content, reasoning, tool arguments and credentials are excluded."
+  ]
+}
