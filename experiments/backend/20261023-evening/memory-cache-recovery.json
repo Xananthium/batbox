@@ -1,0 +1,160 @@
+{
+  "scope": "Memory OpenIE cache recovery after the sampling selection; no new sampler benchmark.",
+  "problem": {
+    "operation_created_at": "2026-10-23T21:06:15.519579+00:00",
+    "source": "experiments/backend/20261023-qat-format/fidelity-repetition-comparison.json",
+    "operation_chunks": 34,
+    "invalid_cached_triple_rows": 2,
+    "failure": "Both old responses ended at1536 output tokens and contained repeated-word runs over1500 words; neither parsed even after the existing JSON repair. Cache hits replayed these failures on every checkpoint recovery.",
+    "input_contamination_check": {
+      "failed_chunk_words": [
+        162,
+        162
+      ],
+      "longest_identical_word_runs": [
+        2,
+        2
+      ],
+      "repeated_output_copied_from_long_repeated_input": false
+    },
+    "historical_model_loop_cause": "Unresolved. Cache poisoning explains durable replay of these two failed extractions; it does not establish the model-level cause or prove a sampling fix."
+  },
+  "repair": {
+    "validates": "The same length-repair and field parsing path plus named-entity/triple item schema; accepts empty arrays and accepted bare NER lists.",
+    "preserves_repairable_length_results": true,
+    "quarantine": "Only the exact failed response is backed up privately and removed under the existing key/database locks. Atomic private-file publication and directory fsync precede deletion. Concurrent replacements are preserved.",
+    "bounded_retry": "A failed length extraction may use one larger per-call budget,1536 to3072 in these two cases, hard maximum4096. Its quarantine receipt preserves that request choice across restart. Default extraction and backend sampling/context settings stay unchanged.",
+    "graph_reset": false,
+    "checkpoint_sha256_before_restart": "a1c7817e167efd46276cb4351d4f4898c1d927b317a534d13c724e61af88b9c3",
+    "checkpoint_unchanged_during_quarantine": true,
+    "rows_before": 692,
+    "rows_after_quarantine": 690,
+    "quarantined_count": 2,
+    "all_other_cache_rows_byte_identical": true,
+    "valid_old_operation_cache_pairs_preserved": 32,
+    "quarantined_rows": [
+      {
+        "chunk_id": "chunk-8abd564ee0b254d60c8764a8c6ae3df8",
+        "cache_key": "9646432371aba861d5ceb01bf8660db7cc7d29ad1ba9e531839995a632a214b4",
+        "message_sha256": "514996ae90af5bb42ef42c11d843cef403f21bce10f6f59cc422d7d51da3fa42",
+        "metadata_sha256": "a06cc6dac4e87a78ab3e5ca190002bd2c265a1c340f6b276e70ca2396325d44a",
+        "finish_reason": "length",
+        "original_budget": 1536,
+        "bounded_retry_budget": 3072
+      },
+      {
+        "chunk_id": "chunk-ccd1ac4487b3e17618d23dfc1f0ded7f",
+        "cache_key": "0c572b2224ce50aa57cc546f7fca815438f5279f53c9153f6fc7b8bec04bc66e",
+        "message_sha256": "da3916755ae2a2ce9d773a250f9bd391b0a56f049944911faaeaf89888a3aa42",
+        "metadata_sha256": "e2cb81f2b16352f5333ba0eb6e0643dca552421b43e9abbb32774641d3402027",
+        "finish_reason": "length",
+        "original_budget": 1536,
+        "bounded_retry_budget": 3072
+      }
+    ],
+    "cache_preservation_scope": "The32 other old-operation NER/triple pairs remain parser-valid; all690 retained cache rows were byte-identical. No semantic re-audit of cached facts is claimed."
+  },
+  "validation": {
+    "test_count": 15,
+    "new_mock_transport_cache_tests": 7,
+    "existing_graph_recovery_and_timeout_tests": 8,
+    "model_calls_in_tests": 0,
+    "independent_review": "Cache key/qualname preservation, classifier, bounded retries, and atomic quarantine durability reviewed independently."
+  },
+  "runtime": {
+    "memory_restart_count": 1,
+    "memory_pid": 252218,
+    "memory_started_at": "2026-10-24T01:22:06.575330+00:00",
+    "observed_at": "2026-10-24T01:26:30.351844+00:00",
+    "graph_state": "indexing",
+    "graph_status": {
+      "nodes": 2941,
+      "edges": 14836,
+      "passages": 331,
+      "facts": 3224,
+      "entities": 2610,
+      "last_error": null,
+      "replayed_operations": 1
+    },
+    "current_source_name": "server-context.json",
+    "old_operation_committed": true,
+    "old_operation_graph_hash": "c6bbb3985a28e0201f7d84e51a20da752f96d9312ec678c288dd4fa40e3c1356",
+    "fresh_extractions": [
+      {
+        "chunk_id": "chunk-8abd564ee0b254d60c8764a8c6ae3df8",
+        "retry_cache_key": "9c38c5bc909fe894a52effba00deb17871f161b6fd5dd1df66182aca3a1667e2",
+        "retry_budget": 3072,
+        "result_cached": true,
+        "finish_reason": "stop",
+        "prompt_tokens": 1337,
+        "completion_tokens": 118,
+        "reasoning_tokens": 0,
+        "response_sha256": "5d974ebeca75946e33ad88789bfedaa17a6160867525e45296ecf6f0edf9533a",
+        "valid_json": true,
+        "triples_count": 5
+      },
+      {
+        "chunk_id": "chunk-ccd1ac4487b3e17618d23dfc1f0ded7f",
+        "retry_cache_key": "f8020123552108ef785d4c82bb4ef03a3307b2d93449e516a0c67e350c5486e2",
+        "retry_budget": 3072,
+        "result_cached": true,
+        "finish_reason": "stop",
+        "prompt_tokens": 1293,
+        "completion_tokens": 118,
+        "reasoning_tokens": 0,
+        "response_sha256": "5d974ebeca75946e33ad88789bfedaa17a6160867525e45296ecf6f0edf9533a",
+        "valid_json": true,
+        "triples_count": 5
+      }
+    ],
+    "fresh_extraction_scope": "Both fresh responses passed JSON/item validation and the old graph transaction committed. This is not an independent semantic audit of every extracted fact.",
+    "current_sources": [
+      {
+        "source": "server-context.json",
+        "file_hash": "d72c1c1d39f55eca21720bd47323bb9cf957dfa529554e68c67150e82a28a8ec",
+        "node_id": "file:1f7fee60f4b1ac64a1fbfa2b90d5b443431be1b90a2d5ad2cb990f1db64540ad",
+        "content_hash": "d72c1c1d39f55eca21720bd47323bb9cf957dfa529554e68c67150e82a28a8ec",
+        "graph_hash": "09613cd9137bba3ee67c0cbee2485e2177ec258bfa683ce74ab18886f50d84bf",
+        "cpu_embedding_exists": 1,
+        "cpu_current": true,
+        "graph_current": false
+      },
+      {
+        "source": "program-map.json",
+        "file_hash": "05214ae5efa59968d1c68691f17e310cd4eeabab7e9f07c6a8cbcb7d562a0bfe",
+        "node_id": "file:bc5ffeeba734b65fdd7ba8f21d52e5ace8ca7a3ae92a3bc143b14bd379dcece2",
+        "content_hash": "05214ae5efa59968d1c68691f17e310cd4eeabab7e9f07c6a8cbcb7d562a0bfe",
+        "graph_hash": "41297162d32a9cff4a91eadbd6b709d7d0b2e4297c201f5f2b8c60777e1590fe",
+        "cpu_embedding_exists": 1,
+        "cpu_current": true,
+        "graph_current": false
+      }
+    ],
+    "benchmark_memory": {
+      "node_id": "benchmark:sampling:c869510",
+      "content_hash": "58c001f96dca92faba544b0d536c80493624b178ec0abe5133924ea6e1dfcb14",
+      "graph_hash": null,
+      "cpu_embedding_exists": 1,
+      "graph_current": false
+    },
+    "embedding_device": "CPUExecutionProvider",
+    "workers": {
+      "batbox-memory": true,
+      "batbox-sources": true,
+      "batbox-hipporag": true
+    },
+    "recent_errors": [],
+    "coverage_note": "Server context, program map and benchmark memory are CPU-embedded with current hashes. Their graph hashes are pending catch-up at this capture; the worker is now indexing server-context.json. Historical backlog was not drained."
+  },
+  "unchanged_model": {
+    "temperature": 0.85,
+    "top_k": 64,
+    "top_p": 0.9,
+    "min_p": 0.05,
+    "repetition_penalty": 1.1,
+    "context_limit": 200000,
+    "compact_at_tokens": 100000,
+    "speculative_tokens": 2
+  },
+  "privacy": "Raw cached responses, retry outputs, native source material and reasoning remain private. This receipt contains hashes/counts/status only."
+}

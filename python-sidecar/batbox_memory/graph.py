@@ -7,6 +7,7 @@ import threading
 import time
 from pathlib import Path
 
+from .extraction_cache import checked_extraction_infer
 from .graph_checkpoint import IndexCheckpoint
 from .store import timestamp
 
@@ -64,6 +65,10 @@ class Graph:
                         "name": field, "strict": True, "schema": {
                             "type": "object", "properties": {field: {"type": "array", "items": item}},
                             "required": [field], "additionalProperties": False}}}
+                if field:
+                    # CacheOpenAI otherwise replays a failed response forever,
+                    # including during checkpoint recovery after a restart.
+                    return checked_extraction_infer(self, super().infer, messages, kwargs, field)
                 return super().infer(messages=messages, **kwargs)
 
         config = BaseConfig(
