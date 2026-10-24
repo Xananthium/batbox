@@ -526,6 +526,9 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
     std::string                   finish_reason;
     batbox::inference::UsageDelta usage;
     std::optional<GenerationDegeneration> streaming_degeneration;
+    bool rejected_reasoning = false;
+    bool quality_stream_aborted = false;
+    std::string rejected_reasoning_text;
 
     // S5 (DIS-983) AC1: one-shot reactive overflow retry guard. If an endpoint
     // loudly rejects the prompt as too large, we compact and retry the turn
@@ -622,6 +625,7 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         // the parent ct fires, giving us linked cancellation.
         auto [stream_src, stream_tok] = ct.child();
         StreamingGenerationGuard streaming_quality;
+        StreamingGenerationGuard reasoning_quality;
         bool streamed_tool_intent = false;
 
         // PEXT2 3.1 (D-1): for iteration 0 reuse the body string captured by the
@@ -739,11 +743,21 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
                 }
                 // Cancel only this inference request. Already journaled tool
                 // results remain in context, and incomplete intents never run.
-                // Tool arguments and reasoning are not visible prose.
-                if (generation_quality_guard_ && !streamed_tool_intent &&
+                // Inspect the isolated reasoning channel too, even before any
+                // visible content or while a tool intent is still incomplete.
+                // Tool argument bytes never enter either prose classifier.
+                if (generation_quality_guard_ &&
                     !ct.is_cancelled() && !streaming_degeneration) {
-                    streaming_degeneration = streaming_quality.check(accumulated_content);
-                    if (streaming_degeneration) stream_src.request_stop();
+                    if (!streamed_tool_intent)
+                        streaming_degeneration = streaming_quality.check(accumulated_content);
+                    if (!streaming_degeneration) {
+                        streaming_degeneration = reasoning_quality.check(reasoning_acc.reasoning());
+                        rejected_reasoning = streaming_degeneration.has_value();
+                    }
+                    if (streaming_degeneration) {
+                        quality_stream_aborted = true;
+                        stream_src.request_stop();
+                    }
                 }
         };
 
@@ -810,7 +824,21 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
                     on_delta_cb_(tail_visible);
                 }
             }
-            if (reasoning_acc.has_reasoning()) {
+            // The final word can have been withheld by the incremental guard.
+            // Check it after flushing without treating a length finish itself
+            // as degeneration, and before any tool intent can be dispatched.
+            if (generation_quality_guard_ && !streaming_degeneration) {
+                streaming_degeneration = detect_degenerate_prose(reasoning_acc.reasoning());
+                rejected_reasoning = streaming_degeneration.has_value();
+            }
+            if (streaming_degeneration) {
+                rejected_reasoning_text = reasoning_acc.reasoning();
+                last_reasoning_.clear();
+                if (reasoning_phase_active && !reasoning_stopped_fired) {
+                    reasoning_stopped_fired = true;
+                    if (on_reasoning_stopped_cb_) on_reasoning_stopped_cb_();
+                }
+            } else if (reasoning_acc.has_reasoning()) {
                 last_reasoning_ = reasoning_acc.reasoning();
             }
         }
@@ -1030,10 +1058,17 @@ Result<void> Conversation::run_turn(batbox::CancelToken ct) {
         raw["generation_quality"] = {{"tokens", degeneration->tokens},
             {"repeated_tokens", degeneration->repeated_tokens},
             {"phrase_tokens", degeneration->phrase_tokens},
-            {"repetitions", degeneration->repetitions}};
+            {"repetitions", degeneration->repetitions},
+            {"channel", rejected_reasoning ? "reasoning" : "content"}};
         if (streaming_degeneration) {
-            raw["generation_quality"]["stream_aborted"] = true;
+            raw["generation_quality"]["stream_aborted"] = quality_stream_aborted;
             raw["generation_quality"]["received_content_bytes"] = asst.content.size();
+            raw["generation_quality"]["received_reasoning_bytes"] = rejected_reasoning_text.size();
+            // Diagnostic receipt only: Message::from_json does not deserialize
+            // this metadata, so it cannot become active/wire content on retry
+            // or restore. Preserve the exact isolated bytes, not a summary.
+            if (!rejected_reasoning_text.empty())
+                raw["generation_quality"]["reasoning"] = rejected_reasoning_text;
         }
     }
     // Persist original bytes before changing the active context or reporting

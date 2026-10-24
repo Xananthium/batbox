@@ -19,12 +19,30 @@ investigation; no causal conclusion is inferred from acceptance counters alone.
 
 ## Harness changes
 
-Visible streams now use the existing narrow prose classifier at bounded byte
-intervals. A detected loop cancels only the current inference request. Exact
+Visible and isolated reasoning streams now use the existing narrow prose
+classifier independently at bounded byte intervals. Modern `reasoning`, legacy
+`reasoning_content`, and configured inline reasoning tags share the same unified
+reasoning channel. A detected loop cancels only the current inference request. Exact
 received partial content is saved with rejection and stream-abort metadata,
 then the existing retry backoff applies. Completed tool results remain durable;
 an aborted incomplete tool intent is not executed. Ordinary user cancellation,
 code/data output and token-limit endings retain their existing behavior.
+
+The reasoning extension follows a matched four-request backend experiment:
+two responses in the MTP-off batch reached the observer's 256-consecutive-word
+repetition cutoff entirely in reasoning, with no visible content or tool calls.
+The paired MTP2 batch produced valid tool calls for all four requests. This
+observation motivated channel coverage; it does not establish that speculation
+always prevents degeneration or that the harness change fixes model quality.
+
+Rejected reasoning is retained exactly inside the private transcript's
+`generation_quality` receipt, with a channel label and received byte counts.
+It is neither assistant content nor a Message field: retries and restored
+contexts receive only the recovery marker, and the downstream reasoning accessor
+is cleared. A final check includes the last unfinished word without labeling a
+normally completed stream as transport-aborted. Code/data exclusions and the
+128-word/64-repeat thresholds remain unchanged; unmarked intentional repeated
+prose can still be indistinguishable from degeneration.
 
 Retrieval queries no longer append a previously rejected repetitive final.
 Native prompt metadata identifies generated recall byte ranges through durable
@@ -40,7 +58,7 @@ They do not change the process working directory or the model/context settings.
 
 ## Validation
 
-Binary SHA-256:
+Original content/context binary SHA-256:
 `ee9f6cd28aff2284fb40f7343a1181fb96ccbb3c24443ae3e456aac77cb0187a`.
 
 | Check | Result |
@@ -68,3 +86,22 @@ cases failed on the previous binary before passing on the new one.
 The private wire captures and real state copy remain outside this repository.
 These tests validate harness cleanup and cancellation, not a cure for the
 underlying model/backend degeneration or a speed advantage from speculation.
+
+The reasoning extension adds local HTTP fixtures for modern and legacy fields,
+split inline tags, final-word detection, benign long reasoning and fenced/data
+reasoning. They check exact private receipt bytes, restart preservation, no
+reasoning leakage into events/memory/request payloads, no execution of an
+unfinished tool intent, and no replay of an earlier completed action. The prior
+content, cancellation and tool-once regressions remain in the same suite.
+Inline fixtures explicitly select a provider profile that recognizes inline
+tags; structured-only provider profiles keep their existing tag behavior.
+
+Reasoning-extension binary SHA-256:
+`5f14dc916f2dc4b3f8524e99e99b4538c7b1bbce65ae73d8da4a29f719c467ad`.
+The expanded streaming HTTP suite passed all eight cases in 64.348 seconds,
+including the original content/cancellation/tool-once regressions. Streaming
+units passed four cases and 10,251 assertions; existing quality/context units
+passed eight cases and 94 assertions. The legacy structured and configured
+inline loop cases both failed against the original `ee9f6cd...` binary before
+passing with this change. These elapsed times include fixture retry-backoff
+waits and are not backend throughput measurements.
