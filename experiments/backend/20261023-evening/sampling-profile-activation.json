@@ -1,0 +1,85 @@
+{
+  "status": "activated_healthy",
+  "verified_at": "2026-10-24T01:07:25.917058+00:00",
+  "pid": 248200,
+  "profile": "/home/isnotreal/model-tools/gguf-pr141-profiles/20261024T005225Z-sampling-9a0928d5fc9f",
+  "profile_manifest_sha256": "596a274539a7f166fc148b5dec496e44b7566d651be477e08604f64ed1222f6f",
+  "base_release": "/home/isnotreal/model-tools/gguf-pr141-releases/20261023-e62877c-e3cefbc",
+  "base_manifest_sha256": "2267b055a309ceb8f5fcde0f8a8dc65db8613f19e72896cd0ccafdd943df0628",
+  "selected_sampling": {
+    "temperature": 0.85,
+    "top_k": 64,
+    "top_p": 0.9,
+    "min_p": 0.05,
+    "repetition_penalty": 1.1
+  },
+  "actual_arguments_match_profile": true,
+  "changed_argument": "--override-generation-config",
+  "all_other_backend_arguments_unchanged": true,
+  "baseline_environment_keys_verified": 20,
+  "non_invocation_environment_changes": [],
+  "live_settings": {
+    "--hf-config-path": "/home/isnotreal/models/gemma4-31b-qat-hauhau-balanced-mtp-gguf/hf-config",
+    "--tokenizer": "/home/isnotreal/models/gemma4-31b-qat-hauhau-balanced-native-mixed-w4w8a16",
+    "--load-format": "gguf",
+    "--quantization": "gguf",
+    "--dtype": "bfloat16",
+    "--tensor-parallel-size": "2",
+    "--max-model-len": "200000",
+    "--max-num-seqs": "16",
+    "--max-num-batched-tokens": "4096",
+    "--kv-cache-dtype": "turboquant_4bit_nc",
+    "--kv-cache-memory-bytes": "6442450944",
+    "--kv-offloading-size": "80",
+    "--kv-offloading-backend": "native",
+    "--prefix-caching-hash-algo": "sha256_cbor",
+    "--speculative-config": "{\"method\": \"mtp\", \"model\": \"/home/isnotreal/models/gemma4-31b-qat-hauhau-balanced-mtp-gguf/assistant/mtp-gemma-4-31B-it.gguf\", \"num_speculative_tokens\": 2, \"quantization\": \"gguf\", \"max_model_len\": 200000, \"draft_load_config\": {\"load_format\": \"gguf\"}, \"use_local_argmax_reduction\": true}",
+    "--port": "8001",
+    "--tool-call-parser": "gemma4",
+    "--reasoning-parser": "gemma4",
+    "--generation-config": "auto",
+    "--override-generation-config": "{\"min_p\": 0.05, \"repetition_penalty\": 1.1, \"temperature\": 0.85, \"top_k\": 64, \"top_p\": 0.9}",
+    "enable_prefix_caching": true
+  },
+  "generation_requests_sent_for_deployment": 0,
+  "clients_started": false,
+  "selection_evidence": {
+    "short_objective_correct": 12,
+    "short_objective_total": 12,
+    "completed_tasks_including_creativity": 16,
+    "task_total": 16,
+    "selected_output_tokens": 16837,
+    "temperature_1_0_output_tokens": 17748,
+    "blind_creative_review": "Parent selected 0.85 after blind review."
+  },
+  "validation_limitations": {
+    "approximately_20k_c4": "Neither 0.85 nor baseline 0.6 produced any complete correct submit_report calls. This was not a clean validation pass.",
+    "selected_0_85": "Two exact direct reports plus a deployment report equivalent only after the documented planned_order string-versus-array normalization; zero actual submit_report calls. The code task exhausted its 4096-token output cap.",
+    "baseline_0_6": "Three correct direct reports, one arithmetic error, one schema-valid but incorrect tool call; all four responses completed.",
+    "activation_basis": "Parent explicitly authorized deployment after comparing the full results; no further inference tests authorized."
+  },
+  "rollback_script": "/home/isnotreal/model-tools/gguf-pr141-profiles/20261024T005225Z-sampling-9a0928d5fc9f/rollback-profile.py",
+  "client_resume_owner": "root after native environment/context alignment",
+  "health_http_status": 200,
+  "model_identity": {
+    "id": "qwen3.6-35b-hauhau-w4a16-vision",
+    "root": "/home/isnotreal/models/gemma4-31b-qat-hauhau-balanced-mtp-gguf/Gemma4-31B-QAT-Uncensored-HauhauCS-Balanced-Q4_K_M.gguf",
+    "max_model_len": 200000
+  },
+  "gpu_kv_cache_capacity_tokens": 328440,
+  "metrics_at_readiness": {
+    "vllm:num_requests_running": 0.0,
+    "vllm:num_requests_waiting": 0.0,
+    "vllm:kv_cache_usage_perc": 0.0
+  },
+  "client_units_at_handoff": {
+    "batbox-engine.service": "inactive",
+    "batbox-memory.service": "inactive",
+    "batbox-watchdog.timer": "inactive"
+  },
+  "clients_intentionally_left_paused": true,
+  "activated_at": "2026-10-24T01:01:13.279783+00:00",
+  "systemd_restart_returned_at": "2026-10-24T01:01:22.954280+00:00",
+  "persistent_override": "/etc/systemd/system/qwen-vllm.service.d/zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-sampling-profile.conf",
+  "persistent_override_sha256": "0c78bbd48aa78518ab017f6550c35a658fd93905b8ae05a6b8f54088188044af"
+}
