@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "audit_date": "2026-10-24",
+  "timezone": "UTC",
+  "activity_window": {
+    "start": "2026-10-24T01:28:00Z",
+    "end": "2026-10-24T11:44:00Z"
+  },
+  "method": "Read-only inspection of structured tool actions/results, worker task records, source diffs, SQLite counts, and service-event metadata. No new builds, tests, inference requests, or deployments were performed by this audit.",
+  "summary": "Autonomous workers mapped the codebase, changed tool-output handling, and drafted runtime improvements. An earlier build and focused checks succeeded; later source edits remain unfinished and were not deployed.",
+  "observed_checks": [
+    {
+      "check": "Full native build",
+      "started_at": "2026-10-24T03:44:54.695Z",
+      "command": "make -j4",
+      "result": "Completed with exit 0; native executable and build targets reached 100%.",
+      "duration_ms": 45388,
+      "limit": "This establishes an earlier build result, not a full test-suite pass or validation of subsequent dirty source. Earlier attempts encountered compile errors and repeated approximately 122-second command timeouts."
+    },
+    {
+      "check": "Native test_session_file executable",
+      "started_at": [
+        "2026-10-24T03:00:59.120Z",
+        "2026-10-24T03:48:56.070Z"
+      ],
+      "result_each_run": {
+        "test_cases_passed": 13,
+        "test_cases_failed": 0,
+        "assertions_passed": 102,
+        "assertions_failed": 0,
+        "exit_code": 0
+      },
+      "limit": "The second run followed the successful build. Neither run validates later health-reporting or asynchronous-dispatch edits."
+    },
+    {
+      "check": "Compiled smoke checks using the real tool-output archive function",
+      "started_at": [
+        "2026-10-24T04:38:00.621Z",
+        "2026-10-24T04:39:35.451Z"
+      ],
+      "observations": [
+        "512000-byte input stayed inline.",
+        "614400-byte and approximately 1 MiB inputs produced archived views.",
+        "Archived output included the new SUMMARY prefix."
+      ],
+      "limit": "These demonstrate threshold behavior and output formatting at that time, not semantic summary quality or an end-to-end runtime improvement."
+    }
+  ],
+  "partial_work": [
+    {
+      "area": "Codebase documentation",
+      "observed": "A documentation_map.md artifact describes major source components. A research/synthesis/review workflow was attempted.",
+      "task_state": "Documentation Organization Workflow remained in progress in the 08:38 task-list result.",
+      "limit": "Artifact existence was checked; completeness and factual accuracy were not independently validated."
+    },
+    {
+      "area": "Tool-output previews and error hints",
+      "observed": "Source edits add a generic archive label, a first-150-character preview, and suggestions on selected tool errors.",
+      "task_state": "Tool Archive Mini-Summaries was marked completed at 04:42:59.",
+      "limit": "The preview is truncation, not an evaluated semantic summary; deployment was not observed."
+    },
+    {
+      "area": "Asynchronous tool and MCP dispatch",
+      "observed": "Draft dispatch_async wrappers were added. Workers compiled standalone concurrency and mock read/grep programs.",
+      "task_state": "The latest memory-worker todo still listed real parallel-flow verification in progress and capacity tuning pending.",
+      "limit": "Reported roughly twofold speedups came from sleep/mock programs, not native ToolRegistry, MCP, or AgentSupervisor integration."
+    },
+    {
+      "area": "Health reporting and compaction callbacks",
+      "observed": "New diagnostics files and callbacks were drafted; source included a proposed 2000-token compaction heuristic.",
+      "task_state": "HealthCheck Diagnostic remained pending in the latest observed shared task list.",
+      "limit": "Current drafts contain definite defects, including a stray partial constructor line and a duplicate async declaration. No later successful build was established."
+    },
+    {
+      "area": "Session persistence",
+      "observed": "SessionFile append logic was rewritten, while still calling an atomic rewrite of the resulting content.",
+      "limit": "Focused session tests passed on the earlier build; an append-performance improvement was not measured."
+    }
+  ],
+  "memory": {
+    "baseline_at": "2026-10-24T01:25:00Z",
+    "baseline_provenance": "Earlier observation snapshot supplied for comparison; not reconstructed by this audit.",
+    "comparison": {
+      "source_records": {
+        "baseline": 261,
+        "observed": 326,
+        "increase": 65
+      },
+      "chunk_embeddings": {
+        "baseline": 1440,
+        "observed": 1692,
+        "increase": 252
+      },
+      "graph_indexed_source_records": {
+        "baseline": 101,
+        "observed": 268,
+        "increase": 167
+      },
+      "graph_nodes": {
+        "baseline": 2941,
+        "observed": 8404,
+        "increase": 5463
+      },
+      "graph_edges": {
+        "baseline": 14836,
+        "observed": 83520,
+        "increase": 68684
+      }
+    },
+    "latest_graph_checkpoint_at": "2026-10-24T11:43:55.158523Z",
+    "latest_graph_index_record_at": "2026-10-24T11:43:55.461648Z",
+    "current_hash_matches": "All 268 graph-indexed source records matched their current provenance hashes.",
+    "memory_jobs": {
+      "ready": 502,
+      "other_states": 0
+    },
+    "limit": "Growth includes retained source snapshots, tool transcripts, and background indexing of existing records. Counts do not measure independently verified facts, new ideas, retrieval quality, or work attributable solely to autonomous workers. Some stored notes contain stale environment descriptions or unverified implementation claims."
+  },
+  "failed_deployment_attempts": [
+    {
+      "at": "2026-10-24T03:49:33.133Z",
+      "reason": "Attempted deployment script did not exist.",
+      "exit_code": 2
+    },
+    {
+      "at": "2026-10-24T03:56:19.919Z",
+      "reason": "Deployment command lacked a valid tested executable.",
+      "exit_code": 1
+    },
+    {
+      "at": "2026-10-24T03:57:28.229Z",
+      "reason": "Used nonexistent build/batbox executable path.",
+      "exit_code": 1
+    },
+    {
+      "at": "2026-10-24T03:57:37.129Z",
+      "reason": "Retried the same invalid executable path with restart requested.",
+      "exit_code": 1
+    }
+  ],
+  "coordinator": {
+    "last_completed_cycle": 26,
+    "last_completed_at": "2026-10-24T03:46:50Z",
+    "cycle_failed_events": {
+      "since_2026_10_24_0000_until_1144": 19,
+      "since_2026_10_24_0128_until_1144": 19,
+      "after_last_completed_cycle_until_1144": 16,
+      "last_failure_at": "2026-10-24T11:33:36Z"
+    },
+    "failure_summary": "Repeated long request timeouts, plus a short backend connection-failure interval. A genuine native crash was recorded around 04:58:49, followed by same-session recovery at 04:58:55.",
+    "worker_pattern": "Workers continued while the coordinator stalled. Later documentation work repeatedly searched for missing research.json; the maintainer issued many helper-output polls and follow-up messages without establishing the requested deliverable."
+  },
+  "source_and_runtime": {
+    "tracked_dirty_files_at_audit": 12,
+    "additional_diagnostics_drafts": "src/diagnostics/HealthCheck.hpp and HealthCheck.cpp",
+    "current_dirty_tree_verified": false,
+    "autonomous_deployment_succeeded": false,
+    "installed_source_commit": "1ba420613696f32ff8be93c60f3ed545ac3fda46",
+    "installed_binary_sha256": "5f14dc916f2dc4b3f8524e99e99b4538c7b1bbce65ae73d8da4a29f719c467ad",
+    "pause": "The 11:41:48 stop was intentional maintenance for the requested temperature experiment, not a crash.",
+    "handoff": "The controlling agent subsequently reported native, memory, and watchdog services resumed with the unchanged sampling profile. This audit made no service changes."
+  },
+  "evidence_basis": [
+    "Structured coordinator and worker tool actions and results, with timestamps.",
+    "Autonomous event metadata and shared task/todo records.",
+    "Current tracked source diff and diagnostic draft files.",
+    "Read-only memory SQLite queries and graph-write journal metadata."
+  ],
+  "publication_note": "Contains summaries and metadata only. Raw model reasoning, raw transcripts, credentials, and private message contents are omitted.",
+  "transport_timeout_interpretation": "Compaction summary requests are non-streaming at temperature0. A timeout with zero received response bytes does not establish that the model performed no internal generation; it does not by itself isolate a model, serving, or harness cause."
+}
