@@ -1,0 +1,94 @@
+[
+  {
+    "case": "worker29k",
+    "stop_condition": "early_censored_clear_repetition",
+    "request_ids": [
+      "chatcmpl-ad2493cfb240920b"
+    ],
+    "first_output_seconds": 219.53394166099315,
+    "wall_seconds": 432.40705907599477,
+    "channels": {
+      "content": {
+        "chars": 0,
+        "word_count": 0,
+        "most_common": [],
+        "repetition": {
+          "word_tokens": 0,
+          "same_word_tail": 0,
+          "tail_cycle": {
+            "period_words": 0,
+            "repetitions": 0,
+            "tail_words": 0
+          },
+          "repeated_8gram_fraction": 0
+        }
+      },
+      "reasoning": {
+        "chars": 1024,
+        "word_count": 256,
+        "most_common": [
+          [
+            "our",
+            256
+          ]
+        ],
+        "repetition": {
+          "word_tokens": 256,
+          "same_word_tail": 256,
+          "tail_cycle": {
+            "period_words": 1,
+            "repetitions": 256,
+            "tail_words": 256
+          },
+          "repeated_8gram_fraction": 0.9959839357429718
+        }
+      }
+    }
+  },
+  {
+    "case": "worker49k",
+    "stop_condition": "early_censored_clear_repetition",
+    "request_ids": [
+      "chatcmpl-94401de0b2fab607"
+    ],
+    "first_output_seconds": 187.48495065100724,
+    "wall_seconds": 432.1682158619951,
+    "channels": {
+      "content": {
+        "chars": 0,
+        "word_count": 0,
+        "most_common": [],
+        "repetition": {
+          "word_tokens": 0,
+          "same_word_tail": 0,
+          "tail_cycle": {
+            "period_words": 0,
+            "repetitions": 0,
+            "tail_words": 0
+          },
+          "repeated_8gram_fraction": 0
+        }
+      },
+      "reasoning": {
+        "chars": 1024,
+        "word_count": 256,
+        "most_common": [
+          [
+            "our",
+            256
+          ]
+        ],
+        "repetition": {
+          "word_tokens": 256,
+          "same_word_tail": 256,
+          "tail_cycle": {
+            "period_words": 1,
+            "repetitions": 256,
+            "tail_words": 256
+          },
+          "repeated_8gram_fraction": 0.9959839357429718
+        }
+      }
+    }
+  }
+]

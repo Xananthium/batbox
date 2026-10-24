@@ -1,0 +1,197 @@
+{
+  "captured_at": "2026-10-24T00:05:11.162419+00:00",
+  "scope": "Read-only live sampling followed by two exact-worker replays on the aged process. Paired fresh-process MTP ablation is a separate artifact.",
+  "aged_backend_pid": 162873,
+  "live_window": {
+    "start": "2026-10-23T23:16:51.371864+00:00",
+    "end": "2026-10-23T23:17:51.721489+00:00",
+    "seconds": 60.349636060986086,
+    "aggregate_output_tps": 56.50406899809699,
+    "draft_acceptance": 0.05739045127534336,
+    "observations": [
+      {
+        "utc": "2026-10-23T23:16:51.371864+00:00",
+        "running": 7.0,
+        "waiting": 0.0,
+        "kv_fraction": 0.8544763682421173,
+        "gpus": [
+          "0, 20722, 100, 274.91",
+          "1, 20722, 100, 222.93"
+        ]
+      },
+      {
+        "utc": "2026-10-23T23:17:01.427395+00:00",
+        "running": 8.0,
+        "waiting": 0.0,
+        "kv_fraction": 0.9165388974068396,
+        "gpus": [
+          "0, 20722, 100, 273.98",
+          "1, 20722, 100, 216.61"
+        ]
+      },
+      {
+        "utc": "2026-10-23T23:17:11.479609+00:00",
+        "running": 8.0,
+        "waiting": 0.0,
+        "kv_fraction": 0.921138590760616,
+        "gpus": [
+          "0, 20722, 100, 276.70",
+          "1, 20722, 100, 222.76"
+        ]
+      },
+      {
+        "utc": "2026-10-23T23:17:21.546449+00:00",
+        "running": 8.0,
+        "waiting": 0.0,
+        "kv_fraction": 0.9222385174321712,
+        "gpus": [
+          "0, 20722, 100, 276.20",
+          "1, 20722, 100, 234.58"
+        ]
+      },
+      {
+        "utc": "2026-10-23T23:17:31.610117+00:00",
+        "running": 8.0,
+        "waiting": 0.0,
+        "kv_fraction": 0.9237384174388374,
+        "gpus": [
+          "0, 20722, 100, 276.57",
+          "1, 20722, 100, 240.39"
+        ]
+      },
+      {
+        "utc": "2026-10-23T23:17:41.674830+00:00",
+        "running": 7.0,
+        "waiting": 0.0,
+        "kv_fraction": 0.8590760615958937,
+        "gpus": [
+          "0, 20722, 100, 274.75",
+          "1, 20722, 100, 247.01"
+        ]
+      },
+      {
+        "utc": "2026-10-23T23:17:51.721489+00:00",
+        "running": 7.0,
+        "waiting": 0.0,
+        "kv_fraction": 0.8603093127124859,
+        "gpus": [
+          "0, 20722, 100, 275.35",
+          "1, 20722, 100, 226.63"
+        ]
+      }
+    ],
+    "new_preemptions": 0.0
+  },
+  "adjacent_102_second_window": {
+    "cpu_to_gpu_offload_bytes": 0,
+    "gpu_to_cpu_offload_bytes": 1458807680,
+    "gpu_to_cpu_transfer_time_seconds": 0.2219731521606434,
+    "local_compute_prompt_tokens": 12362,
+    "local_cache_hit_prompt_tokens": 125232,
+    "new_preemptions": 0
+  },
+  "exact_worker_body": {
+    "captured_sha256": "f78d13d7ce0d20145d0089abca4752547ad2c0e009d7b760cfdf3843b2a5b616",
+    "message_count": 35,
+    "tool_count": 50,
+    "our_word_count_in_message_contents": 0,
+    "fresh_replay_input_tokens": 29465
+  },
+  "aged_worker_replays": [
+    {
+      "label": "original-gguf-mtp2-worker-existing-cache",
+      "capture_body_sha256": "f78d13d7ce0d20145d0089abca4752547ad2c0e009d7b760cfdf3843b2a5b616",
+      "sent_body_sha256": "f78d13d7ce0d20145d0089abca4752547ad2c0e009d7b760cfdf3843b2a5b616",
+      "prompt_tools_sha256": "7bc2d4681b90a17ff943b82b98307fb4c9b354988601c7e922c51aef8c6b4cc0",
+      "started_at": "2026-10-23T23:23:14.755955+00:00",
+      "ended_at": "2026-10-23T23:23:35.923618+00:00",
+      "request_ids": [
+        "chatcmpl-bdfc986d23b273a8"
+      ],
+      "first_output_seconds": 0.9071406689909054,
+      "wall_seconds": 21.146194455999648,
+      "stop_condition": "early_censored_clear_repetition",
+      "content_repetition": {
+        "word_tokens": 256,
+        "same_word_tail": 256,
+        "tail_cycle": {
+          "period_words": 1,
+          "repetitions": 256,
+          "tail_words": 256
+        },
+        "repeated_8gram_fraction": 0.9959839357429718
+      },
+      "reasoning_repetition": {
+        "word_tokens": 0,
+        "same_word_tail": 0,
+        "tail_cycle": {
+          "period_words": 0,
+          "repetitions": 0,
+          "tail_words": 0
+        },
+        "repeated_8gram_fraction": 0
+      },
+      "request_sampling": {
+        "temperature": 0.6,
+        "top_p": 0.9,
+        "max_tokens": 4096
+      }
+    },
+    {
+      "label": "original-gguf-mtp2-worker-existing-cache-seed17",
+      "capture_body_sha256": "f78d13d7ce0d20145d0089abca4752547ad2c0e009d7b760cfdf3843b2a5b616",
+      "sent_body_sha256": "f638fe12d420047c5ea7712c834102b7e40398e2859bdb412a16d532b287fa9d",
+      "prompt_tools_sha256": "7bc2d4681b90a17ff943b82b98307fb4c9b354988601c7e922c51aef8c6b4cc0",
+      "started_at": "2026-10-23T23:23:46.640732+00:00",
+      "ended_at": "2026-10-23T23:24:42.961241+00:00",
+      "request_ids": [
+        "chatcmpl-9ae2b6f9bde9b8f5"
+      ],
+      "first_output_seconds": 0.466262634989107,
+      "wall_seconds": 56.29940247698687,
+      "stop_condition": "early_censored_clear_repetition",
+      "content_repetition": {
+        "word_tokens": 256,
+        "same_word_tail": 256,
+        "tail_cycle": {
+          "period_words": 1,
+          "repetitions": 256,
+          "tail_words": 256
+        },
+        "repeated_8gram_fraction": 0.9959839357429718
+      },
+      "reasoning_repetition": {
+        "word_tokens": 0,
+        "same_word_tail": 0,
+        "tail_cycle": {
+          "period_words": 0,
+          "repetitions": 0,
+          "tail_words": 0
+        },
+        "repeated_8gram_fraction": 0
+      },
+      "request_sampling": {
+        "temperature": 0.6,
+        "top_p": 0.9,
+        "seed": 17,
+        "max_tokens": 4096
+      }
+    }
+  ],
+  "interpretation": [
+    "Repeated output was present in vLLM content deltas on the wire, not introduced by the native SSE parser.",
+    "The loop reproduced with the captured worker body unchanged, then again with seed17.",
+    "Slow live decoding occurred during a window with no host-to-GPU offload loads or preemptions.",
+    "A fresh MTP2 process produced normal tool calls from the same worker prompt and seed, under isolated load and a fresh cache salt.",
+    "Restart, cache freshness and concurrent load changed together between aged and fresh conditions; this does not isolate the cause.",
+    "The fresh cold C4 batch does not reproduce sustained high-occupancy prefix reuse or long-lived state."
+  ],
+  "configured_scheduler_defaults": {
+    "long_prefill_token_threshold": 0,
+    "long_prefill_token_threshold_adaptive": false,
+    "max_num_active_seqs": null,
+    "max_num_seqs": 16,
+    "max_num_batched_tokens": 4096,
+    "basis": "None of the first three settings is overridden in the effective process arguments; values are from the installed scheduler configuration class."
+  }
+}

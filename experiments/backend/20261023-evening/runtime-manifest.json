@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-23T23:28:21.351173+00:00",
+  "packages": {
+    "vllm": "0.32.0",
+    "torch": "2.13.0",
+    "triton": "3.7.1",
+    "transformers": "5.16.1",
+    "flashinfer-python": "0.7.0.post1"
+  },
+  "runtime_source_sha256": {
+    "v1/attention/backends/turboquant_attn.py": "f6968973d56fd1b3451a1974d49e091e8cd1f2280631161a010578a9d3631a00",
+    "v1/attention/ops/turboquant_soa/triton_turboquant_unified_attention.py": "103ae7cf290748c34253f7caab39aacfc8b8d35caf37e863d4217a81143dfe39",
+    "v1/attention/ops/turboquant_soa/triton_turboquant_store.py": "3e0e0a12b8005995eb737a49db78e3780ab1763e55201f8e559ce409603557a2",
+    "v1/worker/gpu_model_runner.py": "4cf95efe4ea8caa3110dcd231ff95ceb97e8136f5056e6bdd388300a484c4a81",
+    "v1/core/sched/scheduler.py": "d9a39870286c424cef2fc0730e24092ee3df67e848608e2278944846bab804ae",
+    "v1/worker/gpu/model_runner.py": "5240fe8d62d403e466a4aa07a28fb7af5c0f1e9b9c3bb08c4003185bde461f87",
+    "v1/worker/gpu/sample/sampler.py": "620b0ff1bea504ebe61794b91ab07cdc243d3d05f8dea4c4044c374add76270b",
+    "v1/worker/gpu/sample/penalties.py": "a5e99c71e6ac50ef025b8a7b0b903a1d2679738d8319af9c98bb200389388b29",
+    "v1/worker/gpu/sample/min_p.py": "4cb5e2f45e1ced6f9685283a7a5c8cfd7204d9a249822e866cfff756c7f04f62",
+    "v1/worker/gpu/sample/gumbel.py": "c14a5fa1899a9ff320c62f29bd161be4a4f0fa124ecf26a28681f0f3d143868e"
+  },
+  "active_model_runner": "v1/worker/gpu/model_runner.py"
+}

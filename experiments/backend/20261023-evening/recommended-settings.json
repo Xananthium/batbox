@@ -1,0 +1,126 @@
+{
+  "checked_at": "2026-10-23T23:55:33.523346+00:00",
+  "model_repository": "HauhauCS/Gemma4-31B-QAT-Uncensored-HauhauCS-Balanced-MTP",
+  "model_revision": "9654466e82d83f5ebfe1518a369bc5900873abb1",
+  "model_card_sha256": "744efcebca6f22cc49343c9c4f03ba62f0ded80586f79ec29dcf57223ca075b6",
+  "sources": {
+    "model_card": "https://huggingface.co/HauhauCS/Gemma4-31B-QAT-Uncensored-HauhauCS-Balanced-MTP/blob/9654466e82d83f5ebfe1518a369bc5900873abb1/README.md",
+    "author_reddit_post": "https://www.reddit.com/r/LocalLLaMA/comments/1ueuki7/gemma426ba4b_31bqat_uncensored_balanced_are_out/",
+    "vllm_gemma4_recipe": "https://github.com/vllm-project/recipes/blob/main/Google/Gemma4.md#recommended-settings",
+    "vllm_31b_recipe": "https://recipes.vllm.ai/Google/gemma-4-31B-it",
+    "vllm_032_mtp_guide": "https://docs.vllm.ai/en/v0.32.0/features/speculative_decoding/mtp/",
+    "vllm_032_speculation_guide": "https://docs.vllm.ai/en/v0.32.0/features/speculative_decoding/",
+    "google_transformers_mtp_guide": "https://ai.google.dev/gemma/docs/mtp/mtp"
+  },
+  "recommended_sampling": {
+    "temperature": 0.6,
+    "top_k": 64,
+    "top_p": 0.9,
+    "min_p": 0.05,
+    "repetition_penalty": 1.1
+  },
+  "configured_production_sampling": {
+    "temperature": 0.6,
+    "top_k": 64,
+    "top_p": 0.9,
+    "min_p": 0.05,
+    "repetition_penalty": 1.1
+  },
+  "configured_defaults_match": true,
+  "production_speculation": {
+    "method": "mtp",
+    "num_speculative_tokens": 2
+  },
+  "published_mtp_guidance": {
+    "vllm_gemma31b_recipe": {
+      "num_speculative_tokens_range": [4, 8],
+      "example_num_speculative_tokens": 4,
+      "tensor_parallel_size": 2,
+      "benchmark_hardware": ["NVIDIA A100", "NVIDIA H100"],
+      "example_max_model_len": 8192,
+      "applicability": "Model-specific starting range; not validated for dual RTX 3090, original GGUF, TQ4 KV, 200k context, or this concurrency. Recipe explicitly recommends hardware-specific experimentation."
+    },
+    "vllm_032_generic_mtp_guide": {
+      "gemma_method": "mtp",
+      "suggested_initial_num_speculative_tokens": 1,
+      "applicability": "Generic conservative starting value, not a measured Gemma31B optimum."
+    },
+    "google_transformers_example": {
+      "num_assistant_tokens": 4,
+      "num_assistant_tokens_schedule": "heuristic",
+      "applicability": "Transformers example; not a recommendation to set vLLM MTP depth to 4."
+    },
+    "author_reddit_scope": "Author supplies llama.cpp MTP activation flags and first-hand speed/stability claims, explicitly tested only with llama.cpp; no draft-token count is recommended in the release post.",
+    "source_audit_decision": "Keep MTP enabled at the existing depth 2. Published values motivate a future controlled depth sweep, not an immediate configuration change or a proven repetition fix."
+  },
+  "native_sampling_inheritance": {
+    "endpoint": "/v1/chat/completions",
+    "endpoint_evidence": "Root and backend_qat verified the captured native-worker wire requests and replay_captured.py:108 use the OpenAI chat-completions endpoint. The separate earlier Anthropic incident is not this ablation.",
+    "verification_method": "Read-only installed-source trace; no runtime request or GPU validation.",
+    "request_fields_reported_by_root": {"temperature": 0.6, "top_p": 0.9},
+    "omitted_fields": ["top_k", "min_p", "repetition_penalty"],
+    "resolved_sampling_given_verified_server_override": {
+      "temperature": 0.6,
+      "top_k": 64,
+      "top_p": 0.9,
+      "min_p": 0.05,
+      "repetition_penalty": 1.1
+    },
+    "trace": [
+      "Captured native-worker requests use ChatCompletionRequest directly; omitted top_k/min_p/repetition_penalty fields default to None.",
+      "ModelConfig.get_diff_sampling_param merges override_generation_config and retains all five sampling fields.",
+      "ChatCompletionRequest.to_sampling_params resolves each field by explicit request, then server default, then neutral default.",
+      "The V2 rejection sampler processes target logits through the regular sampler, including native repetition penalty, temperature, min_p and top-k/top-p."
+    ],
+    "installed_source_root": "/home/isnotreal/vllm-env/lib/python3.12/site-packages/vllm",
+    "installed_source_refs": [
+      "config/model.py:1862-1882",
+      "entrypoints/openai/chat_completion/serving.py:175",
+      "entrypoints/openai/chat_completion/serving.py:360-363",
+      "entrypoints/openai/chat_completion/protocol.py:274-276",
+      "entrypoints/openai/chat_completion/protocol.py:715-728",
+      "entrypoints/openai/chat_completion/protocol.py:753-757",
+      "v1/worker/gpu/sample/sampler.py:64-75",
+      "v1/worker/gpu/sample/sampler.py:254-275",
+      "v1/worker/gpu/sample/penalties.py:51-60",
+      "v1/worker/gpu/spec_decode/rejection_sampler.py:258-267"
+    ],
+    "seed_propagation": "ChatCompletionRequest.to_sampling_params forwards self.seed to SamplingParams. Backend_qat confirmed paired actual-request fixtures add seed 17 identically; the short speed fixture uses seed 20261023."
+  },
+  "installed_tq_mtp_depth_dispatch": {
+    "verification_method": "Read-only installed-source trace; performance consequence not measured here.",
+    "target_verification_query_length": "num_speculative_tokens + 1 when the full draft sequence is scheduled",
+    "prefill_like_condition": "max_query_len > 4 (or num_tokens > 4 * num_seqs when max_query_len is absent)",
+    "split_kv_condition": "use_3d = (not force_2d) and (not is_prefill_like)",
+    "pure_decode_mapping_with_default_force_2d_false": [
+      {"num_speculative_tokens": 1, "query_length": 2, "dispatch": "3D split-KV"},
+      {"num_speculative_tokens": 2, "query_length": 3, "dispatch": "3D split-KV"},
+      {"num_speculative_tokens": 3, "query_length": 4, "dispatch": "3D split-KV"},
+      {"num_speculative_tokens": 4, "query_length": 5, "dispatch": "2D unsplit"},
+      {"num_speculative_tokens": 8, "query_length": 9, "dispatch": "2D unsplit"}
+    ],
+    "mixed_batch_scope": "A prefill with query length above 4 selects the 2D path for the whole unified TQ batch, including shorter MTP verification requests. Native protected layers have their own attention dispatch.",
+    "future_measurement": "Keep MTP on; compare depths 1/2/3 before crossing to 4. Record kernel dispatch, accepted tokens per verification, full mixed-step duration, request inter-token latency and total throughput at actual long contexts. Depth 4 changes both speculative work and TQ attention algorithm, so a speed difference cannot be attributed to drafting depth alone.",
+    "installed_source_root": "/home/isnotreal/vllm-env/lib/python3.12/site-packages/vllm",
+    "installed_source_refs": [
+      "v1/worker/gpu/model_runner.py:273",
+      "v1/worker/gpu/model_runner.py:435-438",
+      "v1/worker/gpu/model_states/interface.py:254-256",
+      "v1/worker/gpu/model_states/default.py:193-195",
+      "v1/worker/gpu/attn_utils.py:532-540",
+      "v1/attention/backends/turboquant_attn.py:307",
+      "v1/attention/backends/turboquant_attn.py:595-622",
+      "v1/attention/ops/turboquant_soa/triton_turboquant_unified_attention.py:1053-1056",
+      "v1/attention/ops/turboquant_soa/triton_turboquant_unified_attention.py:1142-1147"
+    ]
+  },
+  "evidence_limits": [
+    "Author MTP speed claim is a llama.cpp measurement, not a vLLM guarantee.",
+    "Configured defaults can be overridden by individual requests.",
+    "No runtime settings were changed by this source audit.",
+    "This verifies author sampling values and installed inheritance/dispatch paths, not the cause of earlier repetition.",
+    "No official or author setting found in the checked sources establishes a fix for the aged-process repetition on this exact GGUF/TQ4 stack.",
+    "The recipe's historical nightly-only availability note is superseded by Gemma MTP support in the installed v0.32 documentation; it is not an instruction to upgrade.",
+    "Keep original weights, context, KV configuration, batching and frozen plugin unchanged during the existing comparison."
+  ]
+}

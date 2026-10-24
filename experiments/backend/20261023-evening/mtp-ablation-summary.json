@@ -1,0 +1,1714 @@
+{
+  "generated_at": "2026-10-24T00:10:42.944796+00:00",
+  "status": "paired_short_speed_and_long_c4_complete",
+  "controlled_difference": "Remove --speculative-config only",
+  "preserved": {
+    "model": "original Hauhau Q4_K_M GGUF, pinned PR141 plugin",
+    "context": 200000,
+    "tensor_parallel": 2,
+    "kv_dtype": "turboquant_4bit_nc",
+    "kv_bytes": 6442450944,
+    "kv_offload_gib": 80,
+    "max_num_seqs": 16,
+    "max_num_batched_tokens": 4096,
+    "prefix_caching": true,
+    "temperature": 0.6,
+    "top_p": 0.9,
+    "top_k": 64,
+    "min_p": 0.05,
+    "repetition_penalty": 1.1
+  },
+  "isolation": "Both modes use fresh processes on localhost:8002. Batbox and memory are intentionally paused; proxy retries remain on8001. CPU compilation and tests finished before generation.",
+  "speed_method": "C1 and C4 each have one 128-token warmup and two measured 512-token trials, with ignore_eos=true. This is synthetic fixed-output throughput, not live production productivity.",
+  "modes": {
+    "mtp2": {
+      "short_speed": {
+        "1": {
+          "aggregate_tps_mean": 90.61292983031186,
+          "aggregate_tps_trials": [
+            90.4924863500315,
+            90.7333733105922
+          ],
+          "per_request_decode_tps_mean": 93.37586734677478,
+          "ttft_seconds_mean": 0.1760523525008466
+        },
+        "4": {
+          "aggregate_tps_mean": 248.2937526158476,
+          "aggregate_tps_trials": [
+            249.70661000466333,
+            246.88089522703186
+          ],
+          "per_request_decode_tps_mean": 65.37718628653228,
+          "ttft_seconds_mean": 0.2744466155036207
+        }
+      },
+      "quality": [
+        {
+          "id": "facts",
+          "usage": {
+            "prompt_tokens": 55,
+            "total_tokens": 367,
+            "completion_tokens": 312,
+            "completion_tokens_details": {
+              "reasoning_tokens": 237
+            }
+          },
+          "wall_seconds": 2.901007959007984,
+          "first_output_seconds": 0.15538290300173685,
+          "finish_reason": "stop",
+          "payload_sha256": "875968d6122d0a62acd54e43ff3bf64523f8557136f6063b55e1affa12fa2519",
+          "passed": true
+        },
+        {
+          "id": "arithmetic",
+          "usage": {
+            "prompt_tokens": 39,
+            "total_tokens": 654,
+            "completion_tokens": 615,
+            "completion_tokens_details": {
+              "reasoning_tokens": 608
+            }
+          },
+          "wall_seconds": 5.771112115995493,
+          "first_output_seconds": 0.14223825000226498,
+          "finish_reason": "stop",
+          "payload_sha256": "83a4188be16ee588d3bea2b5613aedeac0795717c028cb1188d605c7cbcfbe71",
+          "passed": true
+        },
+        {
+          "id": "constraints",
+          "usage": {
+            "prompt_tokens": 48,
+            "total_tokens": 254,
+            "completion_tokens": 206,
+            "completion_tokens_details": {
+              "reasoning_tokens": 173
+            }
+          },
+          "wall_seconds": 1.9381524400087073,
+          "first_output_seconds": 0.1437356540118344,
+          "finish_reason": "stop",
+          "payload_sha256": "8f8bd5b87f94874ad6762d305896ae01535be18198e376cf2cff417efa6ac715",
+          "passed": true
+        },
+        {
+          "id": "tool_lookup",
+          "usage": {
+            "prompt_tokens": 97,
+            "total_tokens": 243,
+            "completion_tokens": 146,
+            "completion_tokens_details": {
+              "reasoning_tokens": 124
+            }
+          },
+          "wall_seconds": 1.661229199002264,
+          "first_output_seconds": 0.14824536300147884,
+          "finish_reason": "tool_calls",
+          "payload_sha256": "9192169a90c8e820485c7e640d29769e5968c7f43b5b4a331a8cf6de73bde7c7",
+          "passed": true
+        }
+      ],
+      "speed_started_at": "2026-10-23T23:33:10.737340+00:00",
+      "speed_ended_at": "2026-10-23T23:33:54.703704+00:00",
+      "speed_payload_sha256": [
+        "d51e110510e91fc54798e7886cc037444e27344ebb7c0980a4279527876e5de3",
+        "11202b7710b51e20b87189e905b817d4e5724941076babc2ef64e8b747cf35d0",
+        "11202b7710b51e20b87189e905b817d4e5724941076babc2ef64e8b747cf35d0",
+        "365d7fee8ed3f6c95e0cfaf04d2d1313e3f8bedb083a0f38493f830006f8de77",
+        "d4092da563c754789dbfb86236429e2b18a3841c70a70ce6b0f8f9a8c6dd84b2",
+        "d8acc9a299d9ce413959dac6a769da42f9e13e5550e5fbd94c29a53bceb90578",
+        "f375ede6274f44172d689f36bc024f33d7374ebf77ba6b286379a2d7197baf7c",
+        "cb24230e535f9d2dad5d8362e931f2e5f978f0b14e013ce1ca2cd91af1ce22e7",
+        "a4c17d1a82095d5cbcc49eb21a67a070ac3dcba9bbd19c61485c92db4736755f",
+        "4d36cc09b25113292f3d33b94e339e963e09336bfd0c522673926d01bd0b2c08",
+        "6beb11a3ec11b94952441a67282270a5c294aa5bd481c4c85b47d9e39546e037",
+        "cb24230e535f9d2dad5d8362e931f2e5f978f0b14e013ce1ca2cd91af1ce22e7",
+        "a4c17d1a82095d5cbcc49eb21a67a070ac3dcba9bbd19c61485c92db4736755f",
+        "4d36cc09b25113292f3d33b94e339e963e09336bfd0c522673926d01bd0b2c08",
+        "6beb11a3ec11b94952441a67282270a5c294aa5bd481c4c85b47d9e39546e037"
+      ],
+      "real_captured": {
+        "worker": {
+          "started_at": "2026-10-23T23:34:18.175211+00:00",
+          "ended_at": "2026-10-23T23:34:59.643128+00:00",
+          "label": "fresh-mtp2-worker-seed17-identical-payload",
+          "exact_captured_body_replay": true,
+          "capture_body_sha256": "f83604aa7e2e60c5a9d35172bb8e15a08121ab6dbabc71570cf1688c4645f045",
+          "sent_body_sha256": "f83604aa7e2e60c5a9d35172bb8e15a08121ab6dbabc71570cf1688c4645f045",
+          "prompt_tools_sha256": "7bc2d4681b90a17ff943b82b98307fb4c9b354988601c7e922c51aef8c6b4cc0",
+          "override_fields": [],
+          "request_fields": [
+            "cache_salt",
+            "max_tokens",
+            "messages",
+            "model",
+            "seed",
+            "stream",
+            "stream_options",
+            "temperature",
+            "tool_choice",
+            "tools",
+            "top_p"
+          ],
+          "request_sampling": {
+            "temperature": 0.6,
+            "top_p": 0.9,
+            "seed": 17,
+            "max_tokens": 4096
+          },
+          "omitted_sampling_inherits_server": [
+            "top_k",
+            "min_p",
+            "repetition_penalty",
+            "frequency_penalty",
+            "presence_penalty",
+            "max_completion_tokens",
+            "chat_template_kwargs"
+          ],
+          "cache_condition": "inherited",
+          "request_cache_salt_sha256": "81fee280dc1954bf6e62c0340200a4c7704a5facb5c755c594bd082847516e94",
+          "cache_salt_present_in_input": true,
+          "request_ids": [
+            "chatcmpl-b34a16f2d6c98808"
+          ],
+          "first_event_seconds": 27.72297632599657,
+          "first_output_seconds": 27.763559650993557,
+          "wall_seconds": 41.44893752699136,
+          "stream_events": 296,
+          "output_deltas": 294,
+          "finish_reasons": [
+            "tool_calls"
+          ],
+          "stop_condition": "done",
+          "transport_error": null,
+          "usage": {
+            "prompt_tokens": 29465,
+            "total_tokens": 30148,
+            "completion_tokens": 683,
+            "completion_tokens_details": {
+              "reasoning_tokens": 650
+            }
+          },
+          "content_chars": 0,
+          "reasoning_chars": 2462,
+          "content_repetition": {
+            "word_tokens": 0,
+            "same_word_tail": 0,
+            "tail_cycle": {
+              "period_words": 0,
+              "repetitions": 0,
+              "tail_words": 0
+            },
+            "repeated_8gram_fraction": 0
+          },
+          "reasoning_repetition": {
+            "word_tokens": 611,
+            "same_word_tail": 2,
+            "tail_cycle": {
+              "period_words": 0,
+              "repetitions": 0,
+              "tail_words": 0
+            },
+            "repeated_8gram_fraction": 0.038079470198675525
+          },
+          "tools": [
+            {
+              "name": "Read",
+              "argument_chars": 73,
+              "arguments_valid_json_object": true
+            }
+          ],
+          "tools_executed": false,
+          "limits": {
+            "same_word_abort": 256,
+            "deadline_seconds": 1800,
+            "socket_read_seconds": 600
+          },
+          "limitations": [
+            "An early-censored response has no final usage or finish reason.",
+            "Wall timing includes shared-host contention unless isolation is documented.",
+            "Omitted request sampler fields require the separately recorded server defaults."
+          ],
+          "isolated_metrics_delta": {
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:external_prefix_cache_hits_total": 0.0,
+            "vllm:prompt_tokens_total": 29465.0,
+            "vllm:spec_decode_num_draft_tokens_total": 604.0,
+            "vllm:prefix_cache_queries_total": 29465.0,
+            "vllm:spec_decode_num_accepted_tokens_total": 381.0,
+            "vllm:spec_decode_num_drafts_total": 302.0,
+            "vllm:external_prefix_cache_queries_total": 29465.0,
+            "vllm:num_preemptions_total": 0.0,
+            "vllm:generation_tokens_total": 683.0
+          },
+          "prompt_tokens_from_isolated_metrics": 29465.0,
+          "completed_response_decode_tps": 49.834210365219846
+        },
+        "coordinator": {
+          "started_at": "2026-10-23T23:34:59.774413+00:00",
+          "ended_at": "2026-10-23T23:38:28.688348+00:00",
+          "label": "fresh-mtp2-coordinator-seed17-identical-payload",
+          "exact_captured_body_replay": true,
+          "capture_body_sha256": "6d2d36702898f98b5d57dcc9e4b045472a37ce998822ece52bfba767f5357b19",
+          "sent_body_sha256": "6d2d36702898f98b5d57dcc9e4b045472a37ce998822ece52bfba767f5357b19",
+          "prompt_tools_sha256": "9dbe95c3b5f3c4929370c575de2b7af32f253ed9ddf8cb55f5aebdd32e2e1197",
+          "override_fields": [],
+          "request_fields": [
+            "cache_salt",
+            "max_tokens",
+            "messages",
+            "model",
+            "seed",
+            "stream",
+            "stream_options",
+            "temperature",
+            "tool_choice",
+            "tools",
+            "top_p"
+          ],
+          "request_sampling": {
+            "temperature": 0.6,
+            "top_p": 0.9,
+            "seed": 17,
+            "max_tokens": 4096
+          },
+          "omitted_sampling_inherits_server": [
+            "top_k",
+            "min_p",
+            "repetition_penalty",
+            "frequency_penalty",
+            "presence_penalty",
+            "max_completion_tokens",
+            "chat_template_kwargs"
+          ],
+          "cache_condition": "inherited",
+          "request_cache_salt_sha256": "faad0f1d9f35e9b1e559bd64cec3c5071eb1915e431f44ab08d803395f4e1867",
+          "cache_salt_present_in_input": true,
+          "request_ids": [
+            "chatcmpl-ad0addfffbe87067"
+          ],
+          "first_event_seconds": 206.48938352800906,
+          "first_output_seconds": 207.00703919200168,
+          "wall_seconds": 208.90051601199957,
+          "stream_events": 9,
+          "output_deltas": 7,
+          "finish_reasons": [
+            "tool_calls"
+          ],
+          "stop_condition": "done",
+          "transport_error": null,
+          "usage": {
+            "prompt_tokens": 95963,
+            "total_tokens": 96011,
+            "completion_tokens": 48,
+            "completion_tokens_details": {
+              "reasoning_tokens": 2
+            }
+          },
+          "content_chars": 0,
+          "reasoning_chars": 0,
+          "content_repetition": {
+            "word_tokens": 0,
+            "same_word_tail": 0,
+            "tail_cycle": {
+              "period_words": 0,
+              "repetitions": 0,
+              "tail_words": 0
+            },
+            "repeated_8gram_fraction": 0
+          },
+          "reasoning_repetition": {
+            "word_tokens": 0,
+            "same_word_tail": 0,
+            "tail_cycle": {
+              "period_words": 0,
+              "repetitions": 0,
+              "tail_words": 0
+            },
+            "repeated_8gram_fraction": 0
+          },
+          "tools": [
+            {
+              "name": "Bash",
+              "argument_chars": 161,
+              "arguments_valid_json_object": true
+            }
+          ],
+          "tools_executed": false,
+          "limits": {
+            "same_word_abort": 256,
+            "deadline_seconds": 1800,
+            "socket_read_seconds": 600
+          },
+          "limitations": [
+            "An early-censored response has no final usage or finish reason.",
+            "Wall timing includes shared-host contention unless isolation is documented.",
+            "Omitted request sampler fields require the separately recorded server defaults."
+          ],
+          "isolated_metrics_delta": {
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:external_prefix_cache_hits_total": 0.0,
+            "vllm:prompt_tokens_total": 95963.0,
+            "vllm:spec_decode_num_draft_tokens_total": 44.0,
+            "vllm:prefix_cache_queries_total": 95963.0,
+            "vllm:spec_decode_num_accepted_tokens_total": 26.0,
+            "vllm:spec_decode_num_drafts_total": 22.0,
+            "vllm:external_prefix_cache_queries_total": 95963.0,
+            "vllm:num_preemptions_total": 0.0,
+            "vllm:generation_tokens_total": 48.0
+          },
+          "prompt_tokens_from_isolated_metrics": 95963.0,
+          "completed_response_decode_tps": 24.822062516747614
+        }
+      },
+      "c4_long": {
+        "mode": "mtp2",
+        "started_at": "2026-10-23T23:40:19.161665+00:00",
+        "fixture_sha256": "b54b7963b44550a6b62f0ad4885d887eaeaf18adff1f632eec1b6fd0a14b35db",
+        "description": "Four different exact captured native request bodies (coordinator95k, workers29k/61k/49k). Added seed17 and one unique cache salt per case, fixed identically across freshMTP2/no-spec modes. Allfourcold; cross-request common-prefix sharing prevented bydistinctsalts.4096outputbudgets unchanged. No tool execution.",
+        "concurrency": 4,
+        "max_tokens_per_request": 4096,
+        "requests": [
+          {
+            "started_at": "2026-10-23T23:40:19.331108+00:00",
+            "ended_at": "2026-10-23T23:47:32.014246+00:00",
+            "label": "mtp2-coordinator",
+            "exact_captured_body_replay": true,
+            "capture_body_sha256": "a04d7e272d813bfe0a4ead9c6d423f630e7d65e0374100536ecd3547063a5f4c",
+            "sent_body_sha256": "a04d7e272d813bfe0a4ead9c6d423f630e7d65e0374100536ecd3547063a5f4c",
+            "prompt_tools_sha256": "9dbe95c3b5f3c4929370c575de2b7af32f253ed9ddf8cb55f5aebdd32e2e1197",
+            "override_fields": [],
+            "request_fields": [
+              "cache_salt",
+              "max_tokens",
+              "messages",
+              "model",
+              "seed",
+              "stream",
+              "stream_options",
+              "temperature",
+              "tool_choice",
+              "tools",
+              "top_p"
+            ],
+            "request_sampling": {
+              "temperature": 0.6,
+              "top_p": 0.9,
+              "seed": 17,
+              "max_tokens": 4096
+            },
+            "omitted_sampling_inherits_server": [
+              "top_k",
+              "min_p",
+              "repetition_penalty",
+              "frequency_penalty",
+              "presence_penalty",
+              "max_completion_tokens",
+              "chat_template_kwargs"
+            ],
+            "cache_condition": "inherited",
+            "request_cache_salt_sha256": "f7ec79a785c75606e51ca52d5eebc1b0a1d0d13b7804e6a406637d3b4a14febc",
+            "cache_salt_present_in_input": true,
+            "request_ids": [
+              "chatcmpl-8e76a66c3f246eef"
+            ],
+            "first_event_seconds": 410.204036146999,
+            "first_output_seconds": 410.6732660239941,
+            "wall_seconds": 432.6642574120051,
+            "stream_events": 218,
+            "output_deltas": 216,
+            "finish_reasons": [
+              "tool_calls"
+            ],
+            "stop_condition": "done",
+            "transport_error": null,
+            "usage": {
+              "prompt_tokens": 95963,
+              "total_tokens": 96496,
+              "completion_tokens": 533,
+              "completion_tokens_details": {
+                "reasoning_tokens": 488
+              }
+            },
+            "content_chars": 0,
+            "reasoning_chars": 1570,
+            "content_repetition": {
+              "word_tokens": 0,
+              "same_word_tail": 0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              },
+              "repeated_8gram_fraction": 0
+            },
+            "reasoning_repetition": {
+              "word_tokens": 417,
+              "same_word_tail": 1,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              },
+              "repeated_8gram_fraction": 0.11707317073170731
+            },
+            "tools": [
+              {
+                "name": "Bash",
+                "argument_chars": 156,
+                "arguments_valid_json_object": true
+              }
+            ],
+            "tools_executed": false,
+            "limits": {
+              "same_word_abort": 256,
+              "deadline_seconds": 1800,
+              "socket_read_seconds": 600
+            },
+            "limitations": [
+              "An early-censored response has no final usage or finish reason.",
+              "Wall timing includes shared-host contention unless isolation is documented.",
+              "Omitted request sampler fields require the separately recorded server defaults."
+            ],
+            "id": "coordinator",
+            "first_tool_delta_seconds": 431.67395268900145
+          },
+          {
+            "started_at": "2026-10-23T23:40:19.303688+00:00",
+            "ended_at": "2026-10-23T23:47:12.721345+00:00",
+            "label": "mtp2-worker29k",
+            "exact_captured_body_replay": true,
+            "capture_body_sha256": "b321dffd4fd5e61d0c5e38c885eb8b29ef6ddb1c595f39af99747422e4aa8fb7",
+            "sent_body_sha256": "b321dffd4fd5e61d0c5e38c885eb8b29ef6ddb1c595f39af99747422e4aa8fb7",
+            "prompt_tools_sha256": "7bc2d4681b90a17ff943b82b98307fb4c9b354988601c7e922c51aef8c6b4cc0",
+            "override_fields": [],
+            "request_fields": [
+              "cache_salt",
+              "max_tokens",
+              "messages",
+              "model",
+              "seed",
+              "stream",
+              "stream_options",
+              "temperature",
+              "tool_choice",
+              "tools",
+              "top_p"
+            ],
+            "request_sampling": {
+              "temperature": 0.6,
+              "top_p": 0.9,
+              "seed": 17,
+              "max_tokens": 4096
+            },
+            "omitted_sampling_inherits_server": [
+              "top_k",
+              "min_p",
+              "repetition_penalty",
+              "frequency_penalty",
+              "presence_penalty",
+              "max_completion_tokens",
+              "chat_template_kwargs"
+            ],
+            "cache_condition": "inherited",
+            "request_cache_salt_sha256": "cafe86db36af07a3207236af275a1b4759f8f80a0c5d0fd8d8f1a78abbcfbde6",
+            "cache_salt_present_in_input": true,
+            "request_ids": [
+              "chatcmpl-8b9a5d46e639f367"
+            ],
+            "first_event_seconds": 194.7839827590069,
+            "first_output_seconds": 211.36893126599898,
+            "wall_seconds": 413.39890419199946,
+            "stream_events": 5,
+            "output_deltas": 3,
+            "finish_reasons": [
+              "tool_calls"
+            ],
+            "stop_condition": "done",
+            "transport_error": null,
+            "usage": {
+              "prompt_tokens": 29465,
+              "total_tokens": 29564,
+              "completion_tokens": 99,
+              "completion_tokens_details": {
+                "reasoning_tokens": 2
+              }
+            },
+            "content_chars": 0,
+            "reasoning_chars": 0,
+            "content_repetition": {
+              "word_tokens": 0,
+              "same_word_tail": 0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              },
+              "repeated_8gram_fraction": 0
+            },
+            "reasoning_repetition": {
+              "word_tokens": 0,
+              "same_word_tail": 0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              },
+              "repeated_8gram_fraction": 0
+            },
+            "tools": [
+              {
+                "name": "TodoWrite",
+                "argument_chars": 277,
+                "arguments_valid_json_object": true
+              }
+            ],
+            "tools_executed": false,
+            "limits": {
+              "same_word_abort": 256,
+              "deadline_seconds": 1800,
+              "socket_read_seconds": 600
+            },
+            "limitations": [
+              "An early-censored response has no final usage or finish reason.",
+              "Wall timing includes shared-host contention unless isolation is documented.",
+              "Omitted request sampler fields require the separately recorded server defaults."
+            ],
+            "id": "worker29k",
+            "first_tool_delta_seconds": 211.36893126599898
+          },
+          {
+            "started_at": "2026-10-23T23:40:19.282827+00:00",
+            "ended_at": "2026-10-23T23:42:49.271602+00:00",
+            "label": "mtp2-worker61k",
+            "exact_captured_body_replay": true,
+            "capture_body_sha256": "ad3eb2219825e31ff27cd4ae80856390612769e61a4729192ba478b54fc66a68",
+            "sent_body_sha256": "ad3eb2219825e31ff27cd4ae80856390612769e61a4729192ba478b54fc66a68",
+            "prompt_tools_sha256": "bf6aca25c7fb7f8ebf7b74dd5c22266a12cdb0e259f46f25c00724ad258233e2",
+            "override_fields": [],
+            "request_fields": [
+              "cache_salt",
+              "max_tokens",
+              "messages",
+              "model",
+              "seed",
+              "stream",
+              "stream_options",
+              "temperature",
+              "tool_choice",
+              "tools",
+              "top_p"
+            ],
+            "request_sampling": {
+              "temperature": 0.6,
+              "top_p": 0.9,
+              "seed": 17,
+              "max_tokens": 4096
+            },
+            "omitted_sampling_inherits_server": [
+              "top_k",
+              "min_p",
+              "repetition_penalty",
+              "frequency_penalty",
+              "presence_penalty",
+              "max_completion_tokens",
+              "chat_template_kwargs"
+            ],
+            "cache_condition": "inherited",
+            "request_cache_salt_sha256": "22cf6002f440f2933b6014fa82dc35989f83bfa95812ef9538a42aa1ef0e4fde",
+            "cache_salt_present_in_input": true,
+            "request_ids": [
+              "chatcmpl-8cb2611ce2775cea"
+            ],
+            "first_event_seconds": 94.78608412599715,
+            "first_output_seconds": 110.38004534599895,
+            "wall_seconds": 149.9703308189928,
+            "stream_events": 6,
+            "output_deltas": 4,
+            "finish_reasons": [
+              "tool_calls"
+            ],
+            "stop_condition": "done",
+            "transport_error": null,
+            "usage": {
+              "prompt_tokens": 61758,
+              "total_tokens": 61779,
+              "completion_tokens": 21,
+              "completion_tokens_details": {
+                "reasoning_tokens": 2
+              }
+            },
+            "content_chars": 0,
+            "reasoning_chars": 0,
+            "content_repetition": {
+              "word_tokens": 0,
+              "same_word_tail": 0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              },
+              "repeated_8gram_fraction": 0
+            },
+            "reasoning_repetition": {
+              "word_tokens": 0,
+              "same_word_tail": 0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              },
+              "repeated_8gram_fraction": 0
+            },
+            "tools": [
+              {
+                "name": "Glob",
+                "argument_chars": 34,
+                "arguments_valid_json_object": true
+              }
+            ],
+            "tools_executed": false,
+            "limits": {
+              "same_word_abort": 256,
+              "deadline_seconds": 1800,
+              "socket_read_seconds": 600
+            },
+            "limitations": [
+              "An early-censored response has no final usage or finish reason.",
+              "Wall timing includes shared-host contention unless isolation is documented.",
+              "Omitted request sampler fields require the separately recorded server defaults."
+            ],
+            "id": "worker61k",
+            "first_tool_delta_seconds": 110.38004534599895
+          },
+          {
+            "started_at": "2026-10-23T23:40:19.283175+00:00",
+            "ended_at": "2026-10-23T23:47:23.798637+00:00",
+            "label": "mtp2-worker49k",
+            "exact_captured_body_replay": true,
+            "capture_body_sha256": "c2ba582777efdd43acb4d1af6439f0cf0917994a6bb52b0ed3b66456d558ac03",
+            "sent_body_sha256": "c2ba582777efdd43acb4d1af6439f0cf0917994a6bb52b0ed3b66456d558ac03",
+            "prompt_tools_sha256": "09937948723f4b59040981bcde8fcb26710d751904354b9bc84e46248fb58bd7",
+            "override_fields": [],
+            "request_fields": [
+              "cache_salt",
+              "max_tokens",
+              "messages",
+              "model",
+              "seed",
+              "stream",
+              "stream_options",
+              "temperature",
+              "tool_choice",
+              "tools",
+              "top_p"
+            ],
+            "request_sampling": {
+              "temperature": 0.6,
+              "top_p": 0.9,
+              "seed": 17,
+              "max_tokens": 4096
+            },
+            "omitted_sampling_inherits_server": [
+              "top_k",
+              "min_p",
+              "repetition_penalty",
+              "frequency_penalty",
+              "presence_penalty",
+              "max_completion_tokens",
+              "chat_template_kwargs"
+            ],
+            "cache_condition": "inherited",
+            "request_cache_salt_sha256": "47ecb0f9a97cbdd6e49939aca4f79ce3284bab64ee83e90983dd9b372654f8a4",
+            "cache_salt_present_in_input": true,
+            "request_ids": [
+              "chatcmpl-b73782d58fa53e92"
+            ],
+            "first_event_seconds": 162.82310826100002,
+            "first_output_seconds": 166.35333126700425,
+            "wall_seconds": 424.49515745100507,
+            "stream_events": 140,
+            "output_deltas": 138,
+            "finish_reasons": [
+              "tool_calls"
+            ],
+            "stop_condition": "done",
+            "transport_error": null,
+            "usage": {
+              "prompt_tokens": 49144,
+              "total_tokens": 49500,
+              "completion_tokens": 356,
+              "completion_tokens_details": {
+                "reasoning_tokens": 318
+              }
+            },
+            "content_chars": 0,
+            "reasoning_chars": 1208,
+            "content_repetition": {
+              "word_tokens": 0,
+              "same_word_tail": 0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              },
+              "repeated_8gram_fraction": 0
+            },
+            "reasoning_repetition": {
+              "word_tokens": 281,
+              "same_word_tail": 1,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              },
+              "repeated_8gram_fraction": 0.010948905109489093
+            },
+            "tools": [
+              {
+                "name": "Read",
+                "argument_chars": 81,
+                "arguments_valid_json_object": true
+              }
+            ],
+            "tools_executed": false,
+            "limits": {
+              "same_word_abort": 256,
+              "deadline_seconds": 1800,
+              "socket_read_seconds": 600
+            },
+            "limitations": [
+              "An early-censored response has no final usage or finish reason.",
+              "Wall timing includes shared-host contention unless isolation is documented.",
+              "Omitted request sampler fields require the separately recorded server defaults."
+            ],
+            "id": "worker49k",
+            "first_tool_delta_seconds": 423.47948757300037
+          }
+        ],
+        "tools_executed": false,
+        "wall_seconds": 432.88508016099513,
+        "ended_at": "2026-10-23T23:47:32.046810+00:00",
+        "metrics_delta": {
+          "vllm:num_preemptions_total": 0.0,
+          "vllm:prefix_cache_queries_total": 236330.0,
+          "vllm:external_prefix_cache_queries_total": 236330.0,
+          "vllm:kv_offload_store_bytes_total": 7441336320.0,
+          "vllm:generation_tokens_total": 1009.0,
+          "vllm:kv_offload_store_time_total": 1.1311674833297733,
+          "vllm:prefix_cache_hits_total": 0.0,
+          "vllm:spec_decode_num_draft_tokens_total": 862.0,
+          "vllm:spec_decode_num_drafts_total": 431.0,
+          "vllm:spec_decode_num_accepted_tokens_total": 576.0,
+          "vllm:prompt_tokens_total": 236330.0,
+          "vllm:external_prefix_cache_hits_total": 0.0
+        },
+        "completed_response_tokens": 1009,
+        "completed_response_aggregate_tps_including_prefill": 2.330872663998355,
+        "all_final_usage_available": true,
+        "draft_acceptance": 0.6682134570765661,
+        "limitations": [
+          "Cold-prefill elapsed time is included in aggregate throughput.",
+          "Different output lengths make real-task token throughput descriptive, not fixed-work speedup.",
+          "Early-censored loops have no final usage; metrics may include tokens generated just before disconnect."
+        ]
+      },
+      "quality_counts": {
+        "short_exact_answers_passed": 4,
+        "short_exact_answers_total": 4,
+        "real_c4_requests": 4,
+        "real_c4_completed_with_valid_tool_json": 4,
+        "real_c4_repetition_aborts": 0
+      }
+    },
+    "off": {
+      "short_speed": {
+        "1": {
+          "aggregate_tps_mean": 49.25211035307416,
+          "aggregate_tps_trials": [
+            49.41446848186771,
+            49.08975222428061
+          ],
+          "per_request_decode_tps_mean": 49.91492060891883,
+          "ttft_seconds_mean": 0.15667971500079148
+        },
+        "4": {
+          "aggregate_tps_mean": 128.48147311544668,
+          "aggregate_tps_trials": [
+            130.01572964583514,
+            126.94721658505821
+          ],
+          "per_request_decode_tps_mean": 32.67944137832488,
+          "ttft_seconds_mean": 0.2837568216273212
+        }
+      },
+      "quality": [
+        {
+          "id": "facts",
+          "usage": {
+            "prompt_tokens": 55,
+            "total_tokens": 367,
+            "completion_tokens": 312,
+            "completion_tokens_details": {
+              "reasoning_tokens": 237
+            }
+          },
+          "wall_seconds": 6.400228323007468,
+          "first_output_seconds": 0.1617906940082321,
+          "finish_reason": "stop",
+          "payload_sha256": "875968d6122d0a62acd54e43ff3bf64523f8557136f6063b55e1affa12fa2519",
+          "passed": true
+        },
+        {
+          "id": "arithmetic",
+          "usage": {
+            "prompt_tokens": 39,
+            "total_tokens": 437,
+            "completion_tokens": 398,
+            "completion_tokens_details": {
+              "reasoning_tokens": 391
+            }
+          },
+          "wall_seconds": 8.169472787005361,
+          "first_output_seconds": 0.16812104200653266,
+          "finish_reason": "stop",
+          "payload_sha256": "83a4188be16ee588d3bea2b5613aedeac0795717c028cb1188d605c7cbcfbe71",
+          "passed": true
+        },
+        {
+          "id": "constraints",
+          "usage": {
+            "prompt_tokens": 48,
+            "total_tokens": 237,
+            "completion_tokens": 189,
+            "completion_tokens_details": {
+              "reasoning_tokens": 156
+            }
+          },
+          "wall_seconds": 3.93383114199969,
+          "first_output_seconds": 0.16733384199324064,
+          "finish_reason": "stop",
+          "payload_sha256": "8f8bd5b87f94874ad6762d305896ae01535be18198e376cf2cff417efa6ac715",
+          "passed": true
+        },
+        {
+          "id": "tool_lookup",
+          "usage": {
+            "prompt_tokens": 97,
+            "total_tokens": 248,
+            "completion_tokens": 151,
+            "completion_tokens_details": {
+              "reasoning_tokens": 129
+            }
+          },
+          "wall_seconds": 3.2091349140100647,
+          "first_output_seconds": 0.18076847601332702,
+          "finish_reason": "tool_calls",
+          "payload_sha256": "9192169a90c8e820485c7e640d29769e5968c7f43b5b4a331a8cf6de73bde7c7",
+          "passed": true
+        }
+      ],
+      "speed_started_at": "2026-10-23T23:52:01.268334+00:00",
+      "speed_ended_at": "2026-10-23T23:53:22.616087+00:00",
+      "speed_payload_sha256": [
+        "d51e110510e91fc54798e7886cc037444e27344ebb7c0980a4279527876e5de3",
+        "11202b7710b51e20b87189e905b817d4e5724941076babc2ef64e8b747cf35d0",
+        "11202b7710b51e20b87189e905b817d4e5724941076babc2ef64e8b747cf35d0",
+        "365d7fee8ed3f6c95e0cfaf04d2d1313e3f8bedb083a0f38493f830006f8de77",
+        "d4092da563c754789dbfb86236429e2b18a3841c70a70ce6b0f8f9a8c6dd84b2",
+        "d8acc9a299d9ce413959dac6a769da42f9e13e5550e5fbd94c29a53bceb90578",
+        "f375ede6274f44172d689f36bc024f33d7374ebf77ba6b286379a2d7197baf7c",
+        "cb24230e535f9d2dad5d8362e931f2e5f978f0b14e013ce1ca2cd91af1ce22e7",
+        "a4c17d1a82095d5cbcc49eb21a67a070ac3dcba9bbd19c61485c92db4736755f",
+        "4d36cc09b25113292f3d33b94e339e963e09336bfd0c522673926d01bd0b2c08",
+        "6beb11a3ec11b94952441a67282270a5c294aa5bd481c4c85b47d9e39546e037",
+        "cb24230e535f9d2dad5d8362e931f2e5f978f0b14e013ce1ca2cd91af1ce22e7",
+        "a4c17d1a82095d5cbcc49eb21a67a070ac3dcba9bbd19c61485c92db4736755f",
+        "4d36cc09b25113292f3d33b94e339e963e09336bfd0c522673926d01bd0b2c08",
+        "6beb11a3ec11b94952441a67282270a5c294aa5bd481c4c85b47d9e39546e037"
+      ],
+      "real_captured": {
+        "worker": {
+          "started_at": "2026-10-23T23:53:50.199789+00:00",
+          "ended_at": "2026-10-23T23:54:39.110234+00:00",
+          "label": "fresh-no-spec-worker-seed17-identical-payload",
+          "exact_captured_body_replay": true,
+          "capture_body_sha256": "f83604aa7e2e60c5a9d35172bb8e15a08121ab6dbabc71570cf1688c4645f045",
+          "sent_body_sha256": "f83604aa7e2e60c5a9d35172bb8e15a08121ab6dbabc71570cf1688c4645f045",
+          "prompt_tools_sha256": "7bc2d4681b90a17ff943b82b98307fb4c9b354988601c7e922c51aef8c6b4cc0",
+          "override_fields": [],
+          "request_fields": [
+            "cache_salt",
+            "max_tokens",
+            "messages",
+            "model",
+            "seed",
+            "stream",
+            "stream_options",
+            "temperature",
+            "tool_choice",
+            "tools",
+            "top_p"
+          ],
+          "request_sampling": {
+            "temperature": 0.6,
+            "top_p": 0.9,
+            "seed": 17,
+            "max_tokens": 4096
+          },
+          "omitted_sampling_inherits_server": [
+            "top_k",
+            "min_p",
+            "repetition_penalty",
+            "frequency_penalty",
+            "presence_penalty",
+            "max_completion_tokens",
+            "chat_template_kwargs"
+          ],
+          "cache_condition": "inherited",
+          "request_cache_salt_sha256": "81fee280dc1954bf6e62c0340200a4c7704a5facb5c755c594bd082847516e94",
+          "cache_salt_present_in_input": true,
+          "request_ids": [
+            "chatcmpl-ab97ed36876b6e11"
+          ],
+          "first_event_seconds": 26.954996273998404,
+          "first_output_seconds": 26.990147528995294,
+          "wall_seconds": 48.90393421398767,
+          "stream_events": 652,
+          "output_deltas": 649,
+          "finish_reasons": [
+            "tool_calls"
+          ],
+          "stop_condition": "done",
+          "transport_error": null,
+          "usage": {
+            "prompt_tokens": 29465,
+            "total_tokens": 30171,
+            "completion_tokens": 706,
+            "completion_tokens_details": {
+              "reasoning_tokens": 673
+            }
+          },
+          "content_chars": 0,
+          "reasoning_chars": 2368,
+          "content_repetition": {
+            "word_tokens": 0,
+            "same_word_tail": 0,
+            "tail_cycle": {
+              "period_words": 0,
+              "repetitions": 0,
+              "tail_words": 0
+            },
+            "repeated_8gram_fraction": 0
+          },
+          "reasoning_repetition": {
+            "word_tokens": 645,
+            "same_word_tail": 1,
+            "tail_cycle": {
+              "period_words": 0,
+              "repetitions": 0,
+              "tail_words": 0
+            },
+            "repeated_8gram_fraction": 0.047021943573667735
+          },
+          "tools": [
+            {
+              "name": "Read",
+              "argument_chars": 73,
+              "arguments_valid_json_object": true
+            }
+          ],
+          "tools_executed": false,
+          "limits": {
+            "same_word_abort": 256,
+            "deadline_seconds": 1800,
+            "socket_read_seconds": 600
+          },
+          "limitations": [
+            "An early-censored response has no final usage or finish reason.",
+            "Wall timing includes shared-host contention unless isolation is documented.",
+            "Omitted request sampler fields require the separately recorded server defaults."
+          ],
+          "isolated_metrics_delta": {
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:external_prefix_cache_hits_total": 0.0,
+            "vllm:prompt_tokens_total": 29465.0,
+            "vllm:prefix_cache_queries_total": 29465.0,
+            "vllm:external_prefix_cache_queries_total": 29465.0,
+            "vllm:num_preemptions_total": 0.0,
+            "vllm:generation_tokens_total": 706.0
+          },
+          "prompt_tokens_from_isolated_metrics": 29465.0,
+          "completed_response_decode_tps": 32.17152791228082
+        },
+        "coordinator": {
+          "started_at": "2026-10-23T23:54:39.212952+00:00",
+          "ended_at": "2026-10-23T23:58:02.917667+00:00",
+          "label": "fresh-no-spec-coordinator-seed17-identical-payload",
+          "exact_captured_body_replay": true,
+          "capture_body_sha256": "6d2d36702898f98b5d57dcc9e4b045472a37ce998822ece52bfba767f5357b19",
+          "sent_body_sha256": "6d2d36702898f98b5d57dcc9e4b045472a37ce998822ece52bfba767f5357b19",
+          "prompt_tools_sha256": "9dbe95c3b5f3c4929370c575de2b7af32f253ed9ddf8cb55f5aebdd32e2e1197",
+          "override_fields": [],
+          "request_fields": [
+            "cache_salt",
+            "max_tokens",
+            "messages",
+            "model",
+            "seed",
+            "stream",
+            "stream_options",
+            "temperature",
+            "tool_choice",
+            "tools",
+            "top_p"
+          ],
+          "request_sampling": {
+            "temperature": 0.6,
+            "top_p": 0.9,
+            "seed": 17,
+            "max_tokens": 4096
+          },
+          "omitted_sampling_inherits_server": [
+            "top_k",
+            "min_p",
+            "repetition_penalty",
+            "frequency_penalty",
+            "presence_penalty",
+            "max_completion_tokens",
+            "chat_template_kwargs"
+          ],
+          "cache_condition": "inherited",
+          "request_cache_salt_sha256": "faad0f1d9f35e9b1e559bd64cec3c5071eb1915e431f44ab08d803395f4e1867",
+          "cache_salt_present_in_input": true,
+          "request_ids": [
+            "chatcmpl-8d949030a35e2317"
+          ],
+          "first_event_seconds": 200.93510878199595,
+          "first_output_seconds": 201.2201762439945,
+          "wall_seconds": 203.68443191399274,
+          "stream_events": 10,
+          "output_deltas": 7,
+          "finish_reasons": [
+            "tool_calls"
+          ],
+          "stop_condition": "done",
+          "transport_error": null,
+          "usage": {
+            "prompt_tokens": 95963,
+            "total_tokens": 96011,
+            "completion_tokens": 48,
+            "completion_tokens_details": {
+              "reasoning_tokens": 2
+            }
+          },
+          "content_chars": 0,
+          "reasoning_chars": 0,
+          "content_repetition": {
+            "word_tokens": 0,
+            "same_word_tail": 0,
+            "tail_cycle": {
+              "period_words": 0,
+              "repetitions": 0,
+              "tail_words": 0
+            },
+            "repeated_8gram_fraction": 0
+          },
+          "reasoning_repetition": {
+            "word_tokens": 0,
+            "same_word_tail": 0,
+            "tail_cycle": {
+              "period_words": 0,
+              "repetitions": 0,
+              "tail_words": 0
+            },
+            "repeated_8gram_fraction": 0
+          },
+          "tools": [
+            {
+              "name": "Bash",
+              "argument_chars": 161,
+              "arguments_valid_json_object": true
+            }
+          ],
+          "tools_executed": false,
+          "limits": {
+            "same_word_abort": 256,
+            "deadline_seconds": 1800,
+            "socket_read_seconds": 600
+          },
+          "limitations": [
+            "An early-censored response has no final usage or finish reason.",
+            "Wall timing includes shared-host contention unless isolation is documented.",
+            "Omitted request sampler fields require the separately recorded server defaults."
+          ],
+          "isolated_metrics_delta": {
+            "vllm:prefix_cache_hits_total": 0.0,
+            "vllm:external_prefix_cache_hits_total": 0.0,
+            "vllm:prompt_tokens_total": 95963.0,
+            "vllm:prefix_cache_queries_total": 95963.0,
+            "vllm:external_prefix_cache_queries_total": 95963.0,
+            "vllm:num_preemptions_total": 0.0,
+            "vllm:generation_tokens_total": 48.0
+          },
+          "prompt_tokens_from_isolated_metrics": 95963.0,
+          "completed_response_decode_tps": 19.072696300231545
+        }
+      },
+      "c4_long": {
+        "mode": "off",
+        "started_at": "2026-10-23T23:58:03.041607+00:00",
+        "fixture_sha256": "b54b7963b44550a6b62f0ad4885d887eaeaf18adff1f632eec1b6fd0a14b35db",
+        "description": "Four different exact captured native request bodies (coordinator95k, workers29k/61k/49k). Added seed17 and one unique cache salt per case, fixed identically across freshMTP2/no-spec modes. Allfourcold; cross-request common-prefix sharing prevented bydistinctsalts.4096outputbudgets unchanged. No tool execution.",
+        "concurrency": 4,
+        "max_tokens_per_request": 4096,
+        "requests": [
+          {
+            "started_at": "2026-10-23T23:58:03.196905+00:00",
+            "ended_at": "2026-10-24T00:05:06.818019+00:00",
+            "label": "off-coordinator",
+            "exact_captured_body_replay": true,
+            "capture_body_sha256": "a04d7e272d813bfe0a4ead9c6d423f630e7d65e0374100536ecd3547063a5f4c",
+            "sent_body_sha256": "a04d7e272d813bfe0a4ead9c6d423f630e7d65e0374100536ecd3547063a5f4c",
+            "prompt_tools_sha256": "9dbe95c3b5f3c4929370c575de2b7af32f253ed9ddf8cb55f5aebdd32e2e1197",
+            "override_fields": [],
+            "request_fields": [
+              "cache_salt",
+              "max_tokens",
+              "messages",
+              "model",
+              "seed",
+              "stream",
+              "stream_options",
+              "temperature",
+              "tool_choice",
+              "tools",
+              "top_p"
+            ],
+            "request_sampling": {
+              "temperature": 0.6,
+              "top_p": 0.9,
+              "seed": 17,
+              "max_tokens": 4096
+            },
+            "omitted_sampling_inherits_server": [
+              "top_k",
+              "min_p",
+              "repetition_penalty",
+              "frequency_penalty",
+              "presence_penalty",
+              "max_completion_tokens",
+              "chat_template_kwargs"
+            ],
+            "cache_condition": "inherited",
+            "request_cache_salt_sha256": "f7ec79a785c75606e51ca52d5eebc1b0a1d0d13b7804e6a406637d3b4a14febc",
+            "cache_salt_present_in_input": true,
+            "request_ids": [
+              "chatcmpl-aaa6f5a3a26fc3f6"
+            ],
+            "first_event_seconds": 419.02308958099457,
+            "first_output_seconds": 419.94637965699076,
+            "wall_seconds": 423.6059588509961,
+            "stream_events": 9,
+            "output_deltas": 6,
+            "finish_reasons": [
+              "tool_calls"
+            ],
+            "stop_condition": "done",
+            "transport_error": null,
+            "usage": {
+              "prompt_tokens": 95963,
+              "total_tokens": 96011,
+              "completion_tokens": 48,
+              "completion_tokens_details": {
+                "reasoning_tokens": 2
+              }
+            },
+            "content_chars": 0,
+            "reasoning_chars": 0,
+            "content_repetition": {
+              "word_tokens": 0,
+              "same_word_tail": 0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              },
+              "repeated_8gram_fraction": 0
+            },
+            "reasoning_repetition": {
+              "word_tokens": 0,
+              "same_word_tail": 0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              },
+              "repeated_8gram_fraction": 0
+            },
+            "tools": [
+              {
+                "name": "Bash",
+                "argument_chars": 148,
+                "arguments_valid_json_object": true
+              }
+            ],
+            "tools_executed": false,
+            "limits": {
+              "same_word_abort": 256,
+              "deadline_seconds": 1800,
+              "socket_read_seconds": 600
+            },
+            "limitations": [
+              "An early-censored response has no final usage or finish reason.",
+              "Wall timing includes shared-host contention unless isolation is documented.",
+              "Omitted request sampler fields require the separately recorded server defaults."
+            ],
+            "id": "coordinator",
+            "first_tool_delta_seconds": 419.94637965699076
+          },
+          {
+            "started_at": "2026-10-23T23:58:03.151802+00:00",
+            "ended_at": "2026-10-24T00:05:15.577888+00:00",
+            "label": "off-worker29k",
+            "exact_captured_body_replay": true,
+            "capture_body_sha256": "b321dffd4fd5e61d0c5e38c885eb8b29ef6ddb1c595f39af99747422e4aa8fb7",
+            "sent_body_sha256": "b321dffd4fd5e61d0c5e38c885eb8b29ef6ddb1c595f39af99747422e4aa8fb7",
+            "prompt_tools_sha256": "7bc2d4681b90a17ff943b82b98307fb4c9b354988601c7e922c51aef8c6b4cc0",
+            "override_fields": [],
+            "request_fields": [
+              "cache_salt",
+              "max_tokens",
+              "messages",
+              "model",
+              "seed",
+              "stream",
+              "stream_options",
+              "temperature",
+              "tool_choice",
+              "tools",
+              "top_p"
+            ],
+            "request_sampling": {
+              "temperature": 0.6,
+              "top_p": 0.9,
+              "seed": 17,
+              "max_tokens": 4096
+            },
+            "omitted_sampling_inherits_server": [
+              "top_k",
+              "min_p",
+              "repetition_penalty",
+              "frequency_penalty",
+              "presence_penalty",
+              "max_completion_tokens",
+              "chat_template_kwargs"
+            ],
+            "cache_condition": "inherited",
+            "request_cache_salt_sha256": "cafe86db36af07a3207236af275a1b4759f8f80a0c5d0fd8d8f1a78abbcfbde6",
+            "cache_salt_present_in_input": true,
+            "request_ids": [
+              "chatcmpl-ad2493cfb240920b"
+            ],
+            "first_event_seconds": 207.922667937004,
+            "first_output_seconds": 219.53394166099315,
+            "wall_seconds": 432.40705907599477,
+            "stream_events": 257,
+            "output_deltas": 256,
+            "finish_reasons": [],
+            "stop_condition": "early_censored_clear_repetition",
+            "transport_error": null,
+            "usage": {},
+            "content_chars": 0,
+            "reasoning_chars": 1024,
+            "content_repetition": {
+              "word_tokens": 0,
+              "same_word_tail": 0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              },
+              "repeated_8gram_fraction": 0
+            },
+            "reasoning_repetition": {
+              "word_tokens": 256,
+              "same_word_tail": 256,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 256,
+                "tail_words": 256
+              },
+              "repeated_8gram_fraction": 0.9959839357429718
+            },
+            "tools": [],
+            "tools_executed": false,
+            "limits": {
+              "same_word_abort": 256,
+              "deadline_seconds": 1800,
+              "socket_read_seconds": 600
+            },
+            "limitations": [
+              "An early-censored response has no final usage or finish reason.",
+              "Wall timing includes shared-host contention unless isolation is documented.",
+              "Omitted request sampler fields require the separately recorded server defaults."
+            ],
+            "id": "worker29k",
+            "first_tool_delta_seconds": null
+          },
+          {
+            "started_at": "2026-10-23T23:58:03.134130+00:00",
+            "ended_at": "2026-10-24T00:01:34.650169+00:00",
+            "label": "off-worker61k",
+            "exact_captured_body_replay": true,
+            "capture_body_sha256": "ad3eb2219825e31ff27cd4ae80856390612769e61a4729192ba478b54fc66a68",
+            "sent_body_sha256": "ad3eb2219825e31ff27cd4ae80856390612769e61a4729192ba478b54fc66a68",
+            "prompt_tools_sha256": "bf6aca25c7fb7f8ebf7b74dd5c22266a12cdb0e259f46f25c00724ad258233e2",
+            "override_fields": [],
+            "request_fields": [
+              "cache_salt",
+              "max_tokens",
+              "messages",
+              "model",
+              "seed",
+              "stream",
+              "stream_options",
+              "temperature",
+              "tool_choice",
+              "tools",
+              "top_p"
+            ],
+            "request_sampling": {
+              "temperature": 0.6,
+              "top_p": 0.9,
+              "seed": 17,
+              "max_tokens": 4096
+            },
+            "omitted_sampling_inherits_server": [
+              "top_k",
+              "min_p",
+              "repetition_penalty",
+              "frequency_penalty",
+              "presence_penalty",
+              "max_completion_tokens",
+              "chat_template_kwargs"
+            ],
+            "cache_condition": "inherited",
+            "request_cache_salt_sha256": "22cf6002f440f2933b6014fa82dc35989f83bfa95812ef9538a42aa1ef0e4fde",
+            "cache_salt_present_in_input": true,
+            "request_ids": [
+              "chatcmpl-bb6b1918dc156412"
+            ],
+            "first_event_seconds": 104.10556457300845,
+            "first_output_seconds": 154.0516434070014,
+            "wall_seconds": 211.4968277440057,
+            "stream_events": 7,
+            "output_deltas": 4,
+            "finish_reasons": [
+              "tool_calls"
+            ],
+            "stop_condition": "done",
+            "transport_error": null,
+            "usage": {
+              "prompt_tokens": 61758,
+              "total_tokens": 61779,
+              "completion_tokens": 21,
+              "completion_tokens_details": {
+                "reasoning_tokens": 2
+              }
+            },
+            "content_chars": 0,
+            "reasoning_chars": 0,
+            "content_repetition": {
+              "word_tokens": 0,
+              "same_word_tail": 0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              },
+              "repeated_8gram_fraction": 0
+            },
+            "reasoning_repetition": {
+              "word_tokens": 0,
+              "same_word_tail": 0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              },
+              "repeated_8gram_fraction": 0
+            },
+            "tools": [
+              {
+                "name": "Glob",
+                "argument_chars": 34,
+                "arguments_valid_json_object": true
+              }
+            ],
+            "tools_executed": false,
+            "limits": {
+              "same_word_abort": 256,
+              "deadline_seconds": 1800,
+              "socket_read_seconds": 600
+            },
+            "limitations": [
+              "An early-censored response has no final usage or finish reason.",
+              "Wall timing includes shared-host contention unless isolation is documented.",
+              "Omitted request sampler fields require the separately recorded server defaults."
+            ],
+            "id": "worker61k",
+            "first_tool_delta_seconds": 154.0516434070014
+          },
+          {
+            "started_at": "2026-10-23T23:58:03.147806+00:00",
+            "ended_at": "2026-10-24T00:05:15.335279+00:00",
+            "label": "off-worker49k",
+            "exact_captured_body_replay": true,
+            "capture_body_sha256": "c2ba582777efdd43acb4d1af6439f0cf0917994a6bb52b0ed3b66456d558ac03",
+            "sent_body_sha256": "c2ba582777efdd43acb4d1af6439f0cf0917994a6bb52b0ed3b66456d558ac03",
+            "prompt_tools_sha256": "09937948723f4b59040981bcde8fcb26710d751904354b9bc84e46248fb58bd7",
+            "override_fields": [],
+            "request_fields": [
+              "cache_salt",
+              "max_tokens",
+              "messages",
+              "model",
+              "seed",
+              "stream",
+              "stream_options",
+              "temperature",
+              "tool_choice",
+              "tools",
+              "top_p"
+            ],
+            "request_sampling": {
+              "temperature": 0.6,
+              "top_p": 0.9,
+              "seed": 17,
+              "max_tokens": 4096
+            },
+            "omitted_sampling_inherits_server": [
+              "top_k",
+              "min_p",
+              "repetition_penalty",
+              "frequency_penalty",
+              "presence_penalty",
+              "max_completion_tokens",
+              "chat_template_kwargs"
+            ],
+            "cache_condition": "inherited",
+            "request_cache_salt_sha256": "47ecb0f9a97cbdd6e49939aca4f79ce3284bab64ee83e90983dd9b372654f8a4",
+            "cache_salt_present_in_input": true,
+            "request_ids": [
+              "chatcmpl-94401de0b2fab607"
+            ],
+            "first_event_seconds": 175.1365319960023,
+            "first_output_seconds": 187.48495065100724,
+            "wall_seconds": 432.1682158619951,
+            "stream_events": 257,
+            "output_deltas": 256,
+            "finish_reasons": [],
+            "stop_condition": "early_censored_clear_repetition",
+            "transport_error": null,
+            "usage": {},
+            "content_chars": 0,
+            "reasoning_chars": 1024,
+            "content_repetition": {
+              "word_tokens": 0,
+              "same_word_tail": 0,
+              "tail_cycle": {
+                "period_words": 0,
+                "repetitions": 0,
+                "tail_words": 0
+              },
+              "repeated_8gram_fraction": 0
+            },
+            "reasoning_repetition": {
+              "word_tokens": 256,
+              "same_word_tail": 256,
+              "tail_cycle": {
+                "period_words": 1,
+                "repetitions": 256,
+                "tail_words": 256
+              },
+              "repeated_8gram_fraction": 0.9959839357429718
+            },
+            "tools": [],
+            "tools_executed": false,
+            "limits": {
+              "same_word_abort": 256,
+              "deadline_seconds": 1800,
+              "socket_read_seconds": 600
+            },
+            "limitations": [
+              "An early-censored response has no final usage or finish reason.",
+              "Wall timing includes shared-host contention unless isolation is documented.",
+              "Omitted request sampler fields require the separately recorded server defaults."
+            ],
+            "id": "worker49k",
+            "first_tool_delta_seconds": null
+          }
+        ],
+        "tools_executed": false,
+        "wall_seconds": 432.55562168399047,
+        "ended_at": "2026-10-24T00:05:15.597280+00:00",
+        "metrics_delta": {
+          "vllm:external_prefix_cache_queries_total": 236330.0,
+          "vllm:kv_offload_store_time_total": 1.129543164730072,
+          "vllm:num_preemptions_total": 0.0,
+          "vllm:prompt_tokens_total": 236330.0,
+          "vllm:external_prefix_cache_hits_total": 0.0,
+          "vllm:prefix_cache_hits_total": 0.0,
+          "vllm:prefix_cache_queries_total": 236330.0,
+          "vllm:kv_offload_store_bytes_total": 7441336320.0,
+          "vllm:generation_tokens_total": 587.0
+        },
+        "completed_response_tokens": 69,
+        "completed_response_aggregate_tps_including_prefill": 0.15951705755522214,
+        "all_final_usage_available": false,
+        "draft_acceptance": null,
+        "limitations": [
+          "Cold-prefill elapsed time is included in aggregate throughput.",
+          "Different output lengths make real-task token throughput descriptive, not fixed-work speedup.",
+          "Early-censored loops have no final usage; metrics may include tokens generated just before disconnect."
+        ]
+      },
+      "quality_counts": {
+        "short_exact_answers_passed": 4,
+        "short_exact_answers_total": 4,
+        "real_c4_requests": 4,
+        "real_c4_completed_with_valid_tool_json": 2,
+        "real_c4_repetition_aborts": 2
+      }
+    }
+  },
+  "comparison": {
+    "1": {
+      "mtp2_aggregate_tps": 90.61292983031186,
+      "off_aggregate_tps": 49.25211035307416,
+      "mtp2_throughput_gain_percent_vs_off": 83.97776091366222,
+      "disabling_mtp_throughput_change_percent_vs_on": -45.6456043907783
+    },
+    "4": {
+      "mtp2_aggregate_tps": 248.2937526158476,
+      "off_aggregate_tps": 128.48147311544668,
+      "mtp2_throughput_gain_percent_vs_off": 93.25257299372956,
+      "disabling_mtp_throughput_change_percent_vs_on": -48.254246527809656
+    }
+  },
+  "limitations": [
+    "Two measured short-speed trials per concurrency; no formal confidence interval.",
+    "Identical seeds do not force identical sampled text across speculative decoding algorithms.",
+    "Captured requests retain max_tokens=4096; clear loops abort after 256 identical tail words or512 tokens in a repeated cycle.",
+    "Returned tools are inspected but never executed; valid tool JSON alone is not semantic correctness.",
+    "Fresh-process results do not establish the cause of repetition in the long-running production process.",
+    "The concurrent real requests can have different admission timing and output lengths; their aggregate rates are not fixed-work speedup estimates.",
+    "Startup durations are not a controlled performance comparison: the initial MTP2 startup overlapped CPU builds and fixture tests."
+  ],
+  "identical_speed_payloads": true,
+  "identical_c4_long_fixture": true,
+  "conclusions": [
+    "MTP2 increased fixed-output throughput by about84% at C1 and93% aggregate at C4 in this configuration.",
+    "Both modes passed the four short exact-answer/tool checks and the standalone29k/95k captured requests.",
+    "The matched cold C4 batch returned valid tool JSON for4/4 requests with MTP2. Without speculation,2/4 completed and2/4 entered clear reasoning-channel repetition loops.",
+    "The two no-spec failures each emitted256 consecutive copies of our and were censored early. Their final usage is unavailable; completed-response token totals exclude those loops.",
+    "No-spec cold C4 had zero local/external prefix hits and zero preemptions, with stores but no offload-load counter. MTP, prefix hits and CPU KV restoration are not necessary for this observed batch failure.",
+    "This does not prove which kernel or state mechanism caused the failure, or that MTP2 prevents future loops.",
+    "User explicitly requested MTP remain enabled. Production restoration is tracked separately."
+  ],
+  "no_spec_loop_metadata": [
+    {
+      "case": "worker29k",
+      "stop_condition": "early_censored_clear_repetition",
+      "request_ids": [
+        "chatcmpl-ad2493cfb240920b"
+      ],
+      "first_output_seconds": 219.53394166099315,
+      "wall_seconds": 432.40705907599477,
+      "channels": {
+        "content": {
+          "chars": 0,
+          "word_count": 0,
+          "most_common": [],
+          "repetition": {
+            "word_tokens": 0,
+            "same_word_tail": 0,
+            "tail_cycle": {
+              "period_words": 0,
+              "repetitions": 0,
+              "tail_words": 0
+            },
+            "repeated_8gram_fraction": 0
+          }
+        },
+        "reasoning": {
+          "chars": 1024,
+          "word_count": 256,
+          "most_common": [
+            [
+              "our",
+              256
+            ]
+          ],
+          "repetition": {
+            "word_tokens": 256,
+            "same_word_tail": 256,
+            "tail_cycle": {
+              "period_words": 1,
+              "repetitions": 256,
+              "tail_words": 256
+            },
+            "repeated_8gram_fraction": 0.9959839357429718
+          }
+        }
+      }
+    },
+    {
+      "case": "worker49k",
+      "stop_condition": "early_censored_clear_repetition",
+      "request_ids": [
+        "chatcmpl-94401de0b2fab607"
+      ],
+      "first_output_seconds": 187.48495065100724,
+      "wall_seconds": 432.1682158619951,
+      "channels": {
+        "content": {
+          "chars": 0,
+          "word_count": 0,
+          "most_common": [],
+          "repetition": {
+            "word_tokens": 0,
+            "same_word_tail": 0,
+            "tail_cycle": {
+              "period_words": 0,
+              "repetitions": 0,
+              "tail_words": 0
+            },
+            "repeated_8gram_fraction": 0
+          }
+        },
+        "reasoning": {
+          "chars": 1024,
+          "word_count": 256,
+          "most_common": [
+            [
+              "our",
+              256
+            ]
+          ],
+          "repetition": {
+            "word_tokens": 256,
+            "same_word_tail": 256,
+            "tail_cycle": {
+              "period_words": 1,
+              "repetitions": 256,
+              "tail_words": 256
+            },
+            "repeated_8gram_fraction": 0.9959839357429718
+          }
+        }
+      }
+    }
+  ]
+}
