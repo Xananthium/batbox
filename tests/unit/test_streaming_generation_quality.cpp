@@ -58,3 +58,18 @@ TEST_CASE("streaming guard detects prose after a completed source block") {
     }
     CHECK(rejected);
 }
+
+TEST_CASE("private reasoning rejection receipts cannot become message content") {
+    using namespace batbox::conversation;
+    Message message;
+    message.role = Role::Assistant;
+    auto raw = to_json(message);
+    raw["generation_rejected"] = "degenerate_repetition";
+    raw["generation_quality"] = {{"channel", "reasoning"},
+        {"received_reasoning_bytes", 8}, {"reasoning", " our our"}};
+    const auto restored = from_json(raw);
+    CHECK(restored.content.empty());
+    CHECK_FALSE(restored.tool_calls.has_value());
+    CHECK_FALSE(to_json(restored).contains("generation_quality"));
+    CHECK(raw["generation_quality"]["reasoning"] == " our our");
+}
