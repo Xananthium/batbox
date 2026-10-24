@@ -1,0 +1,597 @@
+{
+  "status": "final",
+  "reviewed_labels": [
+    "S-B5B7FFF0",
+    "S-93AA2EDA",
+    "S-92842D60",
+    "S-BEBBED37",
+    "S-09EDBB4F",
+    "S-09A2BA78",
+    "S-F65BAA25",
+    "S-8998D021",
+    "S-F86ED97A",
+    "S-55EE7E8B",
+    "S-0EF7181B",
+    "S-FC628471",
+    "S-FC82BA78",
+    "S-7988CC6D",
+    "S-DBEA3A5F",
+    "S-62395F3D",
+    "S-CBA00DCC",
+    "S-6381990D"
+  ],
+  "scale": "Each criterion is scored independently from 0 to 4; totals are out of 16.",
+  "grading_note": "Qualitative blind judgment, not an objective benchmark or statistical estimate. Originality has been finalized relative to all eighteen supplied answers. Earlier individual evidence is preserved verbatim from its review stage, including any references to the smaller comparison set then available. These are assessed as 350\u2013450-word capability sketches, not full implementation specifications. No external novelty search or empirical validation was performed; condition mappings and generation logs were not accessed.",
+  "reviews": [
+    {
+      "label": "S-B5B7FFF0",
+      "scores": {
+        "originality": 1,
+        "practical_usefulness": 2,
+        "concrete_mechanism": 2,
+        "testability": 2
+      },
+      "total": 7,
+      "evidence": {
+        "originality": "Conflict synthesis, project restart, and belief refresh are familiar workflows; the versioned evidence history is the most substantive element distinguishing this answer within the pair.",
+        "practical_usefulness": "The workflows address plausible recurring research and project problems, but no specific user setting establishes when the proposed four-agent effort is worthwhile.",
+        "concrete_mechanism": "Triggers, agent roles, linked conclusions, and later reuse are specified, while conflict detection, source weighting, belief invalidation, and useful transfer remain undefined.",
+        "testability": "The experiment names paragraph-level evidence, a failure mode, and a single-agent comparison, but defines neither an accuracy rubric nor repeated runs that test durable memory."
+      },
+      "standout_idea_excerpt": "This creates a version-controlled history of evidence, allowing the system to track how its understanding evolved over time.",
+      "shortcomings": [
+        "Role assignment does not itself explain how disputed claims are adjudicated or stale resolutions reopened.",
+        "The experiment may reward finding a moderating variable even when the supplied sources do not support one.",
+        "The 20% accuracy improvement threshold lacks a defined metric, and the prototype does not exercise later evidence reuse."
+      ],
+      "word_count_whitespace": 387
+    },
+    {
+      "label": "S-93AA2EDA",
+      "scores": {
+        "originality": 1,
+        "practical_usefulness": 2,
+        "concrete_mechanism": 2,
+        "testability": 2
+      },
+      "total": 7,
+      "evidence": {
+        "originality": "Analogy retrieval, contradiction review, and draft polishing are conventional ideas, and the chosen contradiction capability closely overlaps the other supplied answer.",
+        "practical_usefulness": "Linked revision reasons and remembered analogies could support real work, but usefulness is left broad and a third source is not necessarily a valid conflict resolver.",
+        "concrete_mechanism": "Each capability provides triggers, agent roles, stored artifacts, and later reuse, but the answer omits criteria for analogy relevance, adjudication, and learning reliable preferences from edits.",
+        "testability": "A small source-backed trial and an observable success condition are present, but abandonment is vague and the example compares productivity with collaboration, which need not conflict."
+      },
+      "standout_idea_excerpt": "Stores \"Delta Logs\" (the difference between version $n$ and $n+1$) linked to the specific reason for change.",
+      "shortcomings": [
+        "The proposed tie-breaking source can encourage premature resolution rather than documenting unresolved or conditional evidence.",
+        "Higher productivity and lower collaboration are compatible outcomes, so the prototype may begin with a false contradiction.",
+        "There is no baseline, operational abandonment threshold, or later-run test of whether stored resolutions or edit reasons help."
+      ],
+      "word_count_whitespace": 385
+    },
+    {
+      "label": "S-92842D60",
+      "scores": {
+        "originality": 1,
+        "practical_usefulness": 2,
+        "concrete_mechanism": 2,
+        "testability": 2
+      },
+      "total": 7,
+      "evidence": {
+        "originality": "The contradiction and analogy workflows substantially repeat other answers, while task decomposition adds a familiar planning function rather than a distinctive mechanism.",
+        "practical_usefulness": "Updating a dependency map as milestones finish could help a small project, but the broad research and learning capabilities lack a concrete user setting or demonstrated advantage.",
+        "concrete_mechanism": "Triggers, agent roles, linked records, and later updates are named, but the answer leaves dependency inference, contradiction adjudication, and analogy validity largely as agent instructions.",
+        "testability": "The prototype identifies a false-contradiction failure and a source-backed observable target, but has no evaluation rubric, baseline, or later-run memory test."
+      },
+      "standout_idea_excerpt": "Memory stores a \u201cDependency Map\u201d with links to why certain steps were prioritized. Later runs adjust this map as milestones are checked off.",
+      "shortcomings": [
+        "Searching for a tie-breaking source and refining consensus can prematurely close a disagreement that should remain unresolved.",
+        "The proposed success criterion assumes the input contains a genuine conditional disagreement instead of testing whether the system can reject one.",
+        "The abandonment rule has no frequency threshold, and changing from a summary bot to a comparison bot does not establish a distinct useful capability."
+      ],
+      "word_count_whitespace": 401
+    },
+    {
+      "label": "S-BEBBED37",
+      "scores": {
+        "originality": 1,
+        "practical_usefulness": 2,
+        "concrete_mechanism": 2,
+        "testability": 2
+      },
+      "total": 7,
+      "evidence": {
+        "originality": "Decision provenance is a useful variation within this batch, but conflict synthesis and analogy retrieval remain conventional and closely overlap the other answers.",
+        "practical_usefulness": "Recovering the original constraints behind a project decision addresses a recognizable recurring problem, although the answer does not show how retrieval changes a later decision.",
+        "concrete_mechanism": "Paragraph-linked tensions and decision-rationale-source chains make memory contents intelligible, but evidence weighting, analogy validation, and revision of old conclusions are unspecified.",
+        "testability": "Introducing a sixth article gives a concrete update scenario and numerical output targets, but contradiction counts and citation counts do not establish correct resolutions or useful memory reuse."
+      },
+      "standout_idea_excerpt": "A chronological chain of *Decision $\\rightarrow$ Rationale $\\rightarrow$ Source Link* (e.g., a specific meeting transcript).",
+      "shortcomings": [
+        "A weighted resolution can hide a real unresolved disagreement because the weighting procedure and acceptance criteria are missing.",
+        "The analogy example produces a metaphor without showing how a successful intervention transfers between domains.",
+        "The experiment lacks correctness labels, a comparison condition, and an operational measure of becoming more vague after new evidence."
+      ],
+      "word_count_whitespace": 420
+    },
+    {
+      "label": "S-09EDBB4F",
+      "word_count_whitespace": 426,
+      "scores": {
+        "originality": 1,
+        "practical_usefulness": 2,
+        "concrete_mechanism": 2,
+        "testability": 2
+      },
+      "total": 7,
+      "evidence": {
+        "originality": "The answer repeats conflict review, decision provenance, and structural analogy from this batch; the pattern-library experiment clarifies an existing idea rather than introducing a distinct capability.",
+        "practical_usefulness": "Researcher, project lead, and designer are recognizable users, and constraint-based retrieval is buildable, but the value of forcing a cross-domain solution remains unestablished.",
+        "concrete_mechanism": "The constraint-solution-source triplet is a concrete reusable record, while the central step of adapting a past solution to current constraints remains an instruction rather than an explained transformation.",
+        "testability": "A 20% reduction in problem-solving time is an observable target and literal overlap is a relevant failure, but the trial lacks a specified comparison and its abandonment rule is qualitative."
+      },
+      "standout_idea_excerpt": "Create a \"Pattern Library\" where the assistant stores every solved problem as a triplet: *(Core Constraint, Applied Solution, Source Link)*.",
+      "shortcomings": [
+        "An unrelated source domain does not itself make the proposed intervention useful or structurally appropriate.",
+        "The prototype does not identify a small set of target problems or a comparison condition for the time-saving claim.",
+        "The claimed benefit from concurrency is not explained by the mainly sequential retrieval-and-adaptation workflow."
+      ]
+    },
+    {
+      "label": "S-09A2BA78",
+      "word_count_whitespace": 381,
+      "scores": {
+        "originality": 1,
+        "practical_usefulness": 2,
+        "concrete_mechanism": 2,
+        "testability": 2
+      },
+      "total": 7,
+      "evidence": {
+        "originality": "Remembered tensions, reused solution patterns, and iterative goal decomposition are familiar mechanisms already prominent in the batch.",
+        "practical_usefulness": "Prioritizing unresolved evidence and revising a plan after a failed milestone could help recurring work, but the user problems are broad and the prototype rewards closing tensions rather than reaching justified decisions.",
+        "concrete_mechanism": "The answer links claims and step results to retained records and subsequent actions, but adaptation and adjudication are described at the level of agent roles.",
+        "testability": "The three-article trial and 80% closure target are observable, but counting prioritization as resolution lets the system pass without settling or properly retaining the underlying uncertainties."
+      },
+      "standout_idea_excerpt": "Memory stores the \"Logic Chain\" (Why Step A leads to Step B) linked to the result of each step. Later runs revisit this chain to pivot if a specific milestone fails.",
+      "shortcomings": [
+        "An unresolved contradiction can be the correct result, so treating it as an infinite-loop failure creates pressure for premature closure.",
+        "The success definition conflates a plan to investigate with an evidential resolution.",
+        "The cost-versus-time-saved abandonment rule lacks a small concrete comparison, and later reuse is not exercised in the proposed trial."
+      ]
+    },
+    {
+      "label": "S-F65BAA25",
+      "word_count_whitespace": 439,
+      "scores": {
+        "originality": 1,
+        "practical_usefulness": 2,
+        "concrete_mechanism": 2,
+        "testability": 2
+      },
+      "total": 7,
+      "evidence": {
+        "originality": "The conflict resolver, analogical bridge, and critique-driven task refinement recombine the same conventional workflows already seen in this batch.",
+        "practical_usefulness": "Reusing a successful refinement sequence is plausibly useful, but the conflict capability explicitly skips fresh search on later similar cases without checking whether the previous conclusion still applies.",
+        "concrete_mechanism": "Trigger commands, contrasting-source records, and an execution-critique-plan-update loop are intelligible, while reliable weighting and transfer of a stored resolution are left unexplained.",
+        "testability": "Two conflicting articles form a small executable trial with an identifiable output, but the weighted-judgment criterion lacks a correctness check and the proposed response to failure is only a prompt change."
+      },
+      "standout_idea_excerpt": "Agent 1 breaks the goal into sub-tasks; Agent 2 executes the first task; Agent 3 critiques the output; Agent 4 adjusts the remaining sub-tasks based on that critique.",
+      "shortcomings": [
+        "Cached resolutions may be stale or inapplicable to the later conflict because reuse has no stated validity check.",
+        "Different effect magnitudes need not contradict each other; the failure example does not establish incompatible claims.",
+        "Asking agents to argue for the most likely truth may encourage confidence without improving the evidence supporting the resolution."
+      ]
+    },
+    {
+      "label": "S-8998D021",
+      "word_count_whitespace": 411,
+      "scores": {
+        "originality": 1,
+        "practical_usefulness": 2,
+        "concrete_mechanism": 2,
+        "testability": 2
+      },
+      "total": 7,
+      "evidence": {
+        "originality": "Conflict updates, dependency planning, and cross-domain analogy closely repeat other answers and introduce no distinctive intervention.",
+        "practical_usefulness": "A revisable newsletter plan and preserved research tensions have plausible value, although the analogy example links definitions rather than showing transfer of a successful solution.",
+        "concrete_mechanism": "Sentence-linked claims and incremental updates are concrete, but milestone-to-goal links do not provide the source evidence for effort estimates or planning assumptions.",
+        "testability": "The experiment has a relevant false-contradiction case and a measurable rereading-time outcome, but no threshold or accuracy safeguard distinguishes useful efficiency from an incomplete synthesis."
+      },
+      "standout_idea_excerpt": "When a third source is added, Batbox doesn't restart; it updates the existing tension point with new evidence.",
+      "shortcomings": [
+        "Much of the proposal remains a list of ordinary planning or comparison roles rather than a new capability arising from their interaction.",
+        "The neural-network/brain bridge illustrates a familiar conceptual comparison, not an actionable transferred solution.",
+        "The proposed trial neither measures whether rereading falls without losing accuracy nor tests a subsequent update to stored tensions."
+      ]
+    },
+    {
+      "label": "S-F86ED97A",
+      "word_count_whitespace": 398,
+      "scores": {
+        "originality": 2,
+        "practical_usefulness": 2,
+        "concrete_mechanism": 2,
+        "testability": 2
+      },
+      "total": 8,
+      "evidence": {
+        "originality": "Comparing predicted and actual decision outcomes, combined with turning missing evidence into proposed work, adds some substantive variety beyond the batch's repeated conflict-resolution templates.",
+        "practical_usefulness": "Revisiting failed tool choices and testing assumptions about client priorities are plausible recurring tasks, but ranking the most consequential gaps is deferred to a possible pivot.",
+        "concrete_mechanism": "Weighted decision records and claim-source plus gap-action pairs connect memory to later behavior, although the critical distinction between a keyword match and adequate causal evidence is not operationalized.",
+        "testability": "Five report paragraphs, one assumption, and expert agreement on three critical gaps provide a small evaluable trial, but identifying gaps does not directly measure the claimed reduction in redundant searching."
+      },
+      "standout_idea_excerpt": "When a decision fails, Batbox retrieves the exact logic used, comparing the *predicted* result with the *actual* outcome to refine future intuition.",
+      "shortcomings": [
+        "The outcome comparison is promising but does not yet say which recorded belief or future choice would change after a failed prediction.",
+        "The prototype asks for three gaps whether or not the report contains that many critical unknowns.",
+        "The stated efficiency benefit lacks a search-time or repeated-query comparison, and no later run tests whether a filled gap stays resolved."
+      ]
+    },
+    {
+      "label": "S-55EE7E8B",
+      "word_count_whitespace": 403,
+      "scores": {
+        "originality": 1,
+        "practical_usefulness": 2,
+        "concrete_mechanism": 2,
+        "testability": 2
+      },
+      "total": 7,
+      "evidence": {
+        "originality": "Conflict mapping and analogy pairs repeat the batch, and the continuity capability mainly packages a summary and next-step list despite the brief excluding generic summaries.",
+        "practical_usefulness": "Linking a pause snapshot to the exact document or code location could reduce restart effort, but the other benefits remain broad and the pause workflow is only lightly developed.",
+        "concrete_mechanism": "The pause trigger, location-linked snapshot, and comparison of new findings with stored claims are concrete partial mechanisms, while feasibility evaluation and useful analogy transfer remain unspecified.",
+        "testability": "The prototype names a complementary-claims failure and requires opposing evidence links for each disagreement, but citation coverage alone cannot establish that the claimed contradictions are real."
+      },
+      "standout_idea_excerpt": "It stores \"Context Snapshots\" linked to the specific document or code block where the user stopped.",
+      "shortcomings": [
+        "The continuity idea does not sufficiently distinguish its behavior from the generic summaries excluded by the challenge.",
+        "The consensus-producing agent can erase the tensions the prototype says it should preserve.",
+        "The experiment has no labeled non-conflicts, explicit correctness check, or later-run test of evidence reuse."
+      ]
+    },
+    {
+      "label": "S-0EF7181B",
+      "word_count_whitespace": 415,
+      "scores": {
+        "originality": 2,
+        "practical_usefulness": 2,
+        "concrete_mechanism": 2,
+        "testability": 2
+      },
+      "total": 8,
+      "evidence": {
+        "originality": "Tracking document variables and their downstream implications adds a substantive use case beyond the batch's dominant conflict-and-analogy template, although the chosen insight generator remains familiar.",
+        "practical_usefulness": "Continuity checking in a novel or manual is a specific recurring problem with a plausible small-team solution, but the claimed ability to flag every downstream effect is unsupported by the described state log.",
+        "concrete_mechanism": "A section-edit trigger and paragraph-linked variable state make the continuity sketch concrete, while the selected prototype mainly stores concept connections without explaining how a useful new inference is distinguished from an association.",
+        "testability": "Five articles and a connection absent from individual sources form a small observable trial, but the success condition does not assess usefulness or validity and the cost-versus-quality abandonment rule is unspecified."
+      },
+      "standout_idea_excerpt": "A \"State Log\" linking current values to the exact paragraph where they were defined.",
+      "shortcomings": [
+        "A state log alone does not explain how all downstream dependencies are found after a document edit.",
+        "An inference absent from each source can still be trivial or unsupported, so a Third Idea is not a sufficient quality criterion.",
+        "The prototype chooses the broad insight generator rather than the more concrete continuity capability and does not test later reuse."
+      ]
+    },
+    {
+      "label": "S-FC628471",
+      "word_count_whitespace": 409,
+      "scores": {
+        "originality": 1,
+        "practical_usefulness": 1,
+        "concrete_mechanism": 2,
+        "testability": 2
+      },
+      "total": 6,
+      "evidence": {
+        "originality": "Conflict auditing, note clustering, and plan critique closely repeat the existing batch, with source-linked step metrics providing only a small variation.",
+        "practical_usefulness": "Constraint-linked planning could help a project, but the strongest capability permits resolving objective date or fact disagreements by averaging, which can manufacture a value that no source supports.",
+        "concrete_mechanism": "Exact-sentence conflict pairs and goal-critique-step-metric records are usable artifacts, but the specified resolution policy cannot reliably distinguish facts to verify from estimates that might be combined.",
+        "testability": "Five project-status paragraphs, objective contradictions, and an 80% resolution target make a small assessable trial, but source choice or averaging is counted as resolution without checking the resulting fact."
+      },
+      "standout_idea_excerpt": "Stores the \"Planning Logic\" (Goal $\\rightarrow$ Critique $\\rightarrow$ Step $\\rightarrow$ Metric) with links to the source constraints.",
+      "shortcomings": [
+        "Averaging contradictory deadlines or binary facts is not an evidential resolution; this is an explicit design weakness rather than merely a missing implementation detail.",
+        "Triggering synthesis at a memory-capacity threshold does not establish when the resulting insight helps a user.",
+        "The prototype has no ground-truth check for its final resolutions or subsequent-use test of the retained conflict pairs."
+      ]
+    },
+    {
+      "label": "S-FC82BA78",
+      "word_count_whitespace": 394,
+      "scores": {
+        "originality": 2,
+        "practical_usefulness": 3,
+        "concrete_mechanism": 3,
+        "testability": 2
+      },
+      "total": 10,
+      "evidence": {
+        "originality": "The stateful writing guard develops a less common capability within this batch through paragraph-linked state changes and pre-scene retrieval, although the concept bridges and consensus roles are familiar.",
+        "practical_usefulness": "An author checking possessions, location, and time across scenes has a concrete recurring task, and a 2,000-word story plus a small state table is a plausible minimum implementation with an explicit overhead tradeoff.",
+        "concrete_mechanism": "Section completion updates a paragraph-linked state log, and the next scene retrieves the current state; the lost-sword example explains a coherent causal use of persistent memory beyond generic summarization.",
+        "testability": "A fixed short story and 50% reduction in verification scrolling give an observable trial, but it does not separately measure state accuracy or distinguish legitimate character behavior from a contradiction."
+      },
+      "standout_idea_excerpt": "Every state change (e.g., \"Character X lost their sword\") is stored with a link to the paragraph where it happened.",
+      "shortcomings": [
+        "Exhaustion and energetic dancing can coexist, so the cited failure should first test whether a contradiction exists rather than demand a corrective edit.",
+        "The experiment measures navigation effort without testing whether the retrieved state is correct or the writing becomes more consistent.",
+        "The first two capabilities contribute little originality, and the role of multiple agents is less compelling than the state-memory mechanism."
+      ]
+    },
+    {
+      "label": "S-7988CC6D",
+      "word_count_whitespace": 399,
+      "scores": {
+        "originality": 1,
+        "practical_usefulness": 2,
+        "concrete_mechanism": 2,
+        "testability": 3
+      },
+      "total": 8,
+      "evidence": {
+        "originality": "Updating an SOP after a recurring task adds some variety, but the selected cached-conflict resolver and analogy workflow remain conventional and closely resemble previous answers.",
+        "practical_usefulness": "Weekly-report bottleneck reduction is a recognizable small-team use case, while reusing a conflict verdict without checking context or freshness could preserve an obsolete conclusion.",
+        "concrete_mechanism": "Completed-task auditing leads to an updated SOP and repeated conflicts retrieve linked verdicts, but bottleneck selection and conditions for reusing a resolution remain broad.",
+        "testability": "Re-presenting the same conflict and requiring the same conclusion 30% faster directly tests durable-memory reuse against the first run, with a clear latency-based abandonment condition, although correctness is not controlled."
+      },
+      "standout_idea_excerpt": "When presented with the same conflict a second time, the system reaches the same conclusion $30\\%$ faster by referencing the durable memory instead of re-processing the raw sources.",
+      "shortcomings": [
+        "Repeating a mistaken conclusion faster would satisfy the stated success condition.",
+        "The contradiction cache has no described mechanism for checking whether new evidence or a changed context requires reopening the verdict.",
+        "The process optimizer does not test whether its proposed simplification actually improves the next task before treating the SOP as optimized."
+      ]
+    },
+    {
+      "label": "S-DBEA3A5F",
+      "word_count_whitespace": 406,
+      "scores": {
+        "originality": 1,
+        "practical_usefulness": 2,
+        "concrete_mechanism": 2,
+        "testability": 2
+      },
+      "total": 7,
+      "evidence": {
+        "originality": "Proponent-skeptic-outsider roles are a familiar deliberation pattern, and the conflict resolver substantially overlaps the blindspot detector rather than establishing three clearly distinct mechanisms.",
+        "practical_usefulness": "Finding a decision-critical unknown and retaining why a project paused could help recurring planning work, but neither contribution is developed around a sufficiently specific decision process.",
+        "concrete_mechanism": "Hypothesis and resume triggers, linked disagreement points, and future search priorities create an understandable partial loop, while diversity of role names does not itself establish independent evidence or better integration.",
+        "testability": "A single business-decision paragraph and at least one critical unknown provide a feasible initial test, but no check establishes that the unknown matters or that the recommendation improves."
+      },
+      "standout_idea_excerpt": "The system identifies at least one \"Critical Unknown\"\u2014a gap in knowledge that none of the agents could resolve using current memory\u2014prompting a targeted search.",
+      "shortcomings": [
+        "Two capabilities largely reuse competing-claim review followed by synthesis, weakening the requested distinction between ideas.",
+        "The prototype identifies a search need but does not execute the search and test whether its evidence changes the recommendation.",
+        "Unchanged agreement with the starting hypothesis can be justified, so ignoring the skeptic needs a substantive evidence-based criterion rather than an expectation of visible modification."
+      ]
+    },
+    {
+      "label": "S-62395F3D",
+      "word_count_whitespace": 393,
+      "scores": {
+        "originality": 1,
+        "practical_usefulness": 1,
+        "concrete_mechanism": 2,
+        "testability": 2
+      },
+      "total": 6,
+      "evidence": {
+        "originality": "Conflict consolidation, gap-driven hypotheses, and outcome-linked workflow versions are familiar mechanisms already represented in the batch; the claimed conversion of a hypothesis to fact is not an inventive contribution.",
+        "practical_usefulness": "Outcome-linked workflow revisions could be useful, but promoting a hypothesis to a proven fact once expected supporting evidence appears embeds a substantial epistemic error in later memory reuse.",
+        "concrete_mechanism": "New-observation and task-completion triggers feed linked consensus and protocol histories, while hypothesis confirmation and selecting the best-ever workflow lack checks for competing explanations or changed conditions.",
+        "testability": "Timed contradiction injections into a project log and an 80% automatic-resolution target form an executable trial, but the count does not establish correct resolutions or acceptable false alarms."
+      },
+      "standout_idea_excerpt": "Stores \"Version History\" linked to the specific outcomes (successes/failures).",
+      "shortcomings": [
+        "Finding predicted supporting evidence does not by itself prove a hypothesis; storing it as fact can amplify the mistake in subsequent runs.",
+        "Automatically adopting the best-ever protocol can confound favorable task conditions with an effective process change.",
+        "The auditor experiment rewards closure without defined truth labels, and it does not measure whether the stored consensus remains valid after another update."
+      ]
+    },
+    {
+      "label": "S-CBA00DCC",
+      "word_count_whitespace": 398,
+      "scores": {
+        "originality": 1,
+        "practical_usefulness": 2,
+        "concrete_mechanism": 2,
+        "testability": 2
+      },
+      "total": 7,
+      "evidence": {
+        "originality": "Reusing project lessons, resolving requirement tradeoffs, and filling knowledge gaps are conventional capabilities already represented by close variants in the batch.",
+        "practical_usefulness": "A documented capacity mistake and a future project bottleneck provide a concrete recurring use for retained lessons, but speed and quality are treated as conflicting requirements without establishing an actual constraint.",
+        "concrete_mechanism": "Five outcome-linked past tasks and a two-agent retrieve-and-adapt prototype give a workable starting point, while the essential distinction between transferable bottlenecks and superficial similarity remains unresolved.",
+        "testability": "Predicting a real bottleneck from a documented prior task is an observable and relevant success condition with a false-analogy failure, but the prototype lacks a held-out case design or an explicit rule for judging obvious versus useful suggestions."
+      },
+      "standout_idea_excerpt": "The assistant correctly predicts at least one bottleneck in a new project that was documented in a previous project\u2019s memory.",
+      "shortcomings": [
+        "The proposal mostly improves retrieval and reuse of ordinary lessons rather than introducing a distinctive capability.",
+        "Speed and quality can be compatible, so their presence alone does not justify storing a forced tradeoff as a resolution.",
+        "Categorical similarity can be useful and cross-domain similarity can be superficial; the pivot should be driven by transfer success rather than the domain labels alone."
+      ]
+    },
+    {
+      "label": "S-6381990D",
+      "word_count_whitespace": 412,
+      "scores": {
+        "originality": 1,
+        "practical_usefulness": 2,
+        "concrete_mechanism": 2,
+        "testability": 2
+      },
+      "total": 7,
+      "evidence": {
+        "originality": "The tension resolver, goal hierarchy, and analogy web repeat the batch's most common mechanisms with little substantive differentiation.",
+        "practical_usefulness": "Evidence-linked priorities could help planning, but the strongest capability assumes a third source can settle the disagreement, and its productivity-versus-collaboration example is not inherently contradictory.",
+        "concrete_mechanism": "Resolution triplets and evidence-backed subtask priorities describe usable records, but the analogy web lacks explicit source provenance and the latter two ideas do not specify their later-run behavior.",
+        "testability": "Two statements plus five papers form a small trial with an observable third-source synthesis, but the criterion can reward a polished reconciliation without establishing either a real contradiction or a correct resolution."
+      },
+      "standout_idea_excerpt": "A hierarchical tree of goals where every sub-task is linked to the original intent and the evidence justifying its priority.",
+      "shortcomings": [
+        "Increased productivity and decreased collaboration can coexist, so the example may lead the system to resolve a false contradiction.",
+        "The existence of a third source does not establish a justified tie-breaker, and synthesis can still leave the question unresolved.",
+        "The prototype does not test later reuse, while two capabilities omit an explicit subsequent-run mechanism requested by the brief."
+      ]
+    }
+  ],
+  "ranking_note": "S-FC82BA78 leads at 10/16 for its concrete author workflow and paragraph-linked narrative-state mechanism. S-F86ED97A, S-0EF7181B, and S-7988CC6D tie at 8/16: respectively, outcome feedback plus evidence gaps; document continuity; and a direct repeated-run memory experiment. Twelve answers tie at 7/16. S-FC628471 and S-62395F3D tie at 6/16 because their strongest weaknesses are explicit unreliable inference policies, not merely missing detail. Ties avoid implying finer discrimination than these qualitative scores support.",
+  "reviewed_count": 18,
+  "ranking_status": "Final; equal total scores share a rank.",
+  "originality_finalization": {
+    "comparison_set_size": 18,
+    "score_changes": [],
+    "note": "No provisional originality adjustment was warranted by the completed comparison. Scores of 2 reflect modest substantive variation within this batch, not a claim of external novelty; the other answers remain at 1."
+  },
+  "ranked_answers": [
+    {
+      "rank": 1,
+      "label": "S-FC82BA78",
+      "total": 10,
+      "tied": false
+    },
+    {
+      "rank": 2,
+      "label": "S-F86ED97A",
+      "total": 8,
+      "tied": true
+    },
+    {
+      "rank": 2,
+      "label": "S-0EF7181B",
+      "total": 8,
+      "tied": true
+    },
+    {
+      "rank": 2,
+      "label": "S-7988CC6D",
+      "total": 8,
+      "tied": true
+    },
+    {
+      "rank": 5,
+      "label": "S-B5B7FFF0",
+      "total": 7,
+      "tied": true
+    },
+    {
+      "rank": 5,
+      "label": "S-93AA2EDA",
+      "total": 7,
+      "tied": true
+    },
+    {
+      "rank": 5,
+      "label": "S-92842D60",
+      "total": 7,
+      "tied": true
+    },
+    {
+      "rank": 5,
+      "label": "S-BEBBED37",
+      "total": 7,
+      "tied": true
+    },
+    {
+      "rank": 5,
+      "label": "S-09EDBB4F",
+      "total": 7,
+      "tied": true
+    },
+    {
+      "rank": 5,
+      "label": "S-09A2BA78",
+      "total": 7,
+      "tied": true
+    },
+    {
+      "rank": 5,
+      "label": "S-F65BAA25",
+      "total": 7,
+      "tied": true
+    },
+    {
+      "rank": 5,
+      "label": "S-8998D021",
+      "total": 7,
+      "tied": true
+    },
+    {
+      "rank": 5,
+      "label": "S-55EE7E8B",
+      "total": 7,
+      "tied": true
+    },
+    {
+      "rank": 5,
+      "label": "S-DBEA3A5F",
+      "total": 7,
+      "tied": true
+    },
+    {
+      "rank": 5,
+      "label": "S-CBA00DCC",
+      "total": 7,
+      "tied": true
+    },
+    {
+      "rank": 5,
+      "label": "S-6381990D",
+      "total": 7,
+      "tied": true
+    },
+    {
+      "rank": 17,
+      "label": "S-FC628471",
+      "total": 6,
+      "tied": true
+    },
+    {
+      "rank": 17,
+      "label": "S-62395F3D",
+      "total": 6,
+      "tied": true
+    }
+  ],
+  "ranked_best_answers": [
+    {
+      "rank": 1,
+      "label": "S-FC82BA78",
+      "total": 10,
+      "tied": false
+    },
+    {
+      "rank": 2,
+      "label": "S-F86ED97A",
+      "total": 8,
+      "tied": true
+    },
+    {
+      "rank": 2,
+      "label": "S-0EF7181B",
+      "total": 8,
+      "tied": true
+    },
+    {
+      "rank": 2,
+      "label": "S-7988CC6D",
+      "total": 8,
+      "tied": true
+    }
+  ],
+  "batch_findings": [
+    "Most answers reuse conflict synthesis, analogy retrieval, and goal decomposition with role lists and renamed memory artifacts.",
+    "The strongest concrete idea is maintaining paragraph-linked narrative state and retrieving it before writing another scene; this remains a familiar application, not a demonstrated breakthrough.",
+    "Only S-7988CC6D earns testability 3 because its experiment directly compares a repeated task using stored evidence with the first run; correctness remains an unresolved limitation.",
+    "No answer earns originality above 2, and no prototype establishes validated benefits."
+  ],
+  "word_limit_check": {
+    "method": "Whitespace-separated word count, including headings and list markers.",
+    "minimum": 381,
+    "maximum": 439,
+    "outside_350_to_450": []
+  }
+}
